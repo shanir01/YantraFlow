@@ -120,7 +120,7 @@ return items.map((it) => {
       workflow: flow("Telegram channel daily post", "Every day 9 AM: AI post → Telegram channel", [
         ["scheduleTrigger", "Every day 9 AM", { mode: "cron", cron: "0 9 * * *", minutes: 60 }],
         ["set", "Your topic", { fields: "topic = AI tools & tech tips for students\nstyle = Hinglish, 4-6 lines, 2 emojis, end with a question", keepOld: true }],
-        ["aiChat", "AI writes post", AI("You write engaging Telegram channel posts.", "Date: {{ $today }}\nTopic: {{ $json.topic }}\nStyle: {{ $json.style }}\nWrite today's post (fresh idea, no repeats).", { temperature: 0.9, maxTokens: 400 })],
+        ["aiChat", "AI writes post", AI("You write engaging Telegram channel posts.", "Date: {{ $today }}\nTopic: {{ $json.topic }}\nStyle: {{ $json.style }}\nWrite today's post (fresh idea, no repeats).", { temperature: 0.9, maxTokens: 400, timeGreeting: "on" })],
         tgText("{{ $json.text }}"),
       ]),
     },
@@ -134,8 +134,8 @@ return items.map((it) => {
       workflow: flow("Trending news → AI post", "Top news → AI caption + hashtags → Telegram", [
         ["scheduleTrigger", "Every day 10 AM", { mode: "cron", cron: "0 10 * * *", minutes: 60 }],
         ["rss", "Trending news", { url: "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en", max: 3 }],
-        ["aiChat", "AI makes post", AI("You turn news into viral social posts in Hinglish: hook line, 3 short lines, 8 hashtags. No fake facts — only what the headline says.", "Headline: {{ $json.title }}\nDetails: {{ $json.contentSnippet }}", { maxTokens: 300 })],
-        tgText("🔥 {{ $json.title }}\n\n{{ $json.text }}\n\n🔗 {{ $json.link }}"),
+        ["aiChat", "AI makes post", AI("You turn news into viral social posts in Hinglish: hook line, 3 short lines, 8 hashtags. No fake facts — only what the headline says.", "Headline: {{ $json.title }}\nDetails: {{ $json.contentSnippet }}", { maxTokens: 300, timeGreeting: "on" })],
+        tgText("{{ $json.text }}\n\n🔥 {{ $json.title }}\n🔗 {{ $json.link }}"),
       ]),
     },
     {
@@ -234,6 +234,8 @@ return items.map((it) => {
   const seedPost = (platform, extra) => ["aiPost", "AI Post Writer (seed)", Object.assign({ platform, autoGenerate: "on", seed: SEED_EXAMPLE, topic: "", language: "Hinglish", tone: "friendly, useful, energetic", fixedText: "", mediaList: "", history: 20, model: "", baseUrl: "", apiKey: "" }, extra || {})];
   const start = ["manualTrigger", "Start", { testData: "{}" }];
   const seedHow = (platformStep) => ["'AI Post Writer (seed)' node kholo → SEED box me apna document paste karo ya Upload (.txt/.md/.pdf)", "Keys page: AI key" + (platformStep ? " + " + platformStep : ""), "▶ Run → 'Repeat' ya 'Daily at' chuno (minimum 30 min) → Start schedule", "Auto message generate = on: har run naya post, pichhle 20 se alag"];
+const videoStep = (extra) => ["videoMaker", "Auto Video Maker", Object.assign({ mode: "auto", script: "{{ $json.caption || $json.text || $json.description }}", title: "{{ $json.title }}", seconds: 0, background: "auto", bgQuery: "{{ $json.topicUsed || 'motivation' }}", photos: "", voice: "auto", voiceLang: "Hinglish", music: "generated", musicFile: "", theme: "bold", watermark: "", cta: "Like + Follow karo", size: "1080x1920" }, extra || {})];
+  const VIDEO_HONEST = "Auto Video Maker: template / slide-style video (AI text ke kinetic captions + gradient / free stock clip / tumhari photos + music) — AI camera footage nahi. Website pe browser me banti hai (tab khula rakho, MP4 ya WebM, voice nahi). PC/Termux pe ffmpeg se MP4 + AI voice (edge-tts).";
   const V4 = [
     {
       id: "link-preview-telegram", icon: "link", categories: ["Telegram"], isNew: true,
@@ -251,37 +253,37 @@ return items.map((it) => {
     {
       id: "seed-telegram-autopost", icon: "telegram", categories: ["Telegram", "AI Content"], isNew: true,
       title: "Telegram auto-post from your SEED (new post every run)", title_hi: "Telegram auto-post (SEED se)",
-      summary: "Apna SEED document daalo (brand, topics, style) → AI har 30 min / ghante / roz naya, alag post likh ke tumhare Telegram channel/bot pe bhejta hai.",
+      summary: "Apna SEED document daalo (brand, topics, style) → AI har 30 min / ghante / roz naya post likhta hai (time ke hisaab se Good Morning/Evening), Auto Video Maker uski short video banata hai, aur video + caption tumhare Telegram channel/bot pe.",
       runsIn: "web", needs: ["AI key", "Telegram bot"],
-      honest: "Website pe tab khula rehna chahiye. 24x7 ke liye PC/Termux version chalao (schedule restart ke baad bhi resume).",
-      howTo: seedHow("Telegram"),
-      workflow: flow("Telegram auto-post (SEED)", "SEED -> AI writes a fresh post -> Telegram", [
-        start, seedPost("telegram"),
-        ["telegram", "Post to Telegram", { operation: "text", text: "{{ $json.text }}", media: "", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }],
+      honest: "Website pe tab khula rehna chahiye. 24x7 ke liye PC/Termux version chalao (schedule restart ke baad bhi resume). " + VIDEO_HONEST,
+      howTo: seedHow("Telegram").concat(["Sirf text chahiye? 'Auto Video Maker' me Video source = off aur Telegram node me Send = text"]),
+      workflow: flow("Telegram auto-post (SEED)", "SEED -> AI writes a fresh post -> Auto Video Maker -> Telegram video + caption", [
+        start, seedPost("telegram"), videoStep({ seconds: 20 }),
+        ["telegram", "Post video to Telegram", { operation: "video", text: "{{ $json.text }}", media: "{{ $json.media }}", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }],
       ]),
     },
     {
       id: "seed-instagram-autopost", icon: "instagram", categories: ["Instagram", "AI Content"], isNew: true,
-      title: "Instagram auto-post from your SEED (AI caption + rotating photos/Reels)", title_hi: "Instagram auto-post (SEED se)",
-      summary: "SEED + photos/Reels ki list do → har run AI naya caption + hashtags likhta hai, list ka agla photo/Reel Instagram pe post.",
+      title: "Instagram Reels auto-post from your SEED (AI caption + auto-made video)", title_hi: "Instagram Reel auto-post (SEED se)",
+      summary: "SEED do → har run AI naya caption + hashtags likhta hai, Auto Video Maker uski vertical Reel banata hai (ya tumhari list ka agla Reel) aur Instagram pe post.",
       runsIn: "setup", needs: ["Instagram Business/Creator account + Meta app token (instagram_content_publish)", "Photos/Reels ke PUBLIC https links", "AI key"],
-      honest: "Instagram sirf official Graph API se post hota hai: Business/Creator account + Facebook Page + Meta developer app token chahiye. Media ka link public hona chahiye (Drive/localhost nahi). Instagram 24 ghante me ~50 API posts allow karta hai.",
-      howTo: ["'AI Post Writer' node: SEED paste karo + 'Photos / videos to rotate' me har line pe ek public link", "Keys page: Instagram user ID + token, AI key", "Instagram node me Post type: IMAGE (photo) ya REELS (video)", "▶ Run → Daily at 18:00 → Start schedule"],
-      workflow: flow("Instagram auto-post (SEED)", "SEED -> AI caption -> next photo/Reel -> Instagram", [
-        start, seedPost("instagram", { mediaList: "# har line pe ek PUBLIC image/video link\nhttps://example.com/post1.jpg\nhttps://example.com/post2.jpg" }),
-        ["instagram", "Post to Instagram", { kind: "IMAGE", mediaUrl: "{{ $json.media }}", caption: "{{ $json.text }}", shareToFeed: true, userId: "", accessToken: "" }],
+      honest: "Instagram sirf official Graph API se post hota hai: Business/Creator account + Facebook Page + Meta developer app token chahiye. Instagram 24 ghante me ~50 API posts allow karta hai. Website pe bani video Instagram ko seedha nahi ja sakti (Instagram public link maangta hai) — auto-video Reels ke liye PC/Termux version, ya apne Reels ke public links list me do. " + VIDEO_HONEST,
+      howTo: ["'AI Post Writer' node: SEED paste karo (video file maangne ki zaroorat nahi — Auto Video Maker banata hai)", "Keys page: Instagram user ID + token, AI key (+ Pexels key ho to stock clip background)", "PC/Termux pe chalao: video file seedha Instagram pe upload hoti hai (resumable upload)", "▶ Run → Daily at 18:00 → Start schedule"],
+      workflow: flow("Instagram auto-post (SEED)", "SEED -> AI caption -> Auto Video Maker (or your own Reel) -> Instagram Reel", [
+        start, seedPost("instagram", { mediaList: "# optional: apne Reels ke PUBLIC links (har line ek). Khaali = Auto Video Maker khud video banayega" }), videoStep({ seconds: 20 }),
+        ["instagram", "Post Reel to Instagram", { kind: "REELS", mediaUrl: "{{ $json.videoUrl || $json.media }}", caption: "{{ $json.text }}", shareToFeed: true, firstComment: "", userId: "", accessToken: "" }],
       ]),
     },
     {
       id: "seed-youtube-autopost", icon: "youtube", categories: ["YouTube", "Video", "AI Content"], isNew: true,
-      title: "YouTube auto-upload from your SEED (AI title, description, tags)", title_hi: "YouTube auto-upload (SEED se)",
-      summary: "Videos ki list (file path ya direct link) + SEED → har run agla video, AI ka naya title/description/tags ke saath YouTube pe upload.",
-      runsIn: "full", needs: ["Full version (PC/Termux)", "YouTube OAuth: client ID + secret + refresh token (youtube.upload)", "AI key"],
-      honest: "YouTube API se upload ke liye Google OAuth refresh token chahiye aur upload server se hota hai — sirf PC/Termux version. Free quota ≈ 6 uploads/din. Community posts API se nahi hote.",
-      howTo: ["Full version chalao", "'AI Post Writer': SEED + 'Photos / videos to rotate' me video file paths (ya direct .mp4 links)", "Keys page: YouTube + AI", "▶ Run → Daily at → Start schedule"],
-      workflow: flow("YouTube auto-upload (SEED)", "SEED -> AI title/desc/tags -> next video -> YouTube", [
-        start, seedPost("youtube", { mediaList: "# har line pe ek video: file path (PC/Termux) ya direct .mp4 link\nvideos/short1.mp4\nvideos/short2.mp4" }),
-        ["youtube", "Upload to YouTube", { file: "{{ $json.media }}", title: "{{ $json.title }}", description: "{{ $json.description }}", tags: "{{ $json.tags }}", privacy: "private", categoryId: "22" }],
+      title: "YouTube Shorts auto-make + upload from your SEED (AI title, description, tags)", title_hi: "YouTube Shorts auto (SEED se)",
+      summary: "SEED do → har run AI naya title/description/tags likhta hai, Auto Video Maker vertical Short banata hai (ya tumhari list ka agla video) aur YouTube pe upload. Video file maangta nahi.",
+      runsIn: "setup", needs: ["YouTube OAuth: client ID + secret + refresh token (youtube.upload)", "AI key"],
+      honest: "YouTube API ke liye Google OAuth refresh token chahiye. Free quota ≈ 6 uploads/din. Website se bhi upload hota hai (tab khula ho, video WebM/MP4); PC/Termux pe MP4 + AI voice + 24x7. " + VIDEO_HONEST,
+      howTo: ["'AI Post Writer': SEED paste karo (video list khaali chhodo = auto video)", "Keys page: YouTube + AI (+ Pexels/Pixabay key = stock clip background)", "Privacy pehle 'private' rakho, check karke public karo", "▶ Run → Daily at → Start schedule (24x7 ke liye PC/Termux)"],
+      workflow: flow("YouTube Shorts auto-make + upload (SEED)", "SEED -> AI title/desc/tags -> Auto Video Maker -> YouTube Shorts", [
+        start, seedPost("youtube", { mediaList: "# optional: apne videos (file path ya direct .mp4 link). Khaali = Auto Video Maker khud Short banayega" }), videoStep({ script: "{{ $json.description }}", seconds: 30 }),
+        ["youtube", "Upload to YouTube", { file: "{{ $json.videoFile || $json.media }}", title: "{{ $json.title }} #shorts", description: "{{ $json.description }}", tags: "{{ $json.tags }}", privacy: "private", categoryId: "22", firstComment: "" }],
       ]),
     },
     {
@@ -303,7 +305,28 @@ return items.map((it) => {
       workflow: flow("LinkedIn auto-post (SEED)", "SEED -> AI LinkedIn post -> LinkedIn", [start, seedPost("linkedin"), ["linkedinPost", "Post on LinkedIn", { text: "{{ $json.text }}", link: "", visibility: "PUBLIC" }]]),
     },
   ];
+  const V43 = [
+    {
+      id: "daily-funny-video", icon: "film", categories: ["YouTube", "Instagram", "Telegram", "Video"], isNew: true,
+      title: "Daily Funny Video → YouTube Shorts + Instagram Reels + Telegram", title_hi: "Roz ek funny video → YouTube + Insta + Telegram",
+      summary: "Topic do (funny, cats, memes...) → har run ek NAYA copyright-free short video dhundhta hai (Pexels / Pixabay free licence ya tumhare apne clips), edit karta hai (9:16, max 59 s, hook text, end CTA, watermark; English bol-chaal ho to Hindi captions + Hindi voice on PC), AI Hinglish title + description + hashtags + pehla comment likhta hai (credit line apne aap), phir YouTube Shorts + Instagram Reels + Telegram pe upload.",
+      runsIn: "setup", needs: ["Pexels ya Pixabay free API key (Keys page)", "AI key", "YouTube OAuth token / Instagram token / Telegram bot — jo platform chahiye"],
+      honest: "Copyright: " + "Pinterest/dusron ke videos repost = copyright strike, isliye free-license source use hota hai. Pinterest download API deta hi nahi. " + "Pexels/Pixabay licence repost allow karta hai; credit line description me jaati hai. Website pe: video dhundhna + light editing (hook/CTA/watermark) + YouTube + Telegram chalta hai; English → Hindi captions/dub aur Instagram ko edited file sirf PC/Termux pe (website pe Instagram ko original Pexels link jaata hai). Koi platform fail ho to baaki phir bhi chalenge.",
+      howTo: ["Keys page: Pexels key (pexels.com/api) ya Pixabay key (pixabay.com/api/docs) — free, 2 min", "'Free Video Finder' me Topic likho (funny, cats, memes, baarish...) — apne clips bhi daal sakte ho", "Keys page: AI + YouTube / Instagram / Telegram (jo chahiye). Jo platform nahi chahiye uska node delete ya Disable karo", "▶ Run → Daily at 18:00 → Start schedule (24x7 ke liye PC/Termux)"],
+      workflow: flow("Daily Funny Video → YouTube + Instagram + Telegram", "Topic -> free-licence clip -> edit (+Hindi) -> AI title/desc/#tags -> YouTube + Instagram + Telegram", [
+        start,
+        ["stockVideo", "Free Video Finder", { topic: "funny animals", source: "auto", ownClips: "", orientation: "portrait", minSeconds: 5, maxSeconds: 60, fallback: "maker", download: "on", pexelsKey: "", pixabayKey: "" }],
+        seedPost("video", { seed: "Channel: roz ek funny short video. Language: Hinglish, masti bhara, short lines, 2-3 emoji. Video ke content ke hisaab se likho. Credit line kabhi mat hatao.", topic: "{{ $json.topic }} — video: {{ $json.videoInfo || $json.topic }}", tone: "funny, light, relatable" }),
+        videoStep({ mode: "auto", seconds: 15, voice: "off", cta: "Roz naye funny videos — Follow karo" }),
+        ["videoEdit", "Edit: 9:16 + Hindi captions", { input: "{{ $json.videoFile || $json.path || $json.media }}", hook: "{{ $json.title }}", cta: "Roz naye funny videos — Follow karo", watermark: "", maxSeconds: 59, speed: 1, music: "off", musicFile: "", translate: "captions", captionLang: "Hindi", whisperModel: "base", theme: "bold" }],
+        ["youtube", "YouTube Shorts", { file: "{{ $json.videoFile || $json.media }}", title: "{{ $json.title }} #shorts", description: "{{ $json.description }}", tags: "{{ $json.tags }}", privacy: "public", categoryId: "23", firstComment: "{{ $json.comment }}" }, { continueOnFail: true }],
+        ["instagram", "Instagram Reel", { kind: "REELS", mediaUrl: "{{ $json.videoUrl || $json.videoFile || $json.media }}", caption: "{{ $json.text }}", shareToFeed: true, firstComment: "{{ $json.comment }}", userId: "", accessToken: "" }, { continueOnFail: true }],
+        ["telegram", "Telegram video", { operation: "video", text: "{{ $json.text }}", media: "{{ $json.media }}", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }, { continueOnFail: true }],
+      ]),
+    },
+  ];
   P.unshift(...V4);
+  P.unshift(...V43);
   // every project is FREE for now — change tier/price here later to make one paid
   for (const p of P) { p.tier = p.tier || "free"; p.price = p.price || 0; p.currency = p.currency || "INR"; }
   return P;

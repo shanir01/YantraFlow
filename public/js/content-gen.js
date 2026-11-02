@@ -11,6 +11,7 @@
     x: { name: "X (Twitter)", limit: 280, style: "ONE tweet, maximum 270 characters including hashtags, punchy, at most 2 hashtags" },
     linkedin: { name: "LinkedIn", limit: 3000, style: "a LinkedIn post: professional but friendly, hook line, 4-8 short lines with line breaks, 3-5 hashtags at the end, no clickbait" },
     youtube: { name: "YouTube", limit: 5000, style: "YouTube video metadata" },
+    video: { name: "YouTube Shorts + Instagram Reels + Telegram", limit: 2200, style: "short vertical video post (title, caption, description, hashtags, first comment)" },
   };
   const SEED_MAX = 6000; // characters of the seed document sent to the AI
   function words(t) { return String(t || "").toLowerCase().replace(/https?:\/\/\S+/g, " ").replace(/[^\p{L}\p{N}\s#]/gu, " ").split(/\s+/).filter((w) => w.length > 2); }
@@ -44,7 +45,9 @@
       o.greeting && o.platform !== "youtube" ? `It is ${o.greeting.slot} now (${o.greeting.hour}:00 India time). Start the post with a ${o.greeting.slot} greeting, for example "${o.greeting.line}" — you may vary the wording and emoji, but do NOT reuse the opening line of an earlier post. Make the content fit the time of day (${o.greeting.mood}).` : "",
       o.platform === "youtube"
         ? 'Reply ONLY with JSON: {"title":"max 90 characters","description":"2-4 short paragraphs + 3-6 hashtags","tags":"comma, separated, tags"}'
-        : "Reply with ONLY the post text — no quotes, no preface like 'Here is your post'.",
+        : o.platform === "video"
+          ? 'Reply ONLY with JSON: {"title":"catchy title, max 80 characters, no hashtags","caption":"2-4 short fun lines for Instagram Reels / Telegram (start with the time greeting if one is asked)","description":"2-3 short lines for YouTube Shorts","hashtags":"8-12 relevant hashtags incl. #shorts #reels","comment":"one friendly first comment / question that makes people reply"}'
+          : "Reply with ONLY the post text — no quotes, no preface like 'Here is your post'.",
     ].filter(Boolean).join("\n");
     const user = [
       seed ? `SEED DOCUMENT (brand info, topics, style):\n"""\n${seed}\n"""` : "",
@@ -64,7 +67,7 @@
       variants: ["Good Afternoon", "Good afternoon doston", "Dopahar ki chai ke saath", "Afternoon update", "Lunch break vibes", "Namaste, good afternoon"], emoji: ["\u{1F324}\uFE0F", "\u2615", "\u{1F31E}", "\u{1F371}"] },
     evening: { label: "Good Evening", mood: "evening: relaxed, reflective, recap of the day or something to try tonight", words: ["good evening", "evening", "shaam", "sandhya", "शुभ संध्या", "शाम"],
       variants: ["Good Evening", "Shubh sandhya", "Good evening doston", "Shaam ki chai ke saath", "Evening vibes", "Namaste, good evening"], emoji: ["\u{1F307}", "\u{1F306}", "\u2615", "\u2728"] },
-    night: { label: "Good Night", mood: "night: calm wrap-up of the day, a thought to sleep on, plan for tomorrow", words: ["good night", "night", "shubh ratri", "raat", "शुभ रात्रि", "रात"],
+    night: { label: "Good Night", mood: "night: calm wrap-up of the day, a thought to sleep on, plan for tomorrow", words: ["good night", "night", "shubh ratri", "raat", "sone se pehle", "शुभ रात्रि", "रात"],
       variants: ["Good Night", "Shubh ratri", "Good night doston", "Raat ka wrap-up", "Sone se pehle ek baat", "Good night family"], emoji: ["\u{1F319}", "\u2728", "\u{1F30C}", "\u{1F31F}"] },
   };
   function hourIn(date, tz) {
@@ -113,6 +116,21 @@
       const first = t.split("\n")[0].slice(0, 100);
       return { title: first, description: t.slice(0, 4900), tags: "", text: t };
     }
+    if (platform === "video") {
+      let j = null;
+      try { j = JSON.parse(t); } catch (_) { const m = t.match(/\{[\s\S]*\}/); if (m) { try { j = JSON.parse(m[0]); } catch (__) { /* */ } } }
+      if (!j || typeof j !== "object") j = { title: t.split("\n")[0], caption: t, description: t, hashtags: "", comment: "" };
+      const tagList = (Array.isArray(j.hashtags) ? j.hashtags.join(" ") : String(j.hashtags || "")).split(/[\s,]+/).filter(Boolean).map((h) => (h.startsWith("#") ? h : "#" + h)).slice(0, 15);
+      const hashtags = tagList.join(" ");
+      const title = String(j.title || "").replace(/#\S+/g, "").trim().slice(0, 100);
+      const caption = String(j.caption || j.description || title).trim();
+      return {
+        title, caption, hashtags, comment: String(j.comment || "").trim().slice(0, 500),
+        description: `${String(j.description || caption).trim()}${hashtags ? "\n\n" + hashtags : ""}`.slice(0, 4900),
+        tags: tagList.map((h) => h.slice(1)).join(", "),
+        text: `${caption}${hashtags ? "\n\n" + hashtags : ""}`.slice(0, 2200),
+      };
+    }
     t = t.replace(/^(here('| i)s|sure[,!]?)[^\n]*\n+/i, "").replace(/^"([\s\S]*)"$/, "$1").trim();
     const lim = (PLATFORMS[platform] || PLATFORMS.telegram).limit;
     if (t.length > lim) t = t.slice(0, lim - 3).replace(/\s+\S*$/, "") + "...";
@@ -125,5 +143,15 @@
     const i = ((Number(index) || 0) % items.length + items.length) % items.length;
     return { media: items[i], index: i, total: items.length };
   }
-  return { PLATFORMS, similarity, maxSimilarity, pushHistory, buildMessages, parseOutput, pickMedia, cleanSeed, SEED_MAX, REPEAT_LIMIT: 0.6, GREET, timeOfDay, pickGreeting, hasGreeting, ensureGreeting };
+  /* AI Chat / any message node: time greeting + "be unique" instructions (same rules as AI Post Writer) */
+  function greetingFor(history, now) { const tod = timeOfDay(now || new Date(), "Asia/Kolkata"); return Object.assign(tod, pickGreeting(tod.slot, history || [], (now || new Date()).getTime ? (now || new Date()).getTime() : Date.now())); }
+  function greetingSystem(g, history) {
+    const hist = (history || []).slice(-8).map((h, i) => `${i + 1}. ${String(h && h.text !== undefined ? h.text : h).replace(/\s+/g, " ").slice(0, 160)}`);
+    return [
+      g ? `It is ${g.slot} now (${g.hour}:00 India time). Start the message with a ${g.slot} greeting, for example "${g.line}" (vary the wording, never reuse an earlier opening). Fit the content to the time of day (${g.mood}).` : "",
+      "Every message must be NEW and different from the earlier ones (new idea, new words).",
+      hist.length ? `Earlier messages (do not repeat):\n${hist.join("\n")}` : "",
+    ].filter(Boolean).join("\n");
+  }
+  return { greetingFor, greetingSystem, PLATFORMS, similarity, maxSimilarity, pushHistory, buildMessages, parseOutput, pickMedia, cleanSeed, SEED_MAX, REPEAT_LIMIT: 0.6, GREET, timeOfDay, pickGreeting, hasGreeting, ensureGreeting };
 });

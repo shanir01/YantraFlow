@@ -49,8 +49,18 @@
   function setNav(name) { $$(".nav a, .bottomnav a").forEach((a) => a.classList.toggle("on", a.dataset.v === name)); }
   function webBanner() {
     if (B.edition !== "web") return "";
-    return `<div class="banner"><span class="bn-ic">${I("globe", 22)}</span><div style="flex:1;min-width:220px"><b>Web version</b> — works right here in your browser, saved on this device. Webhooks, Folder Watch, YouTube upload, email &amp; file saving need the free <b>full version</b> on your PC or phone (Termux).</div><a class="btn sm primary" href="${REPO}" target="_blank" rel="noopener">${I("download", 16)} Download full version</a></div>`;
+    return `<div class="banner"><span class="bn-ic">${I("globe", 22)}</span><div style="flex:1;min-width:220px"><b>Web version</b> — works right here in your browser, saved on this device. Webhooks, Folder Watch, email &amp; file saving need the free <b>full version</b> on your PC or phone (Termux).</div><a class="btn sm primary" href="${REPO}" target="_blank" rel="noopener">${I("download", 16)} Download full version</a></div>${premiumHtml()}`;
   }
+  // ---------- v4.3: "run on localhost for PREMIUM options" note (website only; admin can hide/reword it; user can dismiss it)
+  const PREM_KEY = "yf_prem_note_x";
+  function premiumHtml(compact) {
+    const C = window.YFSite; if (!C || !C.premiumNote) return "";
+    const RT = window.YFSiteRT; let dismissed = false; try { dismissed = !compact && localStorage.getItem(PREM_KEY) === "1"; } catch (_) { /* */ }
+    const n = C.premiumNote(RT ? RT.settings : {}, B.edition, dismissed);
+    if (!n) return "";
+    return `<div class="prem-note${compact ? " compact" : ""}" role="note"><span class="prem-ic">${I("laptop", 20)}</span><div class="prem-tx"><b>${esc(n.text)}</b><ul>${n.features.map((f) => `<li>${I("circle-check", 13)} ${esc(f)}</li>`).join("")}</ul><a href="${REPO}#-pc--termux-setup" target="_blank" rel="noopener">${I("download", 14)} PC / Termux setup (free)</a></div>${compact ? "" : `<button class="prem-x" type="button" aria-label="Note band karo" title="Band karo">${I("x-close", 16)}</button>`}</div>`;
+  }
+  document.addEventListener("click", (e) => { const x = e.target.closest && e.target.closest(".prem-x"); if (!x) return; try { localStorage.setItem(PREM_KEY, "1"); } catch (_) { /* */ } const box = x.closest(".prem-note"); if (box) box.remove(); });
 
   // ---------- views
   async function viewWorkflows() {
@@ -200,7 +210,7 @@
   const TZS = ["Asia/Kolkata", "Asia/Dubai", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Singapore", "Europe/London", "America/New_York", "UTC"];
   function alwaysOnNote() {
     if (B.alwaysOn) return `<div class="sched-note ok">${I("circle-check", 15)}<span><b>PC/Termux version</b> — schedule 24x7 chalega jab tak YantraFlow on hai (restart ke baad bhi apne aap resume). Termux me pehle <code>termux-wake-lock</code> chalao.</span></div>`;
-    return `<div class="sched-note warn">${I("triangle-alert", 15)}<span><b>Website pe schedule tabhi chalega jab ye tab khula ho.</b> 24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a></span></div>`;
+    return `<div class="sched-note warn">${I("triangle-alert", 15)}<span><b>Website pe schedule tabhi chalega jab ye tab khula ho.</b> 24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a></span></div>${premiumHtml(true)}`;
   }
   function schedPill(info) {
     if (!info || !info.schedule || !info.schedule.enabled) return "";
@@ -704,6 +714,62 @@
     if (a === "del") { if (!ED.wf.id) { location.hash = "#/workflows"; return; } if (confirm(`Delete "${ED.wf.name}"?`)) { await B.deleteWorkflow(ED.wf.id); ED.dirty = false; location.hash = "#/workflows"; } }
   }
 
+
+  // ---------- v4.3: Auto Video Maker — try it right here (same engine the video projects use)
+  async function viewVideoMaker() {
+    setNav("projects");
+    const V = window.YFVideo; const W = window.YFVideoWeb; const YC = window.YFContent;
+    const g = YC.greetingFor([]);
+    const sample = `${g.label} doston!\nAaj ka automation tip: roz ka kaam YantraFlow ko do.\nTelegram, YouTube, Instagram — sab apne aap post.\n100% free, keys sirf tumhare phone pe.\n#automation #yantraflow`;
+    const sup = W ? W.supported() : { ok: false, why: "video maker load nahi hua" };
+    view().innerHTML = `<div class="page"><a class="backlink" href="#/projects">← Projects</a>
+      <div class="hero-h"><div><h1 class="h">Auto <span class="g">Video Maker</span></h1><p class="sub">Text do → vertical Shorts / Reels video (kinetic captions + background + music). Yahi engine YouTube / Instagram / Telegram auto-post projects me har run khud video banata hai.</p></div></div>
+      <div class="note honest">${I("info", 15)} <b>Sach baat:</b> ye template / slide-style video hai (text + gradient / photos / free stock clip + music) — AI camera footage nahi. Website pe browser me banti hai: ${sup.ok ? `<b>${sup.ext.toUpperCase()}</b> banegi` : esc(sup.why)}, tab khula rakho, AI voice nahi. PC/Termux pe ffmpeg se MP4 + AI voice.</div>
+      ${premiumHtml(true)}
+      <div class="two-col vm-grid">
+        <section class="card"><label class="lb" for="vm_t">Hook / title (pehli slide)</label><input class="inp" id="vm_t" maxlength="90" value="Roz ka kaam, apne aap">
+          <label class="lb" for="vm_s">Video text (har line = ek slide; #hashtags / links apne aap hat jaate hain)</label><textarea class="inp" id="vm_s" rows="7">${esc(sample)}</textarea>
+          <div class="two"><div><label class="lb" for="vm_len">Length</label><select class="inp" id="vm_len">${[0, 15, 20, 30, 45, 60].map((n) => `<option value="${n}" ${n === 15 ? "selected" : ""}>${n ? n + " sec" : "Auto"}</option>`).join("")}</select></div>
+          <div><label class="lb" for="vm_th">Style</label><select class="inp" id="vm_th">${Object.keys(V.THEMES).map((k) => `<option value="${k}">${esc(V.THEMES[k].name)}</option>`).join("")}</select></div>
+          <div><label class="lb" for="vm_bg">Background</label><select class="inp" id="vm_bg"><option value="gradient">Animated gradient</option><option value="stock">Free stock clip (Pexels/Pixabay key)</option><option value="photos">Meri photos (links)</option></select></div>
+          <div><label class="lb" for="vm_mu">Music</label><select class="inp" id="vm_mu"><option value="generated">Soft music (free, auto)</option><option value="off">No music</option></select></div>
+          <div><label class="lb" for="vm_sz">Size</label><select class="inp" id="vm_sz"><option value="720x1280">720x1280 (fast)</option><option value="1080x1920">1080x1920 (HD)</option></select></div>
+          <div><label class="lb" for="vm_wm">Watermark</label><input class="inp" id="vm_wm" maxlength="40" placeholder="@mychannel"></div></div>
+          <div id="vm_phw" hidden><label class="lb" for="vm_ph">Photo links (har line ek)</label><textarea class="inp" id="vm_ph" rows="3" placeholder="https://images.pexels.com/..."></textarea></div>
+          <div class="row" style="margin-top:14px"><button class="btn primary big" id="vm_go" ${sup.ok ? "" : "disabled"}>${I("clapperboard", 18)} Video banao</button></div>
+          <div class="vm-prog" id="vm_pr" hidden><div class="vm-bar"><span id="vm_pb"></span></div><small id="vm_pt">Shuru…</small></div></section>
+        <section class="card vm-out"><h3>${I("film", 18)} Preview</h3><div id="vm_out" class="vm-empty">${I("square-play", 40)}<p>Video yahan dikhegi</p></div></section>
+      </div></div>`;
+    $("#vm_bg").onchange = () => { $("#vm_phw").hidden = $("#vm_bg").value !== "photos"; };
+    $("#vm_go").onclick = async () => {
+      const btn = $("#vm_go"); btn.disabled = true; $("#vm_pr").hidden = false;
+      try {
+        const plan = V.planVideo({ script: $("#vm_s").value, title: $("#vm_t").value, seconds: Number($("#vm_len").value), theme: $("#vm_th").value, size: $("#vm_sz").value, watermark: $("#vm_wm").value });
+        let bg = { type: "gradient", urls: [] }; let credit = "";
+        if ($("#vm_bg").value === "photos") bg = { type: "image", urls: V.ownClips($("#vm_ph").value).map((c) => c.url) };
+        if ($("#vm_bg").value === "stock") {
+          const { values } = await B.getCreds();
+          const q = V.stockQuery($("#vm_t").value + " " + $("#vm_s").value.split("\n")[1]);
+          let list = [];
+          const pk = values.pexels && values.pexels.apiKey; const xk = values.pixabay && values.pixabay.apiKey;
+          if (!pk && !xk) throw new Error("Keys page pe Pexels ya Pixabay ki free key daalo (ya Background = gradient)");
+          if (pk) { const r = await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(q)}&per_page=30&orientation=portrait`, { headers: { authorization: pk } }); if (r.ok) list = list.concat(V.normalizePexels(await r.json())); }
+          if (xk) { const r = await fetch(`https://pixabay.com/api/videos/?key=${encodeURIComponent(xk)}&q=${encodeURIComponent(q)}&per_page=30`); if (r.ok) list = list.concat(V.normalizePixabay(await r.json())); }
+          const clip = V.pickClip(list, { minSeconds: 4, maxSeconds: 120 });
+          if (!clip) throw new Error(`"${q}" ke liye stock clip nahi mila — dusra text ya gradient try karo`);
+          bg = { type: "video", urls: [clip.url] }; credit = V.creditLine(clip);
+        }
+        $("#vm_pt").textContent = `Recording… ${plan.duration}s (tab khula rakho)`;
+        const t0 = Date.now();
+        const r = await W.render({ plan, bg, music: $("#vm_mu").value, onProgress: (p) => { $("#vm_pb").style.width = Math.round(p * 100) + "%"; } });
+        const ref = W.put(r.blob, { ext: r.ext }); const url = W.get(ref).url;
+        $("#vm_pb").style.width = "100%"; $("#vm_pt").textContent = `Ready: ${r.seconds}s · ${r.width}x${r.height} · ${(r.bytes / 1048576).toFixed(1)} MB · ${r.ext.toUpperCase()} · ${Math.round((Date.now() - t0) / 1000)}s me bani`;
+        $("#vm_out").className = ""; $("#vm_out").innerHTML = `<video id="vm_vid" src="${url}" controls playsinline loop></video><div class="row" style="margin-top:10px"><a class="btn primary" href="${url}" download="yantraflow-video.${r.ext}">${I("download", 16)} Download ${r.ext.toUpperCase()}</a><a class="btn" href="#/projects">${I("layout-grid", 16)} Auto-post projects</a></div>${credit ? `<p class="meta">${esc(credit)}</p>` : ""}${r.ext !== "mp4" ? `<p class="meta">WebM: Telegram + YouTube le lete hain. Instagram ke liye MP4 chahiye — PC/Termux version.</p>` : ""}`;
+        window.YF_LAST_VIDEO = { ref, ext: r.ext, bytes: r.bytes, seconds: r.seconds, type: r.type };
+      } catch (e) { toast(e.message, "err"); $("#vm_pt").textContent = e.message; }
+      btn.disabled = false;
+    };
+  }
   // ---------- router
   let current = "";
   async function route() {
@@ -732,6 +798,7 @@
       else if (v === "keys") await viewKeys();
       else if (v === "admin") await PV.admin(id);
       else if (v === "videos") await PV.videos();
+      else if (v === "video-maker") await viewVideoMaker();
       else await viewWorkflows();
     } catch (e) {
       if (e && e.locked) return;
@@ -762,7 +829,7 @@
     }
     route();
   }
-  window.YFApp = { get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
+  window.YFApp = { premiumHtml, get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
 
   async function boot() {
     if (location.hash.startsWith("#/share/")) sessionStorage.setItem("yf_share", location.hash);

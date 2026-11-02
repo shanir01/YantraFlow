@@ -59,7 +59,7 @@
 
 
   // ---- v4: link preview, uploads, AI helper
-  const LP = window.YFLinkPreview; const YC = window.YFContent;
+  const LP = window.YFLinkPreview; const YC = window.YFContent; const YV = window.YFVideo;
   const tgOk = (r) => r && r.ok && !(r.data && r.data.ok === false);
   const tgDesc = (r) => s(r && r.data && (r.data.description || r.data.error)) || s(r && r.data);
   async function tgCall(token, method, fields, file) {
@@ -119,6 +119,20 @@
     for (const u of via) { try { const f = await blobOf(await fetch(u), u); if (f.blob.size > 0) { f.name = "preview.jpg"; return f; } } catch (e) { last = e.message; } }
     throw new Error(`photo download nahi hui (${last})`);
   }
+  async function stockSearch(ctx, q, src, orientation) {
+    const pk = s(ctx.p("pexelsKey", 0) || (ctx.settings.pexels || {}).apiKey).trim(); const xk = s(ctx.p("pixabayKey", 0) || (ctx.settings.pixabay || {}).apiKey).trim();
+    const list = []; const errs = [];
+    if ((src === "auto" || src === "pexels") && pk) {
+      const r = await http(`${window.YF_PEXELS_API || "https://api.pexels.com"}/videos/search?query=${encodeURIComponent(q)}&per_page=40&page=${1 + Math.floor(Math.random() * 3)}${orientation === "portrait" ? "&orientation=portrait" : ""}`, { headers: { authorization: pk } }).catch((e) => ({ ok: false, status: 0, data: e.message }));
+      if (r.ok) list.push(...YV.normalizePexels(r.data)); else errs.push(apiError("Pexels", r).message);
+    }
+    if ((src === "auto" || src === "pixabay") && xk) {
+      const r = await http(`${window.YF_PIXABAY_API || "https://pixabay.com"}/api/videos/?key=${encodeURIComponent(xk)}&q=${encodeURIComponent(q.slice(0, 100))}&per_page=50&safesearch=true`).catch((e) => ({ ok: false, status: 0, data: e.message }));
+      if (r.ok) list.push(...YV.normalizePixabay(r.data)); else errs.push(apiError("Pixabay", r).message);
+    }
+    if (!pk && !xk && src !== "own") errs.push("Pexels / Pixabay key nahi hai — Keys page pe free key daalo (2 min ka kaam)");
+    return { list, errs };
+  }
   async function aiComplete(ctx, i, messages, opt) {
     const st = ctx.settings.ai || {};
     const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
@@ -169,7 +183,11 @@
       const st = ctx.settings.ai || {}; const out = [];
       for (let i = 0; i < ctx.items.length; i++) {
         const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
-        const messages = []; const sys = s(ctx.p("system", i)); if (sys) messages.push({ role: "system", content: sys });
+        const greetOn = ctx.raw.timeGreeting === "on"; const HK = "yf_" + (window.YF_NS || "") + "posthist";
+        let hall = {}; if (greetOn) { try { hall = JSON.parse(localStorage.getItem(HK) || "{}"); } catch (_) { hall = {}; } }
+        const hkey = `${(ctx.workflow && ctx.workflow.id) || "wf"}:${(ctx.node && ctx.node.id) || "n"}`; const hrec = hall[hkey] || { posts: [] };
+        const greet = greetOn ? YC.greetingFor(hrec.posts) : null;
+        const messages = []; const sys = [s(ctx.p("system", i)), greet ? YC.greetingSystem(greet, hrec.posts) : ""].filter(Boolean).join("\n"); if (sys) messages.push({ role: "system", content: sys });
         messages.push({ role: "user", content: need(ctx.p("prompt", i), "Prompt") });
         const pick = AIM.pickModel(base, s(ctx.p("model", i) || st.model));
         const badM = AIM.badModel && AIM.badModel(base, pick.model); if (badM) throw new Error(badM);
@@ -179,7 +197,9 @@
         } catch (e) { throw new Error(`Could not reach the AI at ${base}. Start FreeLLM-Router on this device, or set an online OpenAI-compatible Base URL + key on the Keys page (e.g. https://api.groq.com/openai/v1).`); }
         if (!r.ok) { const e = apiError("AI", r); const f = AIM.modelError(base, pick.model, r.status, e.message.replace(/^AI answered \d+: /, "")); throw f ? new Error(f) : e; }
         const c = r.data && r.data.choices && r.data.choices[0];
-        out.push({ ...ctx.items[i], text: s(c && c.message && c.message.content).trim(), model: (r.data && r.data.model) || pick.model, usage: (r.data && r.data.usage) || null });
+        let text = s(c && c.message && c.message.content).trim();
+        if (greet && text) { text = YC.ensureGreeting(text, greet.slot, greet); hrec.posts = YC.pushHistory(hrec.posts, { text, at: new Date().toISOString() }, 20); hall[hkey] = hrec; try { localStorage.setItem(HK, JSON.stringify(hall)); } catch (_) { /* */ } }
+        out.push({ ...ctx.items[i], text, model: (r.data && r.data.model) || pick.model, usage: (r.data && r.data.usage) || null, ...(greet ? { timeOfDay: greet.slot } : {}) });
       }
       return one(out);
     },
@@ -207,11 +227,13 @@
           if (!r) { r = await tgCall(token, "sendMessage", { chat_id: chatId, text: own ? text.slice(0, 4096) : LP.caption(preview, 4096), parse_mode: capPm, link_preview_options: { url: link, prefer_large_media: true, show_above_text: true } }); via = "message+preview"; }
         } else {
           const media = need(ctx.p("media", i), "Media URL");
-          if (!/^https?:\/\//.test(media)) throw new Error("Web version can send media by link only. Local files need the full version (PC/Termux).");
           const method = { photo: "sendPhoto", video: "sendVideo", document: "sendDocument" }[op];
           const fields = { chat_id: chatId, caption: text.slice(0, 1024) || undefined, parse_mode: pm };
-          if (mode !== "upload") { r = await tgCall(token, method, { ...fields, [op]: media }); via = "url"; }
-          if (mode === "upload" || (mode === "auto" && !tgOk(r) && r.status === 400 && LP.TG_URL_FAIL.test(tgDesc(r)))) {
+          const made = window.YFVideoWeb && window.YFVideoWeb.get(media);
+          if (made) { r = await tgCall(token, method, Object.assign({}, fields, op === "video" ? { supports_streaming: true } : {}), { field: op, blob: made.blob, name: `yantraflow-video.${made.ext || "mp4"}` }); via = "upload"; }
+          else if (!/^https?:\/\//.test(media)) throw new Error("Web version can send media by link only (or a video made by Auto Video Maker). Local files need the full version (PC/Termux).");
+          if (made) { /* sent */ } else if (mode !== "upload") { r = await tgCall(token, method, { ...fields, [op]: media }); via = "url"; }
+          if (!made && (mode === "upload" || (mode === "auto" && !tgOk(r) && r.status === 400 && LP.TG_URL_FAIL.test(tgDesc(r))))) {
             const f = op === "photo" ? await downloadImage(media, ctx.settings) : await downloadDirect(media);
             r = await tgCall(token, method, fields, { field: op, blob: f.blob, name: f.name }); via = "upload";
           }
@@ -256,22 +278,132 @@
         }
         const pmd = YC.pickMedia(ctx.p("mediaList", i), rec.mediaIndex); if (pmd.total) rec.mediaIndex = pmd.index + 1;
         rec.posts = YC.pushHistory(rec.posts, { text: res.text, at: new Date().toISOString() }, Number(ctx.raw.history) || 20);
-        out.push({ ...ctx.items[i], ...res, platform, timeOfDay: greeting ? greeting.slot : "", media: pmd.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
+        const credit = s(ctx.items[i].credit);
+        if (credit && res.text && platform !== "x") { res.description = YV.addCredit(res.description || "", credit); if (platform !== "youtube") res.text = YV.addCredit(res.text, credit); }
+        if (platform === "video") res.caption = res.text;
+        out.push({ ...ctx.items[i], ...res, platform, topicUsed: s(ctx.p("topic", i)), timeOfDay: greeting ? greeting.slot : "", media: pmd.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
       }
       all[key] = rec; try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { /* storage full */ }
+      return one(out);
+    },
+
+    /* ---- v4.3 video: free-licence finder, Auto Video Maker, Video Editor, YouTube upload from the browser */
+    stockVideo: async (ctx) => {
+      const KEY = "yf_" + (window.YF_NS || "") + "videohist"; let all = {}; try { all = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (_) { all = {}; }
+      const key = `${(ctx.workflow && ctx.workflow.id) || "wf"}:${ctx.node.id}`; const rec = all[key] || { used: [] }; const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const topic = s(ctx.p("topic", i)).trim() || "funny animals"; const q = YV.stockQuery(topic); const src = ctx.raw.source || "auto";
+        const opt = { used: rec.used, minSeconds: Number(ctx.raw.minSeconds) || 0, maxSeconds: Number(ctx.raw.maxSeconds) || 60, orientation: ctx.raw.orientation || "portrait" };
+        const found = src === "own" ? { list: [], errs: [] } : await stockSearch(ctx, q, src, opt.orientation);
+        let clip = YV.pickClip(found.list, opt);
+        if (!clip && found.list.length && rec.used.length) { rec.used = []; clip = YV.pickClip(found.list, Object.assign(opt, { used: [] })); }
+        if (!clip) { const own = YV.ownClips(ctx.p("ownClips", i)).filter((c) => /^https?:/i.test(c.url)); clip = own.length ? own[Math.floor(Math.random() * own.length)] : null; }
+        if (!clip) {
+          const why = found.errs.join(" · ") || `"${q}" ke liye koi naya video nahi mila`;
+          if ((ctx.raw.fallback || "maker") === "error") throw new Error(why);
+          ctx.log(`No free video found (${why}) — Auto Video Maker will make one`);
+          out.push({ ...ctx.items[i], topic, query: q, media: "", needsMaker: true, videoSource: "none", fallbackReason: why }); continue;
+        }
+        rec.used = rec.used.concat([clip.id]).slice(-300);
+        out.push({ ...ctx.items[i], topic, query: q, media: clip.url, videoUrl: /^https:/i.test(clip.url) ? clip.url : "", credit: YV.creditLine(clip), videoSource: clip.source,
+          videoInfo: [clip.tags, clip.author && `by ${clip.author}`].filter(Boolean).join(", "), clip: { id: clip.id, page: clip.pageUrl, author: clip.author, license: clip.license, seconds: clip.duration, width: clip.width, height: clip.height } });
+      }
+      all[key] = rec; try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { /* */ }
+      return one(out);
+    },
+    videoMaker: async (ctx) => {
+      const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const it = ctx.items[i]; const mode = ctx.raw.mode || "auto"; const incoming = s(it.videoFile || it.media || it.path);
+        if (mode === "off") { out.push({ ...it }); continue; }
+        if (mode === "own" || (mode === "auto" && !it.needsMaker && YV.looksVideo(incoming))) { if (!incoming) throw new Error("Video source = own, par koi video link nahi mila"); out.push({ ...it, media: incoming, videoBy: "own" }); continue; }
+        if (!window.YFVideoWeb) throw new Error("Video maker is page me load nahi hua — page refresh karo");
+        const planInput = { script: s(ctx.p("script", i)), title: s(ctx.p("title", i)), seconds: Number(ctx.p("seconds", i)) || 0, theme: ctx.raw.theme, size: ctx.raw.size, cta: s(ctx.p("cta", i)), watermark: s(ctx.p("watermark", i)) };
+        if (!YV.splitScript(planInput.script).length && !planInput.title.trim()) throw new Error("Video ke liye text khaali hai — pehle AI Post Writer step lagao ya 'Video text' bharo");
+        const plan = YV.planVideo(planInput);
+        let bg = { type: "gradient", urls: [] }; let credit = "";
+        const bgMode = ctx.raw.background || "auto";
+        const photos = YV.ownClips(ctx.p("photos", i)).map((c) => c.url).filter((u) => /^https?:|^blob:/i.test(u));
+        if (/\.(jpe?g|png|webp)(\?|$)/i.test(incoming) && !photos.length) photos.push(incoming);
+        if ((bgMode === "photos" || bgMode === "auto") && photos.length) bg = { type: YV.looksVideo(photos[0]) ? "video" : "image", urls: photos };
+        else if (bgMode === "stock" || bgMode === "auto") {
+          const f = await stockSearch(ctx, YV.stockQuery(s(ctx.p("bgQuery", i)) || plan.title || "abstract"), "auto", "portrait");
+          const clip = YV.pickClip(f.list, { minSeconds: 4, maxSeconds: 120 });
+          if (clip) { bg = { type: "video", urls: [clip.url] }; credit = YV.creditLine(clip); }
+          else if (bgMode === "stock") throw new Error(f.errs.join(" · ") || "Stock clip nahi mila");
+        }
+        if (ctx.raw.voice && ctx.raw.voice !== "off") ctx.log("AI voice website pe nahi lagti (browser limit) — PC/Termux version me edge-tts voice milti hai. Music ke saath video ban rahi hai.");
+        const music = ctx.raw.music === "off" ? "off" : ctx.raw.music === "file" ? s(ctx.p("musicFile", i)) || "generated" : "generated";
+        ctx.log(`Video record ho rahi hai (${plan.duration}s) — tab khula rakho`);
+        const r = await window.YFVideoWeb.render({ plan, bg, music });
+        const ref = window.YFVideoWeb.put(r.blob, { ext: r.ext, seconds: r.seconds });
+        const res = { ...it, media: ref, videoFile: ref, videoType: r.ext, videoSeconds: r.seconds, videoBytes: r.bytes, videoPreview: window.YFVideoWeb.get(ref).url, videoBy: "YantraFlow Auto Video Maker (website)", needsMaker: false };
+        if (credit) { res.credit = YV.addCredit(s(it.credit), credit); res.description = YV.addCredit(s(it.description), credit); }
+        if (r.ext !== "mp4") ctx.log("Is browser ne WebM banaya — Telegram + YouTube le lete hain; Instagram ke liye MP4 chahiye (PC/Termux version ya naya Chrome).");
+        out.push(res);
+      }
+      return one(out);
+    },
+    videoEdit: async (ctx) => {
+      const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const it = ctx.items[i]; const input = s(ctx.p("input", i)).trim();
+        if (!input) { ctx.log("No video to edit — passing through"); out.push({ ...it }); continue; }
+        const made = window.YFVideoWeb && window.YFVideoWeb.get(input);
+        const src = made ? made.url : input;
+        if (!/^https?:|^blob:/i.test(src)) throw new Error("Website pe sirf video link edit hota hai — file ke liye PC/Termux version");
+        if ((ctx.raw.translate || "captions") !== "off") ctx.log("English -> Hindi captions/dub sirf PC/Termux version me (website pe awaaz sunke translate nahi hota). Baaki editing ho rahi hai.");
+        let r;
+        try { r = await window.YFVideoWeb.render({ edit: { clip: src, hook: s(ctx.p("hook", i)), cta: s(ctx.p("cta", i)), watermark: s(ctx.p("watermark", i)), maxSeconds: Number(ctx.raw.maxSeconds) || 59, speed: Number(ctx.raw.speed) || 1, theme: ctx.raw.theme }, music: ctx.raw.music === "generated" ? "generated" : ctx.raw.music === "file" ? s(ctx.p("musicFile", i)) : "off" }); }
+        catch (e) { ctx.log(`Edit skipped (${e.message}) — original clip jayegi`); out.push({ ...it }); continue; }
+        const ref = window.YFVideoWeb.put(r.blob, { ext: r.ext, seconds: r.seconds });
+        out.push({ ...it, media: ref, videoFile: ref, videoType: r.ext, videoSeconds: r.seconds, videoPreview: window.YFVideoWeb.get(ref).url, edited: { web: true, captions: 0, dubbed: false } });
+      }
+      return one(out);
+    },
+    youtube: async (ctx) => {
+      const st = ctx.settings.youtube || {}; const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const file = need(ctx.p("file", i), "Video");
+        const made = window.YFVideoWeb && window.YFVideoWeb.get(file);
+        let blob;
+        if (made) blob = made.blob;
+        else if (/^https?:/i.test(file)) blob = (await downloadDirect(file)).blob;
+        else throw new Error("Website se YouTube pe Auto Video Maker wali video ya direct video link hi jaata hai. Phone/PC ki file ke liye PC/Termux version.");
+        const tok = await http(window.YF_GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token", { method: "POST", body: new URLSearchParams({ client_id: need(st.clientId, "YouTube client ID"), client_secret: need(st.clientSecret, "YouTube client secret"), refresh_token: need(st.refreshToken, "YouTube refresh token"), grant_type: "refresh_token" }) });
+        if (!tok.ok || !tok.data || !tok.data.access_token) throw apiError("Google login", tok);
+        let tags = ctx.p("tags", i); tags = Array.isArray(tags) ? tags : s(tags).split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean);
+        const meta = { snippet: { title: need(ctx.p("title", i), "Title").slice(0, 100), description: s(ctx.p("description", i)).slice(0, 5000), tags: tags.slice(0, 30), categoryId: s(ctx.raw.categoryId || "22") }, status: { privacyStatus: ctx.raw.privacy || "private", selfDeclaredMadeForKids: false } };
+        const UP = window.YF_YOUTUBE_UPLOAD || "https://www.googleapis.com/upload/youtube/v3/videos";
+        let init; try { init = await fetch(`${UP}?uploadType=resumable&part=snippet,status`, { method: "POST", headers: { authorization: `Bearer ${tok.data.access_token}`, "content-type": "application/json; charset=UTF-8", "x-upload-content-type": blob.type || "video/*", "x-upload-content-length": String(blob.size) }, body: JSON.stringify(meta) }); }
+        catch (e) { throw new Error("YouTube tak browser nahi pahunch paaya: " + e.message); }
+        if (!init.ok) throw apiError("YouTube (start upload)", { status: init.status, data: await init.text().then((t) => { try { return JSON.parse(t); } catch (_) { return t; } }) });
+        const loc = init.headers.get("location"); if (!loc) throw new Error("YouTube did not return an upload URL (browser ko 'location' header nahi mila) — PC/Termux version se upload karo");
+        const up = await http(loc, { method: "PUT", headers: { "content-type": blob.type || "video/*" }, body: blob });
+        if (!up.ok) throw apiError("YouTube (upload)", up);
+        const yt = { ok: true, videoId: up.data.id, url: `https://youtu.be/${up.data.id}`, privacy: meta.status.privacyStatus, from: "website" };
+        const cm = s(ctx.p("firstComment", i)).trim();
+        if (cm) { const r2 = await http(`${window.YF_YOUTUBE_API || "https://www.googleapis.com/youtube/v3"}/commentThreads?part=snippet`, { method: "POST", headers: { authorization: `Bearer ${tok.data.access_token}`, "content-type": "application/json" }, body: JSON.stringify({ snippet: { videoId: up.data.id, topLevelComment: { snippet: { textOriginal: cm } } } }) }).catch((e) => ({ ok: false, data: e.message })); if (r2.ok) yt.commentId = r2.data && r2.data.id; else { yt.commentError = apiError("YouTube (comment)", r2).message; ctx.log("Upload done, first comment failed (needs youtube.force-ssl scope)"); } }
+        out.push({ ...ctx.items[i], youtube: yt });
+      }
       return one(out);
     },
     instagram: async (ctx) => {
       const st = ctx.settings.instagram || {}; const out = []; const G = "https://graph.facebook.com/v21.0";
       for (let i = 0; i < ctx.items.length; i++) {
         const uid = need(ctx.p("userId", i) || st.userId, "Instagram user ID"); const token = need(ctx.p("accessToken", i) || st.accessToken, "Instagram access token");
-        const url = need(ctx.p("mediaUrl", i), "Media URL"); if (!/^https:\/\//.test(url)) throw new Error("Instagram needs a PUBLIC https:// media URL.");
+        const url = need(ctx.p("mediaUrl", i), "Media URL");
+        if (/^yfvideo:/.test(url)) throw new Error("Website pe bani video Instagram ko seedha nahi ja sakti — Instagram ko PUBLIC https link chahiye. Free Video Finder wala Pexels/Pixabay link seedha jaata hai; apni banayi video ke liye PC/Termux version (wo file khud upload karta hai).");
+        if (!/^https:\/\//.test(url)) throw new Error("Instagram needs a PUBLIC https:// media URL.");
         const kind = ctx.raw.kind || "REELS"; const p = new URLSearchParams({ caption: s(ctx.p("caption", i)).slice(0, 2200), access_token: token });
         if (kind === "IMAGE") p.set("image_url", url); else { p.set("media_type", "REELS"); p.set("video_url", url); }
         const c = await http(`${G}/${uid}/media`, { method: "POST", body: p }); if (!c.ok) throw apiError("Instagram (create)", c);
         for (let k = 0; k < 60; k++) { const q = await http(`${G}/${c.data.id}?fields=status_code&access_token=${encodeURIComponent(token)}`); const code = q.data && q.data.status_code; if (code === "FINISHED" || (kind === "IMAGE" && !code)) break; if (code === "ERROR") throw new Error("Instagram could not process the media"); await sleep(5000); }
         const pub = await http(`${G}/${uid}/media_publish`, { method: "POST", body: new URLSearchParams({ creation_id: c.data.id, access_token: token }) }); if (!pub.ok) throw apiError("Instagram (publish)", pub);
-        out.push({ ...ctx.items[i], instagram: { ok: true, mediaId: pub.data.id } });
+        const ig = { ok: true, mediaId: pub.data.id };
+        const cm = s(ctx.p("firstComment", i)).trim();
+        if (cm) { const r2 = await http(`${G}/${pub.data.id}/comments`, { method: "POST", body: new URLSearchParams({ message: cm.slice(0, 2200), access_token: token }) }).catch((e) => ({ ok: false, data: e.message })); if (r2.ok) ig.commentId = r2.data && r2.data.id; else { ig.commentError = apiError("Instagram (comment)", r2).message; ctx.log("Post done, first comment failed"); } }
+        out.push({ ...ctx.items[i], instagram: ig });
       }
       return one(out);
     },

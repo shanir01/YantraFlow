@@ -45,6 +45,10 @@
         { key: "authorUrn", label: "Author URN (optional)", placeholder: "blank = auto (urn:li:person:…)" },
         { key: "version", label: "API version (YYYYMM)", placeholder: "202610" },
       ] },
+    { id: "pexels", title: "Pexels (free stock videos)", icon: "film", help: "Free key: pexels.com/api → Get Started → login → app ka naam (YantraFlow) likho → API key copy. Free: 200 requests/ghanta, 20,000/mahina. Videos free licence (repost allowed). Auto Video Maker background + Daily Funny Video project me use hota hai.",
+      fields: [{ key: "apiKey", label: "Pexels API key", secret: true, placeholder: "563492ad6f9170000100000…" }] },
+    { id: "pixabay", title: "Pixabay (free stock videos)", icon: "film", help: "Free key: pixabay.com pe account banao → pixabay.com/api/docs kholo → 'Parameters' ke paas tumhari key dikhegi (key=…) → copy. Free: 100 requests/minute. Pixabay Content License (repost allowed).",
+      fields: [{ key: "apiKey", label: "Pixabay API key", secret: true, placeholder: "12345678-abcdef…" }] },
     { id: "linkpreview", title: "Link preview (website only)", icon: "link", help: "Website pe link ka preview padhne ke liye: khaali = free public service (microlink.io, ~50 links/din, no key). Apna unlimited chahiye to Supabase Edge Function deploy karo (README → v4 → Link preview proxy) aur uska URL yahan daalo. PC/Termux version ko iski zaroorat nahi.",
       fields: [
         { key: "proxyUrl", label: "Your proxy URL (optional)", placeholder: "https://<project>.supabase.co/functions/v1/link-preview" },

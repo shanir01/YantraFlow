@@ -431,6 +431,17 @@ window.YF_NODE_META = [
     "label": "API key (blank = use Keys page)",
     "type": "secret",
     "default": ""
+   },
+   {
+    "key": "timeGreeting",
+    "label": "Time greeting + unique message",
+    "type": "select",
+    "options": [
+     "off",
+     "on"
+    ],
+    "default": "off",
+    "help": "on = message time ke hisaab se shuru: Good Morning (5-12) / Afternoon (12-17) / Evening (17-21) / Night (21-5), India time. Har run naya message, pichhle messages repeat nahi. Auto-message projects me ON hai."
    }
   ],
   "type": "aiChat",
@@ -453,9 +464,11 @@ window.YF_NODE_META = [
      "instagram",
      "x",
      "linkedin",
-     "youtube"
+     "youtube",
+     "video"
     ],
-    "default": "telegram"
+    "default": "telegram",
+    "help": "video = Shorts/Reels: title + caption + description + hashtags + first comment (Daily video project)."
    },
    {
     "key": "autoGenerate",
@@ -555,6 +568,389 @@ window.YF_NODE_META = [
   "icon": "sprout",
   "color": "#22c55e",
   "description": "Writes a NEW post every run for Telegram / Instagram / X / LinkedIn / YouTube from your SEED document. Remembers the last posts so it never repeats."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "topic",
+    "label": "Topic",
+    "type": "text",
+    "default": "funny animals",
+    "placeholder": "funny, cats, memes, baarish, gym..."
+   },
+   {
+    "key": "source",
+    "label": "Source",
+    "type": "select",
+    "options": [
+     "auto",
+     "pexels",
+     "pixabay",
+     "own"
+    ],
+    "default": "auto",
+    "help": "auto = Pexels + Pixabay (jiski key ho). own = sirf neeche wale tumhare apne clips."
+   },
+   {
+    "key": "ownClips",
+    "label": "My own clips (one link or file path per line)",
+    "type": "textarea",
+    "default": "",
+    "help": "Apne banaye / license wale clips. auto me tab use honge jab Pexels/Pixabay kuch na de."
+   },
+   {
+    "key": "orientation",
+    "label": "Shape",
+    "type": "select",
+    "options": [
+     "portrait",
+     "any"
+    ],
+    "default": "portrait"
+   },
+   {
+    "key": "minSeconds",
+    "label": "Min seconds",
+    "type": "number",
+    "default": 5
+   },
+   {
+    "key": "maxSeconds",
+    "label": "Max seconds",
+    "type": "number",
+    "default": 60
+   },
+   {
+    "key": "fallback",
+    "label": "Kuch na mile to",
+    "type": "select",
+    "options": [
+     "maker",
+     "error"
+    ],
+    "default": "maker",
+    "help": "maker = agle Auto Video Maker step se slide video ban jayegi."
+   },
+   {
+    "key": "download",
+    "label": "Download file (PC/Termux)",
+    "type": "select",
+    "options": [
+     "on",
+     "off"
+    ],
+    "default": "on",
+    "help": "YouTube upload + editing ke liye file chahiye."
+   },
+   {
+    "key": "pexelsKey",
+    "label": "Pexels API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   },
+   {
+    "key": "pixabayKey",
+    "label": "Pixabay API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "stockVideo",
+  "label": "Free Video Finder (Pexels / Pixabay)",
+  "group": "Video",
+  "icon": "film",
+  "color": "#14b8a6",
+  "description": "Topic do (funny, cats, memes...) -> har run ek NAYA free-licence short video dhundhta hai (Pexels / Pixabay — repost allowed) ya tumhare apne clips. Credit line apne aap. Copyright strike se bachne ke liye dusron ke Pinterest/Insta/YouTube videos nahi uthata."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "mode",
+    "label": "Video source",
+    "type": "select",
+    "options": [
+     "auto",
+     "make",
+     "own",
+     "off"
+    ],
+    "default": "auto",
+    "help": "auto = pichhle step me video (apni file/link) ho to wahi, warna nayi video banao. make = hamesha nayi. own = sirf apni file/link. off = video nahi (text post)."
+   },
+   {
+    "key": "script",
+    "label": "Video text (script)",
+    "type": "textarea",
+    "default": "{{ $json.caption || $json.text || $json.description }}",
+    "help": "Hashtags / links apne aap hat jaate hain. Har line = ek slide."
+   },
+   {
+    "key": "title",
+    "label": "Hook / title (first slide)",
+    "type": "text",
+    "default": "{{ $json.title }}"
+   },
+   {
+    "key": "seconds",
+    "label": "Length (15-60 s, 0 = auto)",
+    "type": "number",
+    "default": 0
+   },
+   {
+    "key": "background",
+    "label": "Background",
+    "type": "select",
+    "options": [
+     "auto",
+     "stock",
+     "photos",
+     "gradient"
+    ],
+    "default": "auto",
+    "help": "auto = Pexels/Pixabay key ho to free stock clip, warna animated gradient. photos = neeche apni photos."
+   },
+   {
+    "key": "bgQuery",
+    "label": "Stock background search (English)",
+    "type": "text",
+    "default": "{{ $json.topicUsed || $json.topic }}",
+    "placeholder": "motivation, city, nature..."
+   },
+   {
+    "key": "photos",
+    "label": "My photos / clips (one link or path per line)",
+    "type": "textarea",
+    "default": ""
+   },
+   {
+    "key": "voice",
+    "label": "AI voice (PC/Termux)",
+    "type": "select",
+    "options": [
+     "off",
+     "auto",
+     "edge",
+     "espeak"
+    ],
+    "default": "off",
+    "help": "edge = free natural voice (pip install edge-tts, internet). espeak = offline robotic. Website pe voice nahi lagti (browser limit)."
+   },
+   {
+    "key": "voiceLang",
+    "label": "Voice language",
+    "type": "select",
+    "options": [
+     "Hinglish",
+     "Hindi",
+     "English"
+    ],
+    "default": "Hinglish"
+   },
+   {
+    "key": "music",
+    "label": "Music",
+    "type": "select",
+    "options": [
+     "generated",
+     "file",
+     "off"
+    ],
+    "default": "generated",
+    "help": "generated = YantraFlow khud soft royalty-free music banata hai. file = apni music (link ya file path) neeche."
+   },
+   {
+    "key": "musicFile",
+    "label": "Music file / link (royalty-free)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "theme",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "bold",
+     "neon",
+     "sunset",
+     "clean"
+    ],
+    "default": "bold"
+   },
+   {
+    "key": "watermark",
+    "label": "Watermark / handle",
+    "type": "text",
+    "default": "",
+    "placeholder": "@mychannel"
+   },
+   {
+    "key": "cta",
+    "label": "End text (CTA)",
+    "type": "text",
+    "default": "Like + Follow karo"
+   },
+   {
+    "key": "size",
+    "label": "Size",
+    "type": "select",
+    "options": [
+     "1080x1920",
+     "720x1280"
+    ],
+    "default": "1080x1920"
+   },
+   {
+    "key": "pexelsKey",
+    "label": "Pexels API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   },
+   {
+    "key": "pixabayKey",
+    "label": "Pixabay API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "videoMaker",
+  "label": "Auto Video Maker (Shorts / Reels)",
+  "group": "Video",
+  "icon": "clapperboard",
+  "color": "#f43f5e",
+  "description": "Har run khud vertical video banata hai (1080x1920, 15-60 s): AI ke text se kinetic captions + photo / free stock clip / gradient background + music (+ voice on PC). Template / slide-style video hai — camera footage nahi. PC/Termux = MP4 (ffmpeg). Website = browser me banti hai."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "input",
+    "label": "Video file / link",
+    "type": "text",
+    "default": "{{ $json.videoFile || $json.path || $json.media }}"
+   },
+   {
+    "key": "hook",
+    "label": "Hook text (first 3 s, top)",
+    "type": "text",
+    "default": "{{ $json.title }}"
+   },
+   {
+    "key": "cta",
+    "label": "End text (last 3 s)",
+    "type": "text",
+    "default": "Follow karo roz naye videos ke liye"
+   },
+   {
+    "key": "watermark",
+    "label": "Watermark / handle",
+    "type": "text",
+    "default": "",
+    "placeholder": "@mychannel"
+   },
+   {
+    "key": "maxSeconds",
+    "label": "Max length (s)",
+    "type": "number",
+    "default": 59
+   },
+   {
+    "key": "speed",
+    "label": "Speed (0.5 - 2)",
+    "type": "number",
+    "default": 1
+   },
+   {
+    "key": "music",
+    "label": "Music",
+    "type": "select",
+    "options": [
+     "off",
+     "generated",
+     "file"
+    ],
+    "default": "off"
+   },
+   {
+    "key": "musicFile",
+    "label": "Music file / link (royalty-free)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "translate",
+    "label": "English -> Hindi",
+    "type": "select",
+    "options": [
+     "off",
+     "captions",
+     "captions+dub"
+    ],
+    "default": "captions",
+    "help": "PC/Termux: faster-whisper sunta hai (pip install faster-whisper), AI Hindi me badalta hai, captions video pe. +dub = Hindi AI voice (edge-tts), original awaaz dheemi. Clip me English bol-chaal na ho to skip."
+   },
+   {
+    "key": "captionLang",
+    "label": "Caption language",
+    "type": "select",
+    "options": [
+     "Hindi",
+     "Hinglish"
+    ],
+    "default": "Hindi"
+   },
+   {
+    "key": "whisperModel",
+    "label": "Speech model (tiny = fast, base = better)",
+    "type": "select",
+    "options": [
+     "tiny",
+     "base",
+     "small"
+    ],
+    "default": "base"
+   },
+   {
+    "key": "theme",
+    "label": "Colours",
+    "type": "select",
+    "options": [
+     "bold",
+     "neon",
+     "sunset",
+     "clean"
+    ],
+    "default": "bold"
+   },
+   {
+    "key": "model",
+    "label": "AI model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "AI Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "AI API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "videoEdit",
+  "label": "Video Editor (9:16, trim, Hindi captions)",
+  "group": "Video",
+  "icon": "scissors",
+  "color": "#f97316",
+  "description": "Clip ko Shorts/Reels ready banata hai: 9:16 crop, max 60 s trim, speed, hook text upar, end CTA, watermark, music. English bol-chaal ho to Hindi/Hinglish captions + optional Hindi voice dub (PC/Termux)."
  },
  {
   "inputs": 1,
@@ -672,9 +1068,10 @@ window.YF_NODE_META = [
    },
    {
     "key": "mediaUrl",
-    "label": "Public video / image URL",
+    "label": "Video / image (public URL, or a file on PC/Termux)",
     "type": "text",
-    "default": "{{ $json.videoUrl }}"
+    "default": "{{ $json.videoUrl || $json.videoFile || $json.media }}",
+    "help": "Public https link -> Instagram khud le leta hai. PC/Termux pe file path bhi chalega (resumable upload) — Auto Video Maker wali video seedha jaati hai."
    },
    {
     "key": "caption",
@@ -687,6 +1084,13 @@ window.YF_NODE_META = [
     "label": "Also show Reel in feed",
     "type": "boolean",
     "default": true
+   },
+   {
+    "key": "firstComment",
+    "label": "First comment (optional)",
+    "type": "text",
+    "default": "{{ $json.comment }}",
+    "help": "Post ke baad pehla comment (instagram_manage_comments permission chahiye; fail hua to post phir bhi ho jayega)."
    },
    {
     "key": "userId",
@@ -769,7 +1173,7 @@ window.YF_NODE_META = [
     "key": "file",
     "label": "Video file path or direct video link",
     "type": "text",
-    "default": "{{ $json.path }}"
+    "default": "{{ $json.videoFile || $json.path || $json.media }}"
    },
    {
     "key": "title",
@@ -805,15 +1209,21 @@ window.YF_NODE_META = [
     "label": "Category ID (22 = People & Blogs, 24 = Entertainment, 27 = Education)",
     "type": "text",
     "default": "22"
+   },
+   {
+    "key": "firstComment",
+    "label": "First comment (optional)",
+    "type": "text",
+    "default": "",
+    "help": "Upload ke baad pehla comment. Refresh token me youtube.force-ssl scope chahiye; fail hua to upload phir bhi ho jayega."
    }
   ],
   "type": "youtube",
-  "fullOnly": "YouTube upload reads a video file from disk — use the full version.",
   "label": "YouTube Upload",
   "group": "Social & Messaging",
   "icon": "youtube",
   "color": "#ff0033",
-  "description": "Upload a video file from this phone/PC to your channel (YouTube Data API v3)."
+  "description": "Upload a video (Shorts too: vertical + under 60 s) to your channel (YouTube Data API v3). PC/Termux: file or link. Website: Auto Video Maker wali video ya direct video link."
  },
  {
   "inputs": 1,

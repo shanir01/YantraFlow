@@ -362,7 +362,9 @@
         ${tg("c_mo", "Maintenance banner", s.maintenance_on, "Sabko yellow maintenance patti dikhegi")}
         ${tx("c_mt", "Maintenance text", s.maintenance_text, "", 240)}
         ${tg("c_ve", "Videos / Tutorials page", s.videos_enabled, "Footer + menu me Videos link")}
-        ${tg("c_an", "Traffic analytics", s.analytics_enabled, "Anonymous page views (koi email/IP nahi)")}</div>
+        ${tg("c_an", "Traffic analytics", s.analytics_enabled, "Anonymous page views (koi email/IP nahi)")}
+        ${tg("c_pn", "Localhost PREMIUM note", s.premium_note_on, "Projects page + Run sheet pe 'PC/Termux pe aur PREMIUM options' wala note")}
+        ${tx("c_pt", "Premium note text (khaali = default)", s.premium_note_text, "Localhost (PC/Termux) pe chalao to aur PREMIUM options milenge — free me:", 240)}</div>
       <div class="card"><h3 class="adm-h3">${I("mail", 17)} Footer + contact</h3>
         ${tx("c_ft", "Footer text", s.footer_text, "Created by …", 200)}
         ${tx("c_ce", "Contact email", s.contact_email, "you@gmail.com", 120)}
@@ -374,7 +376,7 @@
       site_name: $("#c_name").value, logo_url: $("#c_logo").value, primary_color: $("#c_p").value, accent_color: $("#c_a").value,
       hero_title: $("#c_ht").value, hero_subtitle: $("#c_hs").value, banner_on: $("#c_bon").checked, banner_text: $("#c_bt").value, banner_kind: ($("input[name=bk]:checked") || {}).value,
       signups_enabled: $("#c_su").checked, signups_off_message: $("#c_suo").value, maintenance_on: $("#c_mo").checked, maintenance_text: $("#c_mt").value,
-      videos_enabled: $("#c_ve").checked, analytics_enabled: $("#c_an").checked, footer_text: $("#c_ft").value, contact_email: $("#c_ce").value,
+      videos_enabled: $("#c_ve").checked, analytics_enabled: $("#c_an").checked, premium_note_on: $("#c_pn").checked, premium_note_text: $("#c_pt").value, footer_text: $("#c_ft").value, contact_email: $("#c_ce").value,
       social: { instagram: $("#c_s_instagram").value, youtube: $("#c_s_youtube").value, telegram: $("#c_s_telegram").value, github: $("#c_s_github").value },
     });
     const preview = () => { const n = read(); RT().apply(n); $("#c_pv").textContent = n.primary_color; $("#c_av").textContent = n.accent_color; $("#c_gp").style.background = C.themeVars(n)["--grad"]; $("#c_lprev").src = n.logo_url || "img/logo.svg"; };
@@ -393,7 +395,7 @@
       } catch (err) { toast("Logo upload fail: " + err.message + " (Setup tab dekho)", "err"); }
     };
     $("#cr").onclick = () => { if (!confirm("Saari settings default pe karni hain? (Save dabane pe lagu hogi)")) return; RT().apply(C.mergeSettings(null)); customizeFill(C.mergeSettings(null)); };
-    function customizeFill(n) { $("#c_name").value = n.site_name; $("#c_logo").value = n.logo_url; $("#c_p").value = n.primary_color; $("#c_a").value = n.accent_color; $("#c_ht").value = n.hero_title; $("#c_hs").value = n.hero_subtitle; $("#c_bon").checked = n.banner_on; $("#c_bt").value = n.banner_text; $("#c_su").checked = n.signups_enabled; $("#c_suo").value = n.signups_off_message; $("#c_mo").checked = n.maintenance_on; $("#c_mt").value = n.maintenance_text; $("#c_ve").checked = n.videos_enabled; $("#c_an").checked = n.analytics_enabled; $("#c_ft").value = n.footer_text; $("#c_ce").value = n.contact_email; for (const k of Object.keys(n.social)) $("#c_s_" + k).value = n.social[k]; preview(); }
+    function customizeFill(n) { $("#c_name").value = n.site_name; $("#c_logo").value = n.logo_url; $("#c_p").value = n.primary_color; $("#c_a").value = n.accent_color; $("#c_ht").value = n.hero_title; $("#c_hs").value = n.hero_subtitle; $("#c_bon").checked = n.banner_on; $("#c_bt").value = n.banner_text; $("#c_su").checked = n.signups_enabled; $("#c_suo").value = n.signups_off_message; $("#c_mo").checked = n.maintenance_on; $("#c_mt").value = n.maintenance_text; $("#c_ve").checked = n.videos_enabled; $("#c_an").checked = n.analytics_enabled; $("#c_pn").checked = n.premium_note_on; $("#c_pt").value = n.premium_note_text; $("#c_ft").value = n.footer_text; $("#c_ce").value = n.contact_email; for (const k of Object.keys(n.social)) $("#c_s_" + k).value = n.social[k]; preview(); }
     $("#cf").onsubmit = async (e) => {
       e.preventDefault();
       const n = read(); const btn = $("#cs"); const m = $("#cm");

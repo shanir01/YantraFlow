@@ -12,6 +12,8 @@ const { oauth1Header } = require("./oauth1");
 const AIM = require("../public/js/ai-model.js");
 const LP = require("../public/js/link-preview.js");
 const YC = require("../public/js/content-gen.js");
+const YV = require("../public/js/video-core.js");
+const VM = require("./video");
 
 // API base URLs (overridable with env vars — handy for tests or proxies).
 const API = {
@@ -21,6 +23,10 @@ const API = {
   youtubeUpload: () => process.env.YANTRAFLOW_YOUTUBE_UPLOAD || "https://www.googleapis.com/upload/youtube/v3/videos",
   x: () => process.env.YANTRAFLOW_X_API || "https://api.twitter.com",
   linkedin: () => process.env.YANTRAFLOW_LINKEDIN_API || "https://api.linkedin.com",
+  rupload: () => process.env.YANTRAFLOW_RUPLOAD_API || "https://rupload.facebook.com/ig-api-upload/v21.0",
+  youtubeData: () => process.env.YANTRAFLOW_YOUTUBE_API || "https://www.googleapis.com/youtube/v3",
+  pexels: () => process.env.YANTRAFLOW_PEXELS_API || "https://api.pexels.com",
+  pixabay: () => process.env.YANTRAFLOW_PIXABAY_API || "https://pixabay.com",
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -444,10 +450,16 @@ def({
     { key: "maxTokens", label: "Max tokens", type: "number", default: 500 },
     { key: "baseUrl", label: "Base URL " + CRED, type: "text", default: "" },
     { key: "apiKey", label: "API key " + CRED, type: "secret", default: "" },
+    { key: "timeGreeting", label: "Time greeting + unique message", type: "select", options: ["off", "on"], default: "off", help: "on = message time ke hisaab se shuru: Good Morning (5-12) / Afternoon (12-17) / Evening (17-21) / Night (21-5), India time. Har run naya message, pichhle messages repeat nahi. Auto-message projects me ON hai." },
   ],
   async run(ctx) {
     const out = [];
     const st = ctx.settings.ai || {};
+    const greetOn = ctx.raw.timeGreeting === "on";
+    const hstore = greetOn ? jsonFile(ctx, "post-history.json") : null;
+    const hall = hstore ? hstore.read() : {};
+    const hkey = `${(ctx.workflow && ctx.workflow.id) || "wf"}:${(ctx.node && ctx.node.id) || "n"}`;
+    const hrec = hall[hkey] || { posts: [] };
     for (let i = 0; i < ctx.items.length; i++) {
       const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
       const key = s(ctx.p("apiKey", i) || st.apiKey || "local");
@@ -456,7 +468,8 @@ def({
       const badM = AIM.badModel(base, model);
       if (badM) throw new Error(badM);
       const messages = [];
-      const sys = s(ctx.p("system", i));
+      const greet = greetOn ? YC.greetingFor(hrec.posts) : null;
+      const sys = [s(ctx.p("system", i)), greetOn ? YC.greetingSystem(greet, hrec.posts) : ""].filter(Boolean).join("\n");
       if (sys) messages.push({ role: "system", content: sys });
       messages.push({ role: "user", content: need(ctx.p("prompt", i), "Prompt") });
       const r = await http(`${base}/chat/completions`, {
@@ -466,9 +479,11 @@ def({
         timeoutMs: 120000,
       }).catch((e) => { throw new Error(`${e.message}. Is your AI server running? (FreeLLM-Router: start it first, or change Base URL on the Credentials page)`); });
       if (!r.ok) { const e = apiError("AI", r); const f = AIM.modelError(base, model, r.status, e.message.replace(/^AI answered \d+: /, "")); throw f ? new Error(f) : e; }
-      const text = r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message ? s(r.data.choices[0].message.content).trim() : "";
-      out.push({ ...ctx.items[i], text, model: (r.data && r.data.model) || model, usage: (r.data && r.data.usage) || null });
+      let text = r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message ? s(r.data.choices[0].message.content).trim() : "";
+      if (greet && text) { text = YC.ensureGreeting(text, greet.slot, greet); hrec.posts = YC.pushHistory(hrec.posts, { text, at: new Date().toISOString() }, 20); }
+      out.push({ ...ctx.items[i], text, model: (r.data && r.data.model) || model, usage: (r.data && r.data.usage) || null, ...(greet ? { timeOfDay: greet.slot } : {}) });
     }
+    if (hstore) { hall[hkey] = hrec; hstore.write(hall); }
     return one(out);
   },
 });
@@ -477,7 +492,7 @@ def({
   type: "aiPost", label: "AI Post Writer (seed)", group: "AI", icon: "sprout", color: "#22c55e",
   description: "Writes a NEW post every run for Telegram / Instagram / X / LinkedIn / YouTube from your SEED document. Remembers the last posts so it never repeats.",
   params: [
-    { key: "platform", label: "Platform", type: "select", options: ["telegram", "instagram", "x", "linkedin", "youtube"], default: "telegram" },
+    { key: "platform", label: "Platform", type: "select", options: ["telegram", "instagram", "x", "linkedin", "youtube", "video"], default: "telegram", help: "video = Shorts/Reels: title + caption + description + hashtags + first comment (Daily video project)." },
     { key: "autoGenerate", label: "Auto message generate", type: "select", options: ["on", "off"], default: "on", help: "on = har run pe AI naya, alag message banayega. off = neeche wala fixed message hi bhejega." },
     { key: "timeGreeting", label: "Time greeting", type: "select", options: ["on", "off"], default: "on", help: "on = post time ke hisaab se shuru hoga: Good Morning (5-12), Good Afternoon (12-17), Good Evening (17-21), Good Night (21-5), India time. Har baar alag wording, repeat nahi." },
     { key: "seed", label: "SEED document (brand info, topics, style)", type: "textarea", upload: true, default: "", placeholder: "Apne brand / channel ke baare me likho: kya karte ho, topics, links, kaisi language, kya NAHI bolna..." },
@@ -520,9 +535,204 @@ def({
       const pm = YC.pickMedia(ctx.p("mediaList", i), rec.mediaIndex);
       if (pm.total) rec.mediaIndex = pm.index + 1;
       rec.posts = YC.pushHistory(rec.posts, { text: res.text, at: new Date().toISOString() }, Number(ctx.raw.history) || 20);
-      out.push({ ...ctx.items[i], ...res, platform, timeOfDay: greeting ? greeting.slot : "", media: pm.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
+      const credit = s(ctx.items[i].credit);
+      if (credit && res.text && platform !== "x") { res.description = YV.addCredit(res.description || "", credit); if (platform !== "youtube") res.text = YV.addCredit(res.text, credit); }
+      if (platform === "video") res.caption = res.text;
+      out.push({ ...ctx.items[i], ...res, platform, topicUsed: s(ctx.p("topic", i)), timeOfDay: greeting ? greeting.slot : "", media: pm.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
     }
     all[key] = rec; store.write(all);
+    return one(out);
+  },
+});
+
+// ===== Video: free-licence finder, Auto Video Maker, Video Editor (v4.3)
+async function stockSearch(ctx, q, src, orientation) {
+  const P = (ctx.settings.pexels || {}).apiKey; const X = (ctx.settings.pixabay || {}).apiKey;
+  const pk = s(ctx.p("pexelsKey", 0) || P).trim(); const xk = s(ctx.p("pixabayKey", 0) || X).trim();
+  const list = []; const errs = [];
+  if ((src === "auto" || src === "pexels") && pk) {
+    const page = 1 + Math.floor(Math.random() * 3);
+    const r = await http(`${API.pexels()}/videos/search?query=${encodeURIComponent(q)}&per_page=40&page=${page}${orientation === "portrait" ? "&orientation=portrait" : ""}`, { headers: { authorization: pk }, timeoutMs: 30000 }).catch((e) => ({ ok: false, status: 0, data: e.message }));
+    if (r.ok) list.push(...YV.normalizePexels(r.data)); else errs.push(apiError("Pexels", r).message);
+  }
+  if ((src === "auto" || src === "pixabay") && xk) {
+    const r = await http(`${API.pixabay()}/api/videos/?key=${encodeURIComponent(xk)}&q=${encodeURIComponent(q.slice(0, 100))}&per_page=50&safesearch=true`, { timeoutMs: 30000 }).catch((e) => ({ ok: false, status: 0, data: e.message }));
+    if (r.ok) list.push(...YV.normalizePixabay(r.data)); else errs.push(apiError("Pixabay", r).message);
+  }
+  if (!pk && !xk && src !== "own") errs.push("Pexels / Pixabay key nahi hai — Keys page pe free key daalo (2 min ka kaam)");
+  return { list, errs };
+}
+async function saveDownload(ctx, url, prefix) {
+  const f = await download(url, 200 * 1024 * 1024);
+  const dir = path.join(ctx.filesDir || ".", "videos"); fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `${prefix}-${Date.now()}${path.extname(f.name) || ".mp4"}`);
+  fs.writeFileSync(file, f.buf);
+  return file;
+}
+def({
+  type: "stockVideo", label: "Free Video Finder (Pexels / Pixabay)", group: "Video", icon: "film", color: "#14b8a6",
+  description: "Topic do (funny, cats, memes...) -> har run ek NAYA free-licence short video dhundhta hai (Pexels / Pixabay — repost allowed) ya tumhare apne clips. Credit line apne aap. Copyright strike se bachne ke liye dusron ke Pinterest/Insta/YouTube videos nahi uthata.",
+  params: [
+    { key: "topic", label: "Topic", type: "text", default: "funny animals", placeholder: "funny, cats, memes, baarish, gym..." },
+    { key: "source", label: "Source", type: "select", options: ["auto", "pexels", "pixabay", "own"], default: "auto", help: "auto = Pexels + Pixabay (jiski key ho). own = sirf neeche wale tumhare apne clips." },
+    { key: "ownClips", label: "My own clips (one link or file path per line)", type: "textarea", default: "", help: "Apne banaye / license wale clips. auto me tab use honge jab Pexels/Pixabay kuch na de." },
+    { key: "orientation", label: "Shape", type: "select", options: ["portrait", "any"], default: "portrait" },
+    { key: "minSeconds", label: "Min seconds", type: "number", default: 5 },
+    { key: "maxSeconds", label: "Max seconds", type: "number", default: 60 },
+    { key: "fallback", label: "Kuch na mile to", type: "select", options: ["maker", "error"], default: "maker", help: "maker = agle Auto Video Maker step se slide video ban jayegi." },
+    { key: "download", label: "Download file (PC/Termux)", type: "select", options: ["on", "off"], default: "on", help: "YouTube upload + editing ke liye file chahiye." },
+    { key: "pexelsKey", label: "Pexels API key " + CRED, type: "secret", default: "" },
+    { key: "pixabayKey", label: "Pixabay API key " + CRED, type: "secret", default: "" },
+  ],
+  async run(ctx) {
+    const store = jsonFile(ctx, "video-history.json"); const all = store.read();
+    const key = `${(ctx.workflow && ctx.workflow.id) || "wf"}:${ctx.node.id}`;
+    const rec = all[key] || { used: [] };
+    const out = [];
+    for (let i = 0; i < ctx.items.length; i++) {
+      const topic = s(ctx.p("topic", i)).trim() || "funny animals"; const q = YV.stockQuery(topic);
+      const src = ctx.raw.source || "auto";
+      const opt = { used: rec.used, minSeconds: Number(ctx.raw.minSeconds) || 0, maxSeconds: Number(ctx.raw.maxSeconds) || 60, orientation: ctx.raw.orientation || "portrait" };
+      const found = src === "own" ? { list: [], errs: [] } : await stockSearch(ctx, q, src, opt.orientation);
+      let clip = YV.pickClip(found.list, opt);
+      if (!clip && found.list.length && rec.used.length) { rec.used = []; clip = YV.pickClip(found.list, Object.assign(opt, { used: [] })); }
+      if (!clip) { const own = YV.ownClips(ctx.p("ownClips", i)); clip = YV.pickClip(own, Object.assign(opt, { minSeconds: 0, orientation: "any" })) || (own.length ? own[0] : null); }
+      if (!clip) {
+        const why = found.errs.join(" · ") || `"${q}" ke liye koi naya video nahi mila`;
+        if ((ctx.raw.fallback || "maker") === "error") throw new Error(why);
+        ctx.log(`No free video found (${why}) — Auto Video Maker will make one`);
+        out.push({ ...ctx.items[i], topic, query: q, media: "", needsMaker: true, videoSource: "none", fallbackReason: why });
+        continue;
+      }
+      let media = clip.url;
+      if (/^https?:\/\//i.test(clip.url) && (ctx.raw.download || "on") === "on") media = await saveDownload(ctx, clip.url, clip.id.replace(/[^a-z0-9]+/gi, "-"));
+      rec.used = rec.used.concat([clip.id]).slice(-300);
+      const credit = YV.creditLine(clip);
+      out.push({ ...ctx.items[i], topic, query: q, media, path: /^https?:/i.test(media) ? "" : media, videoUrl: /^https:\/\//i.test(clip.url) ? clip.url : "", credit, videoSource: clip.source,
+        videoInfo: [clip.tags, clip.author && `by ${clip.author}`].filter(Boolean).join(", "), clip: { id: clip.id, page: clip.pageUrl, author: clip.author, license: clip.license, seconds: clip.duration, width: clip.width, height: clip.height } });
+    }
+    all[key] = rec; store.write(all);
+    return one(out);
+  },
+});
+const VIDEO_PARAMS = [
+  { key: "voice", label: "AI voice (PC/Termux)", type: "select", options: ["off", "auto", "edge", "espeak"], default: "off", help: "edge = free natural voice (pip install edge-tts, internet). espeak = offline robotic. Website pe voice nahi lagti (browser limit)." },
+  { key: "voiceLang", label: "Voice language", type: "select", options: ["Hinglish", "Hindi", "English"], default: "Hinglish" },
+  { key: "music", label: "Music", type: "select", options: ["generated", "file", "off"], default: "generated", help: "generated = YantraFlow khud soft royalty-free music banata hai. file = apni music (link ya file path) neeche." },
+  { key: "musicFile", label: "Music file / link (royalty-free)", type: "text", default: "" },
+  { key: "theme", label: "Style", type: "select", options: ["bold", "neon", "sunset", "clean"], default: "bold" },
+  { key: "watermark", label: "Watermark / handle", type: "text", default: "", placeholder: "@mychannel" },
+];
+def({
+  type: "videoMaker", label: "Auto Video Maker (Shorts / Reels)", group: "Video", icon: "clapperboard", color: "#f43f5e",
+  description: "Har run khud vertical video banata hai (1080x1920, 15-60 s): AI ke text se kinetic captions + photo / free stock clip / gradient background + music (+ voice on PC). Template / slide-style video hai — camera footage nahi. PC/Termux = MP4 (ffmpeg). Website = browser me banti hai.",
+  params: [
+    { key: "mode", label: "Video source", type: "select", options: ["auto", "make", "own", "off"], default: "auto", help: "auto = pichhle step me video (apni file/link) ho to wahi, warna nayi video banao. make = hamesha nayi. own = sirf apni file/link. off = video nahi (text post)." },
+    { key: "script", label: "Video text (script)", type: "textarea", default: "{{ $json.caption || $json.text || $json.description }}", help: "Hashtags / links apne aap hat jaate hain. Har line = ek slide." },
+    { key: "title", label: "Hook / title (first slide)", type: "text", default: "{{ $json.title }}" },
+    { key: "seconds", label: "Length (15-60 s, 0 = auto)", type: "number", default: 0 },
+    { key: "background", label: "Background", type: "select", options: ["auto", "stock", "photos", "gradient"], default: "auto", help: "auto = Pexels/Pixabay key ho to free stock clip, warna animated gradient. photos = neeche apni photos." },
+    { key: "bgQuery", label: "Stock background search (English)", type: "text", default: "{{ $json.topicUsed || $json.topic }}", placeholder: "motivation, city, nature..." },
+    { key: "photos", label: "My photos / clips (one link or path per line)", type: "textarea", default: "" },
+    ...VIDEO_PARAMS,
+    { key: "cta", label: "End text (CTA)", type: "text", default: "Like + Follow karo" },
+    { key: "size", label: "Size", type: "select", options: ["1080x1920", "720x1280"], default: "1080x1920" },
+    { key: "pexelsKey", label: "Pexels API key " + CRED, type: "secret", default: "" },
+    { key: "pixabayKey", label: "Pixabay API key " + CRED, type: "secret", default: "" },
+  ],
+  async run(ctx) {
+    const out = [];
+    for (let i = 0; i < ctx.items.length; i++) {
+      const it = ctx.items[i]; const mode = ctx.raw.mode || "auto";
+      const incoming = s(it.videoFile || it.path || it.media);
+      if (mode === "off") { out.push({ ...it }); continue; }
+      if (mode === "own" || (mode === "auto" && !it.needsMaker && YV.looksVideo(incoming))) {
+        if (!incoming) throw new Error("Video source = own, par pichhle step me koi video file/link nahi mila");
+        out.push({ ...it, media: incoming, videoBy: "own" }); continue;
+      }
+      const planInput = { script: s(ctx.p("script", i)), title: s(ctx.p("title", i)), seconds: Number(ctx.p("seconds", i)) || 0, theme: ctx.raw.theme, size: ctx.raw.size, cta: s(ctx.p("cta", i)), watermark: s(ctx.p("watermark", i)) };
+      if (!YV.splitScript(planInput.script).length && !planInput.title.trim()) throw new Error("Video ke liye text khaali hai — pehle AI Post Writer step lagao ya 'Video text' bharo");
+      const plan = YV.planVideo(planInput);
+      let bg = null; let credit = "";
+      const bgMode = ctx.raw.background || "auto";
+      const photos = YV.ownClips(ctx.p("photos", i)).map((c) => c.url);
+      const inImg = /\.(jpe?g|png|webp)(\?|$)/i.test(incoming) ? [incoming] : [];
+      const local = async (u) => (/^https?:\/\//i.test(u) ? saveDownload(ctx, u, "bg") : resolvePath(ctx, u));
+      if (bgMode === "photos" || (bgMode === "auto" && (photos.length || inImg.length))) {
+        const list = photos.length ? photos : inImg;
+        if (list.length) { const files = []; for (const u of list.slice(0, 8)) files.push(await local(u)); bg = { type: YV.looksVideo(list[0]) ? "video" : "image", files }; }
+      }
+      if (!bg && (bgMode === "stock" || bgMode === "auto")) {
+        const q = YV.stockQuery(s(ctx.p("bgQuery", i)) || plan.title || "abstract background");
+        const f = await stockSearch(ctx, q, "auto", "portrait");
+        const clip = YV.pickClip(f.list, { minSeconds: 4, maxSeconds: 120 });
+        if (clip) { bg = { type: "video", files: [await saveDownload(ctx, clip.url, "bg")] }; credit = YV.creditLine(clip); }
+        else if (bgMode === "stock") throw new Error(f.errs.join(" · ") || `Stock clip nahi mila: ${q}`);
+        else if (f.errs.length) ctx.log(`Stock background skipped (${f.errs.join(" · ")}) — using gradient`);
+      }
+      const dir = path.join(ctx.filesDir || ".", "videos"); fs.mkdirSync(dir, { recursive: true });
+      const music = ctx.raw.music === "off" ? "off" : ctx.raw.music === "file" ? await local(need(ctx.p("musicFile", i), "Music file")) : "generated";
+      const r = await VM.makeVideo({ plan, planInput, bg, voice: ctx.raw.voice || "off", voiceName: YV.VOICES[ctx.raw.voiceLang] || YV.VOICES.Hinglish, music, outFile: path.join(dir, `yantraflow-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.mp4`) });
+      r.warnings.forEach((w) => ctx.log(w));
+      const res = { ...it, media: r.file, path: r.file, videoFile: r.file, videoUrl: "", videoType: "mp4", videoSeconds: r.seconds, videoBy: "YantraFlow Auto Video Maker", videoBackground: r.background, voice: r.voice, needsMaker: false };
+      if (credit) { res.credit = YV.addCredit(s(it.credit), credit); res.description = YV.addCredit(s(it.description), credit); }
+      out.push(res);
+    }
+    return one(out);
+  },
+});
+def({
+  type: "videoEdit", label: "Video Editor (9:16, trim, Hindi captions)", group: "Video", icon: "scissors", color: "#f97316",
+  description: "Clip ko Shorts/Reels ready banata hai: 9:16 crop, max 60 s trim, speed, hook text upar, end CTA, watermark, music. English bol-chaal ho to Hindi/Hinglish captions + optional Hindi voice dub (PC/Termux).",
+  params: [
+    { key: "input", label: "Video file / link", type: "text", default: "{{ $json.videoFile || $json.path || $json.media }}" },
+    { key: "hook", label: "Hook text (first 3 s, top)", type: "text", default: "{{ $json.title }}" },
+    { key: "cta", label: "End text (last 3 s)", type: "text", default: "Follow karo roz naye videos ke liye" },
+    { key: "watermark", label: "Watermark / handle", type: "text", default: "", placeholder: "@mychannel" },
+    { key: "maxSeconds", label: "Max length (s)", type: "number", default: 59 },
+    { key: "speed", label: "Speed (0.5 - 2)", type: "number", default: 1 },
+    { key: "music", label: "Music", type: "select", options: ["off", "generated", "file"], default: "off" },
+    { key: "musicFile", label: "Music file / link (royalty-free)", type: "text", default: "" },
+    { key: "translate", label: "English -> Hindi", type: "select", options: ["off", "captions", "captions+dub"], default: "captions", help: "PC/Termux: faster-whisper sunta hai (pip install faster-whisper), AI Hindi me badalta hai, captions video pe. +dub = Hindi AI voice (edge-tts), original awaaz dheemi. Clip me English bol-chaal na ho to skip." },
+    { key: "captionLang", label: "Caption language", type: "select", options: ["Hindi", "Hinglish"], default: "Hindi" },
+    { key: "whisperModel", label: "Speech model (tiny = fast, base = better)", type: "select", options: ["tiny", "base", "small"], default: "base" },
+    { key: "theme", label: "Colours", type: "select", options: ["bold", "neon", "sunset", "clean"], default: "bold" },
+    { key: "model", label: "AI model " + CRED, type: "text", default: "" },
+    { key: "baseUrl", label: "AI Base URL " + CRED, type: "text", default: "" },
+    { key: "apiKey", label: "AI API key " + CRED, type: "secret", default: "" },
+  ],
+  async run(ctx) {
+    const out = [];
+    for (let i = 0; i < ctx.items.length; i++) {
+      const it = ctx.items[i];
+      let input = s(ctx.p("input", i)).trim();
+      if (!input) { ctx.log("No video to edit — passing through"); out.push({ ...it }); continue; }
+      input = /^https?:\/\//i.test(input) ? await saveDownload(ctx, input, "src") : resolvePath(ctx, input);
+      let captions = []; let dubLines = []; let speech = null;
+      const tr = ctx.raw.translate || "captions";
+      if (tr !== "off") {
+        const info = await VM.probe(input);
+        if (info.hasAudio) {
+          try {
+            const wav = input + ".16k.wav";
+            await VM.run(process.env.YANTRAFLOW_FFMPEG || "ffmpeg", ["-y", "-loglevel", "error", "-i", input, "-t", "120", "-ac", "1", "-ar", "16000", wav], { timeoutMs: 120000 });
+            speech = await VM.transcribe(wav, ctx.raw.whisperModel || "base");
+            try { fs.unlinkSync(wav); } catch (_) { /* */ }
+            const words = speech.segments.map((x) => x.text).join(" ").split(/\s+/).filter(Boolean).length;
+            if (speech.language === "en" && words >= 3) {
+              const ai = await aiComplete(ctx, i, YV.translateMessages(speech.segments.slice(0, 40), ctx.raw.captionLang || "Hindi"), { temperature: 0.3, maxTokens: 1500 });
+              captions = YV.parseTranslation(ai.text, speech.segments.slice(0, 40));
+              if (tr === "captions+dub") dubLines = captions.map((c) => ({ start: c.start, text: c.text }));
+            } else ctx.log(`Speech language "${speech.language}" / ${words} words — translation skipped`);
+          } catch (e) { ctx.log(`English -> Hindi skipped: ${e.message}`); }
+        } else ctx.log("Clip has no sound — translation skipped");
+      }
+      const dir = path.join(ctx.filesDir || ".", "videos"); fs.mkdirSync(dir, { recursive: true });
+      const music = ctx.raw.music === "file" ? (/^https?:/i.test(s(ctx.p("musicFile", i))) ? await saveDownload(ctx, s(ctx.p("musicFile", i)), "music") : resolvePath(ctx, ctx.p("musicFile", i))) : ctx.raw.music || "off";
+      const r = await VM.editVideo({ input, hook: s(ctx.p("hook", i)), cta: s(ctx.p("cta", i)), watermark: s(ctx.p("watermark", i)), maxSeconds: Number(ctx.raw.maxSeconds) || 59, speed: Number(ctx.raw.speed) || 1, music, theme: ctx.raw.theme, captions, dubLines, voiceName: ctx.raw.captionLang === "Hinglish" ? "hi-IN-MadhurNeural" : "hi-IN-SwaraNeural", outFile: path.join(dir, `edited-${Date.now()}.mp4`) });
+      r.warnings.forEach((w) => ctx.log(w));
+      out.push({ ...it, media: r.file, path: r.file, videoFile: r.file, videoUrl: "", videoSeconds: r.seconds, edited: { captions: r.captions, dubbed: r.dubbed, speechLanguage: speech ? speech.language : "", hindi: captions.map((c) => c.text).join(" ").slice(0, 500) } });
+    }
     return one(out);
   },
 });
@@ -615,9 +825,10 @@ def({
   description: "Post a photo or Reel with the official Instagram Graph API. Needs a Business/Creator account + a PUBLIC media URL.",
   params: [
     { key: "kind", label: "Post type", type: "select", options: ["REELS", "IMAGE"], default: "REELS" },
-    { key: "mediaUrl", label: "Public video / image URL", type: "text", default: "{{ $json.videoUrl }}" },
+    { key: "mediaUrl", label: "Video / image (public URL, or a file on PC/Termux)", type: "text", default: "{{ $json.videoUrl || $json.videoFile || $json.media }}", help: "Public https link -> Instagram khud le leta hai. PC/Termux pe file path bhi chalega (resumable upload) — Auto Video Maker wali video seedha jaati hai." },
     { key: "caption", label: "Caption", type: "textarea", default: "{{ $json.text }}" },
     { key: "shareToFeed", label: "Also show Reel in feed", type: "boolean", default: true },
+    { key: "firstComment", label: "First comment (optional)", type: "text", default: "{{ $json.comment }}", help: "Post ke baad pehla comment (instagram_manage_comments permission chahiye; fail hua to post phir bhi ho jayega)." },
     { key: "userId", label: "Instagram user ID " + CRED, type: "text", default: "" },
     { key: "accessToken", label: "Access token " + CRED, type: "secret", default: "" },
   ],
@@ -628,14 +839,26 @@ def({
       const uid = need(ctx.p("userId", i) || st.userId, "Instagram user ID");
       const token = need(ctx.p("accessToken", i) || st.accessToken, "Instagram access token");
       const url = need(ctx.p("mediaUrl", i), "Media URL");
-      if (!/^https:\/\//i.test(url)) throw new Error("Instagram needs a PUBLIC https:// URL for the media (not a file on your phone). Upload it somewhere public first (e.g. your website, a CDN, Cloudinary free plan).");
       const kind = ctx.raw.kind || "REELS";
+      const isWeb = /^https:\/\//i.test(url);
+      if (!isWeb && (/^(yfvideo|blob):/i.test(url) || /^http:/i.test(url) || kind === "IMAGE")) throw new Error("Instagram needs a PUBLIC https:// URL for this media (photos), or a video FILE on PC/Termux. Upload it somewhere public first (e.g. your website, a CDN, Cloudinary free plan).");
       const params = new URLSearchParams({ caption: s(ctx.p("caption", i)).slice(0, 2200), access_token: token });
+      let localFile = "";
       if (kind === "IMAGE") params.set("image_url", url);
-      else { params.set("media_type", "REELS"); params.set("video_url", url); params.set("share_to_feed", String(ctx.raw.shareToFeed !== false && ctx.raw.shareToFeed !== "false")); }
+      else {
+        params.set("media_type", "REELS"); params.set("share_to_feed", String(ctx.raw.shareToFeed !== false && ctx.raw.shareToFeed !== "false"));
+        if (isWeb) params.set("video_url", url);
+        else { localFile = resolvePath(ctx, url); if (!fs.existsSync(localFile)) throw new Error(`Video file not found: ${localFile}. Instagram needs a PUBLIC https:// link, or a video file that exists on this PC/Termux.`); params.set("upload_type", "resumable"); }
+      }
       const c = await http(`${API.graph()}/${uid}/media`, { method: "POST", body: params });
       if (!c.ok) throw apiError("Instagram (create)", c);
       const creationId = c.data.id;
+      if (localFile) {
+        // resumable upload: send the file bytes straight to Instagram (no public link needed)
+        const buf = await fsp.readFile(localFile);
+        const up = await http(c.data.uri || `${API.rupload()}/${creationId}`, { method: "POST", headers: { authorization: `OAuth ${token}`, offset: "0", file_size: String(buf.length), "content-type": "application/octet-stream" }, body: buf, timeoutMs: 600000 });
+        if (!up.ok || (up.data && up.data.success === false)) throw apiError("Instagram (upload)", up);
+      }
       // Videos are processed by Instagram first — wait until FINISHED (max ~5 min).
       for (let k = 0; k < 60; k++) {
         const st2 = await http(`${API.graph()}/${creationId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`);
@@ -647,7 +870,13 @@ def({
       }
       const p = await http(`${API.graph()}/${uid}/media_publish`, { method: "POST", body: new URLSearchParams({ creation_id: creationId, access_token: token }) });
       if (!p.ok) throw apiError("Instagram (publish)", p);
-      out.push({ ...ctx.items[i], instagram: { ok: true, mediaId: p.data.id } });
+      const ig = { ok: true, mediaId: p.data.id, upload: localFile ? "file" : "url" };
+      const cm = s(ctx.p("firstComment", i)).trim();
+      if (cm) {
+        const r2 = await http(`${API.graph()}/${p.data.id}/comments`, { method: "POST", body: new URLSearchParams({ message: cm.slice(0, 2200), access_token: token }) }).catch((e) => ({ ok: false, data: e.message }));
+        if (r2.ok) ig.commentId = r2.data && r2.data.id; else { ig.commentError = apiError("Instagram (comment)", r2).message; ctx.log(`Post done, first comment failed: ${ig.commentError}`); }
+      }
+      out.push({ ...ctx.items[i], instagram: ig });
     }
     return one(out);
   },
@@ -684,15 +913,16 @@ def({
   },
 });
 def({
-  type: "youtube", fullOnly: "YouTube upload reads a video file from disk — use the full version.", label: "YouTube Upload", group: "Social & Messaging", icon: "youtube", color: "#ff0033",
-  description: "Upload a video file from this phone/PC to your channel (YouTube Data API v3).",
+  type: "youtube", label: "YouTube Upload", group: "Social & Messaging", icon: "youtube", color: "#ff0033",
+  description: "Upload a video (Shorts too: vertical + under 60 s) to your channel (YouTube Data API v3). PC/Termux: file or link. Website: Auto Video Maker wali video ya direct video link.",
   params: [
-    { key: "file", label: "Video file path or direct video link", type: "text", default: "{{ $json.path }}" },
+    { key: "file", label: "Video file path or direct video link", type: "text", default: "{{ $json.videoFile || $json.path || $json.media }}" },
     { key: "title", label: "Title", type: "text", default: "{{ $json.title }}" },
     { key: "description", label: "Description", type: "textarea", default: "{{ $json.description }}" },
     { key: "tags", label: "Tags (comma separated)", type: "text", default: "{{ $json.tags }}" },
     { key: "privacy", label: "Privacy", type: "select", options: ["private", "unlisted", "public"], default: "private" },
     { key: "categoryId", label: "Category ID (22 = People & Blogs, 24 = Entertainment, 27 = Education)", type: "text", default: "22" },
+    { key: "firstComment", label: "First comment (optional)", type: "text", default: "", help: "Upload ke baad pehla comment. Refresh token me youtube.force-ssl scope chahiye; fail hua to upload phir bhi ho jayega." },
   ],
   async run(ctx) {
     const st = ctx.settings.youtube || {};
@@ -729,7 +959,13 @@ def({
       const txt = await up.text();
       let data; try { data = JSON.parse(txt); } catch (_) { data = txt; }
       if (!up.ok) throw apiError("YouTube (upload)", { status: up.status, data });
-      out.push({ ...ctx.items[i], youtube: { ok: true, videoId: data.id, url: `https://youtu.be/${data.id}`, privacy: meta.status.privacyStatus } });
+      const yt = { ok: true, videoId: data.id, url: `https://youtu.be/${data.id}`, privacy: meta.status.privacyStatus };
+      const cm = s(ctx.p("firstComment", i)).trim();
+      if (cm) {
+        const r2 = await http(`${API.youtubeData()}/commentThreads?part=snippet`, { method: "POST", headers: { authorization: `Bearer ${tok.data.access_token}`, "content-type": "application/json" }, body: JSON.stringify({ snippet: { videoId: data.id, topLevelComment: { snippet: { textOriginal: cm.slice(0, 9000) } } } }) }).catch((e) => ({ ok: false, data: e.message }));
+        if (r2.ok) yt.commentId = r2.data && r2.data.id; else { yt.commentError = apiError("YouTube (comment)", r2).message; ctx.log(`Upload done, first comment failed (needs youtube.force-ssl scope): ${yt.commentError}`); }
+      }
+      out.push({ ...ctx.items[i], youtube: yt });
     }
     return one(out);
   },

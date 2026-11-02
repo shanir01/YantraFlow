@@ -31,6 +31,57 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 
 > YantraFlow is **inspired by** n8n's idea, but it is written from scratch — no n8n code is used. n8n has far more integrations; YantraFlow is small, simple and phone-friendly.
 
+## 🎬 v4.3: Auto Video Maker + Daily Funny Video
+
+**Video projects ab khud video banate hain** — file maangna band.
+
+| | Website | PC / Termux (localhost) |
+|---|---|---|
+| **Auto Video Maker** (AI text → vertical 1080x1920 Shorts/Reels, 15–60 s, kinetic captions, gradient / photos / free stock clip background, music) | Browser me banti hai (canvas + MediaRecorder). MP4 jab browser support kare (naya Chrome / Safari), warna WebM. Tab khula rakho (20 s video ≈ 20 s). Voice nahi. | ffmpeg se **MP4 (H.264 + AAC)** + **AI voice** (edge-tts free, ya espeak offline) |
+| **Video Editor** (9:16 crop, max 59 s, speed, hook text, end CTA, watermark, music) | Haan (browser me re-record) | Haan (ffmpeg) |
+| **English → Hindi** (speech sun ke Hindi/Hinglish captions + Hindi voice dub, original awaaz dheemi) | Nahi | Haan: faster-whisper + tumhari AI key + edge-tts |
+| **YouTube upload** | Haan (Auto Video Maker wali video ya direct link) | Haan (file / link) |
+| **Instagram Reel** | Sirf PUBLIC link wali video (jaise Pexels link) | Haan, **file seedha upload** (resumable upload) |
+| **Telegram video** | Haan | Haan |
+
+Sach baat: ye **template / slide-style** videos hain (text + photos / free stock clips + music) — AI camera footage nahi.
+
+**Kahan laga hai:** Telegram, Instagram aur YouTube SEED auto-post projects me "Auto Video Maker" step default hai (Video source = auto: tumhari apni file/link ho to wahi, warna nayi video). Sirf text chahiye to Video source = off. Try karne ke liye: website → Projects → **Auto Video Maker — abhi try karo** (`#/video-maker`).
+
+### Naya project: Daily Funny Video → YouTube Shorts + Instagram Reels + Telegram
+Topic do (funny, cats, memes, baarish…) → har run:
+1. **Free Video Finder** — Pexels / Pixabay se ek NAYA free-licence vertical clip (pichhle 300 yaad, repeat nahi) ya tumhare apne clips
+2. **AI Post Writer (platform: video)** — Hinglish title + caption + description + hashtags + pehla comment, time greeting ke saath; **credit line apne aap** (description + caption)
+3. **Auto Video Maker** — kuch na mile to slide video bana deta hai
+4. **Video Editor** — 9:16, ≤59 s, hook, CTA, watermark; English bol-chaal ho to Hindi captions (+ Hindi dub option) — PC/Termux
+5. **YouTube Shorts + Instagram Reel + Telegram** — ek platform fail ho to baaki phir bhi chalte hain
+
+> **Pinterest kyon nahi?** Pinterest / Instagram / YouTube se dusron ke videos utha ke repost karna = copyright strike (channel band ho sakta hai), aur Pinterest download API deta hi nahi, license bhi pata nahi chalta. Isliye sirf free-licence sources (Pexels License / Pixabay Content License — repost allowed) ya tumhare apne clips.
+
+### Pexels + Pixabay free keys (2 min)
+- **Pexels:** pexels.com/api → *Get Started* → login / sign up → app ka naam `YantraFlow`, use: "auto posting tool" → **API key copy** → YantraFlow → Keys → *Pexels* → paste → Save. (Free: 200 requests/ghanta, 20,000/mahina)
+- **Pixabay:** pixabay.com pe free account → pixabay.com/api/docs kholo (login rehte hue) → "Parameters" me `key` ke saamne tumhari key → copy → Keys → *Pixabay* → paste → Save. (Free: 100 requests/minute)
+- Ek bhi key kaafi hai. Key nahi hai to Auto Video Maker gradient background use karta hai.
+
+## 💎 PC / Termux setup
+Website pe ek note dikhta hai: *"Localhost (PC/Termux) pe chalao to aur PREMIUM options milenge"* — sab free:
+24x7 schedule (tab band ho tab bhi) · Video Maker MP4 + AI voice · English → Hindi captions/dub · X, LinkedIn, Slack, Email post + Instagram file upload · unlimited link preview · folder watch, webhooks, local files.
+(Admin panel → Site customise → *Localhost PREMIUM note* se ye note band ya text badal sakte ho; user ✕ se hide kar sakta hai.)
+
+```bash
+# Termux (Android)
+pkg install nodejs git ffmpeg python
+pip install edge-tts            # free AI voice (optional)
+git clone https://github.com/shanir01/YantraFlow && cd YantraFlow && npm start
+termux-wake-lock                # 24x7 ke liye
+# (English -> Hindi captions ke liye faster-whisper chahiye — PC pe aasaan: pip install faster-whisper; Termux pe ye mushkil hai, wahan translate = off rakho)
+
+# PC (Windows: winget install ffmpeg · Mac: brew install ffmpeg · Linux: sudo apt install ffmpeg)
+pip install edge-tts faster-whisper
+git pull && npm start
+```
+Videos `files/videos/` me save hoti hain. Hindi captions ke liye PC me koi Devanagari font (Noto Sans Devanagari / Mangal) hona chahiye — Windows/Android me pehle se hota hai.
+
 ## 🚀 v4: Auto-post & Schedule 24x7
 
 **New in v4 (Nov 2026):**
@@ -330,7 +381,7 @@ cd YantraFlow && sh start.sh
 ## 🧪 Tests
 
 ```bash
-npm test     # 49 tests: engine, cron, expressions, templates, projects, v4 scheduler (incl. restart-resume), link preview parser + Telegram upload, SEED auto-generate — all with mocked APIs
+npm test     # 72 tests: engine, cron, expressions, templates, projects, v4 scheduler (incl. restart-resume), link preview + Telegram upload, SEED auto-generate, admin, time greeting, v4.3 video maker (plan, captions, real ffmpeg MP4), free video finder, licence credit — all with mocked APIs
 ```
 Every outside service (AI, Telegram, Instagram/Facebook Graph, Google/YouTube, X, Discord, Slack, SMTP, RSS, Sheets) is mocked in `test/helpers.js` — tests never touch the internet or real keys.
 
@@ -340,11 +391,14 @@ Every outside service (AI, Telegram, Instagram/Facebook Graph, Google/YouTube, X
 src/server.js      HTTP server, API, webhooks
 src/runner.js      scheduler (cron/interval, v4 Run schedules in data/schedules.json) + folder/sheet polling
 src/nodes.js       every node (add your own here!)
+src/video.js       v4.3 PC/Termux video pipeline: ffmpeg MP4, edge-tts / espeak voice, faster-whisper -> Hindi captions + dub
 public/            the editor UI (vanilla JS + Drawflow)
 public/js/engine-core.js   workflow engine (shared by server & web version)
 public/js/schedule-core.js Run once / every N / daily at HH:MM (min 30 min)
 public/js/link-preview.js  OpenGraph/Twitter parser + Telegram caption
-public/js/content-gen.js   SEED prompt + no-repeat history
+public/js/content-gen.js   SEED prompt + no-repeat history + time greeting (AI Post Writer + AI Chat)
+public/js/video-core.js    v4.3 video plan, kinetic captions, ffmpeg args, Pexels/Pixabay picker + licence credit (shared, tested)
+public/js/video-web.js     v4.3 website video renderer (canvas + MediaRecorder) + YouTube/Telegram upload of made videos
 supabase/functions/link-preview/  optional proxy for the website's link previews
 public/js/admin.js         admin panel (#/admin): users, traffic, videos, site customise, setup
 public/js/site.js          applies Site customise for everyone, anonymous page views, public Videos page

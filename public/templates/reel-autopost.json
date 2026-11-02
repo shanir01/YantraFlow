@@ -41,7 +41,8 @@
         "temperature": 0.8,
         "maxTokens": 300,
         "baseUrl": "",
-        "apiKey": ""
+        "apiKey": "",
+        "timeGreeting": "on"
       },
       "position": [
         560,

@@ -1,7 +1,7 @@
 {
   "name": "yantraflow",
-  "version": "4.2.0",
-  "description": "Free n8n-style automation platform with an admin panel (users, traffic, videos, site customise): link preview to Telegram, SEED-based AI auto-posting (Telegram, Instagram, YouTube, X, LinkedIn), schedules (every N / daily at HH:MM), 23 ready-made projects and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
+  "version": "4.3.0",
+  "description": "Free n8n-style automation platform: Auto Video Maker (Shorts/Reels), Daily Funny Video (Pexels/Pixabay free-licence) to YouTube + Instagram + Telegram, admin panel, link preview to Telegram, SEED-based AI auto-posting, schedules (every N / daily at HH:MM), 24 ready-made projects and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
   "main": "src/server.js",
   "bin": {
     "yantraflow": "src/server.js"
@@ -23,10 +23,14 @@
     "linkedin",
     "n8n-alternative",
     "no-code",
+    "pexels",
+    "reels",
     "scheduler",
     "self-hosted",
+    "shorts",
     "telegram-bot",
     "termux",
+    "video-maker",
     "workflow",
     "youtube"
   ],

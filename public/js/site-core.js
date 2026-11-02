@@ -33,9 +33,11 @@
     maintenance_text: "Site par maintenance chal raha hai — kuch features thodi der ke liye slow ho sakte hain.",
     videos_enabled: true,
     analytics_enabled: true,
+    premium_note_on: true,         // "Localhost (PC/Termux) pe aur PREMIUM options" note on the website
+    premium_note_text: "",         // "" = default text
   });
-  const BOOL_KEYS = ["banner_on", "signups_enabled", "maintenance_on", "videos_enabled", "analytics_enabled"];
-  const TEXT_LIMITS = { site_name: 40, hero_title: 120, hero_subtitle: 240, banner_text: 240, footer_text: 200, contact_email: 120, signups_off_message: 240, maintenance_text: 240, logo_url: 600 };
+  const BOOL_KEYS = ["banner_on", "signups_enabled", "maintenance_on", "videos_enabled", "analytics_enabled", "premium_note_on"];
+  const TEXT_LIMITS = { site_name: 40, hero_title: 120, hero_subtitle: 240, banner_text: 240, footer_text: 200, contact_email: 120, signups_off_message: 240, maintenance_text: 240, logo_url: 600, premium_note_text: 240 };
 
   function safeUrl(u) {
     const s = String(u == null ? "" : u).trim();
@@ -57,6 +59,14 @@
     if (["info", "warn", "ok"].includes(raw.banner_kind)) out.banner_kind = raw.banner_kind;
     if (raw.social && typeof raw.social === "object") for (const k of Object.keys(out.social)) if (typeof raw.social[k] === "string") out.social[k] = safeUrl(raw.social[k]);
     return out;
+  }
+  // v4.3: the "run on localhost for PREMIUM options" note. Only on the website edition, admin can hide / reword it, user can dismiss it.
+  const PREMIUM_DEFAULT = "Localhost (PC/Termux) pe chalao to aur PREMIUM options milenge — free me:";
+  const PREMIUM_FEATURES = ["24x7 schedule (website tab band ho tab bhi chalta rahe)", "Auto Video Maker MP4 + AI voice (edge-tts) — Instagram Reels ready", "English → Hindi captions + Hindi voice dub (Video Editor)", "X (Twitter), LinkedIn, Slack, Email post + Instagram video file upload", "Unlimited link preview (website pe ~50/din)", "Folder watch, webhooks, local files read/write"];
+  function premiumNote(settings, edition, dismissed) {
+    const s = mergeSettings(settings);
+    if (edition !== "web" || !s.premium_note_on || dismissed) return null;
+    return { text: s.premium_note_text || PREMIUM_DEFAULT, features: PREMIUM_FEATURES.slice() };
   }
   // CSS variables to apply for a settings object.
   function themeVars(s) {
@@ -201,5 +211,5 @@
     return { items, ready: need.length === 0, pending: need.length };
   }
 
-  return { PRIMARY_ADMIN, DEFAULT_SETTINGS, mergeSettings, themeVars, safeUrl, adminList, isAdminEmail, adminGuard, deviceOf, cleanPath, refHost, countryFromTz, buildPageView, aggregateTraffic, dayKey, youtubeId, parseVideo, sortVideos, isMissingTable, setupChecklist };
+  return { premiumNote, PREMIUM_FEATURES, PREMIUM_DEFAULT, PRIMARY_ADMIN, DEFAULT_SETTINGS, mergeSettings, themeVars, safeUrl, adminList, isAdminEmail, adminGuard, deviceOf, cleanPath, refHost, countryFromTz, buildPageView, aggregateTraffic, dayKey, youtubeId, parseVideo, sortVideos, isMissingTable, setupChecklist };
 });
