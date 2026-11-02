@@ -31,24 +31,32 @@
   const KEY = () => "yf_" + (window.YF_NS || "") + "errors";
   function load() { try { const a = JSON.parse(localStorage.getItem(KEY()) || "[]"); return Array.isArray(a) ? a : []; } catch (_) { return []; } }
   function store(a) { try { localStorage.setItem(KEY(), JSON.stringify(a.slice(0, 200))); } catch (_) { /* full */ } paintBadges(); }
+  /* v4.6: errors belong to ONE project and only its LATEST run is kept (no history).
+     The bug button lives only inside the editor and shows the open project's errors. */
+  const curWid = () => { const ed = window.YFEditor && window.YFEditor.current(); return ed ? ed.id || null : null; };
   const E = {
     list: () => load(),
-    open: () => load().filter((e) => !e.resolved),
-    count: () => load().filter((e) => !e.resolved).length,
-    add(row) { if (!row || !row.error) return; const a = load(); const key = row.key || `${row.workflowId}:${row.nodeId}:${row.error}:${Date.now()}`; if (a.some((x) => x.key === key)) return; a.unshift(Object.assign({ at: new Date().toISOString(), resolved: false }, row, { key })); store(a); },
-    fromExec(ex, wf) { for (const r of C.fromExecution(ex, wf)) E.add(r); },
+    mine: (wid) => C.errorsFor(load(), wid === undefined ? curWid() : wid),
+    open: (wid) => E.mine(wid).filter((e) => !e.resolved),
+    count: (wid) => E.open(wid).length,
+    add(row) { // trigger failures etc. — replaces that project's old rows (latest only)
+      if (!row || !row.error || !row.workflowId) return;
+      const key = row.key || `${row.workflowId}:${row.nodeId}:${Date.now()}`;
+      store([Object.assign({ at: new Date().toISOString(), resolved: false }, row, { key })].concat(load().filter((e) => e.workflowId !== row.workflowId)));
+    },
+    fromExec(ex, wf) { if (!ex) return; if (!ex.workflowId && !wf) { const id = curWid(); if (id) wf = { id }; } store(C.replaceRunErrors(load(), ex, wf)); },
     resolve(key) { const a = load(); const x = a.find((e) => e.key === key); if (x) x.resolved = true; store(a); },
-    clear() { store([]); },
-    resolveAll() { store(load().map((e) => Object.assign(e, { resolved: true }))); },
-    async sync() {
-      const b = B(); if (!b || !b.listRuns) return;
+    clear(wid) { const id = wid === undefined ? curWid() : wid; store(id ? load().filter((e) => e.workflowId !== id) : []); },
+    resolveAll(wid) { const id = wid === undefined ? curWid() : wid; store(load().map((e) => (e.workflowId === id ? Object.assign(e, { resolved: true }) : e))); },
+    async sync(wid) { // runs made by the schedule / PC server: take this project's latest run only
+      const id = wid === undefined ? curWid() : wid; const b = B(); if (!id || !b || !b.listRuns) return;
       try {
-        const runs = (await b.listRuns()) || []; const seen = new Set(load().map((e) => String(e.key).split(":")[0]));
-        for (const r of runs.slice(0, 25)) {
-          if (r.status !== "error" || seen.has(r.id)) continue;
-          let ex = r; if (!r.nodes && b.getRun) { try { ex = await b.getRun(r.id); } catch (_) { ex = r; } }
-          E.fromExec(ex);
-        }
+        const runs = ((await b.listRuns()) || []).filter((r) => r.workflowId === id && r.status !== "running");
+        const last = runs.sort((x, y) => String(y.startedAt || "").localeCompare(String(x.startedAt || "")))[0]; if (!last) return;
+        if (load().some((e) => e.workflowId === id && e.executionId === last.id) || (last.status !== "error" && !E.mine(id).length)) return;
+        if (E.mine(id).some((e) => e.executionId && String(e.at || "") > String(last.finishedAt || last.startedAt || ""))) return;
+        let ex = last; if (last.status === "error" && !last.nodes && b.getRun) { try { ex = await b.getRun(last.id); } catch (_) { ex = last; } }
+        E.fromExec(ex, { id });
       } catch (_) { /* offline / locked */ }
     },
   };
@@ -71,34 +79,30 @@
         <div class="ec-act">${e.workflowId && e.nodeId ? `<button class="btn sm primary" data-jump>${I("mouse-pointer-click", 15)} Node pe jao</button>` : e.workflowId ? `<button class="btn sm" data-jump>${I("square-pen", 15)} Workflow kholo</button>` : ""}${e.nodeType && window.YFGuideUI ? `<button class="btn sm" data-guide>${I("book-open", 15)} Guide</button>` : ""}<button class="btn sm ghost" data-copy>${I("copy", 15)} Copy</button>${e.resolved ? "" : `<button class="btn sm ghost" data-res>${I("check", 15)} Resolved</button>`}</div>
       </div></article>`;
   }
-  let ecTab = "errors";
   async function openCenter(focusKey) {
     closeCenter();
-    if (focusKey === "__check__") { ecTab = "check"; focusKey = null; } E.sync().then(() => { if ($("#errc")) render(); });
+    const wid = curWid();
+    if (!wid && focusKey !== "__check__") { if (app()) app().toast("Error Center project ke andar hai — project kholo", ""); return; }
+    const check = focusKey === "__check__"; if (check) focusKey = null;
+    if (!check) E.sync(wid).then(() => { if ($("#errc")) render(); });
     const bd = document.createElement("div"); bd.className = "ec-back"; bd.id = "ecb"; bd.onclick = closeCenter;
     const p = document.createElement("aside"); p.className = "errc"; p.id = "errc"; p.setAttribute("role", "dialog"); p.setAttribute("aria-label", "Error Center");
     document.body.append(bd, p);
-    const inEditor = !!(window.YFEditor && window.YFEditor.current());
-    if (!inEditor && ecTab === "check") ecTab = "errors";
+    const wname = (window.YFEditor && window.YFEditor.current() && window.YFEditor.current().name) || "";
     function render() {
-      const all = E.list(); const openN = all.filter((e) => !e.resolved).length;
-      let body = "";
-      if (ecTab === "check") {
+      const list = E.open(wid); let body = "";
+      if (check) {
         const issues = window.YFEditor.lint();
         body = issues.length ? `<p class="ec-note">${I("scan-search", 15)} Run se pehle is workflow me ${issues.length} dikkat mili:</p>` + issues.map((e) => rowHtml(e, false)).join("") : `<div class="ec-empty">${I("circle-check", 40)}<b>Sab theek dikh raha hai</b><small>Trigger hai, nodes jude hain, keys bhari hain. Ab Run dabao.</small></div>`;
       } else {
-        const list = all.filter((e) => ecTab === "all" || !e.resolved);
-        body = list.length ? list.map((e) => rowHtml(e, e.key === focusKey)).join("") : `<div class="ec-empty">${I("shield-check", 40)}<b>Koi error nahi</b><small>Run ya schedule me koi node fail hua to yahan dikhega — kya hua, kahan, kyun aur kaise fix karein.</small></div>`;
+        body = list.length ? `<p class="ec-note">${I("play", 14)} Last run ke errors — sirf is project ke. Naya Run purane errors hata deta hai.</p>` + list.map((e) => rowHtml(e, e.key === focusKey || list.length === 1)).join("") : `<div class="ec-empty">${I("shield-check", 40)}<b>Koi error nahi</b><small>Run dabao — is project ka koi node fail hua to yahan dikhega: kya hua, kahan, kyun aur kaise fix karein.</small></div>`;
       }
-      p.innerHTML = `<header class="ec-h"><span class="ec-hi">${I("bug", 20)}</span><div><b>Error Center</b><small>${openN ? `${openN} unresolved` : "Sab clear"}</small></div><span class="spacer"></span><button class="btn sm ghost icon" id="ecx" aria-label="Close">${I("close", 18)}</button></header>
-        <nav class="ec-tabs"><button data-t="errors" class="${ecTab === "errors" ? "on" : ""}">Errors <span>${openN}</span></button>${inEditor ? `<button data-t="check" class="${ecTab === "check" ? "on" : ""}">Is workflow ko check karo</button>` : ""}<button data-t="all" class="${ecTab === "all" ? "on" : ""}">History</button></nav>
+      p.innerHTML = `<header class="ec-h"><span class="ec-hi">${I(check ? "scan-search" : "bug", 20)}</span><div><b>${check ? "Workflow check" : "Error Center"}</b><small>${esc(wname || "Ye project")}${check ? "" : ` · ${list.length ? `${list.length} error` : "Sab clear"}`}</small></div><span class="spacer"></span><button class="btn sm ghost icon" id="ecx" aria-label="Close">${I("close", 18)}</button></header>
         <div class="ec-list">${body}</div>
-        ${ecTab !== "check" && all.length ? `<footer class="ec-f"><button class="btn sm" id="ecres">${I("check", 15)} Sab resolved</button><button class="btn sm ghost" id="ecclr" style="color:#ff9aac">${I("trash-2", 15)} Clear all</button></footer>` : ""}`;
+        ${!check && list.length ? `<footer class="ec-f"><button class="btn sm ghost" id="ecclr" style="color:#ff9aac">${I("trash-2", 15)} Clear all</button></footer>` : ""}`;
       $("#ecx", p).onclick = closeCenter;
-      $$("[data-t]", p).forEach((b) => (b.onclick = () => { ecTab = b.dataset.t; render(); }));
-      $("#ecres", p) && ($("#ecres", p).onclick = () => { E.resolveAll(); render(); });
-      $("#ecclr", p) && ($("#ecclr", p).onclick = () => { if (confirm("Saare errors hata dein?")) { E.clear(); render(); } });
-      const rows = ecTab === "check" ? window.YFEditor.lint() : E.list();
+      $("#ecclr", p) && ($("#ecclr", p).onclick = () => { E.clear(wid); render(); });
+      const rows = check ? window.YFEditor.lint() : list;
       $$(".ec-row", p).forEach((el) => {
         const e = rows.find((x) => x.key === el.dataset.key) || {};
         $(".ec-sum", el).onclick = () => el.classList.toggle("open");
@@ -271,18 +275,12 @@
   }
 
   // ------------------------------------------------------------------ chrome: bug + terminal buttons in the top bar
-  function chrome() {
-    const tr = $(".top-right");
-    if (tr && !$("#errBtn")) {
-      tr.insertAdjacentHTML("afterbegin", `<a class="term-btn" href="#/terminal" title="Terminal" aria-label="Terminal">${I("square-terminal", 18)}</a>${errButton("errBtn")}`);
-      $("#errBtn").onclick = () => openCenter();
-    }
-    const nav = $(".topbar .nav");
-    if (nav && !nav.querySelector('[data-v="terminal"]')) nav.insertAdjacentHTML("beforeend", `<a href="#/terminal" data-v="terminal">${I("square-terminal", 17)}<span>Terminal</span></a>`);
-    paintBadges();
-  }
+  // v4.6: the top bar has no bug / terminal buttons any more — the Error Center is inside each project
+  // (editor bug button) and the Terminal opens from the editor (PC/laptop). Only the badges get painted.
+  function chrome() { paintBadges(); }
+  addEventListener("hashchange", () => { const h = $("#rtoasts"); if (h) h.innerHTML = ""; setTimeout(paintBadges, 50); });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", chrome); else chrome();
-  setInterval(() => { if (B() && document.visibilityState === "visible") E.sync(); }, 90000);
+  setInterval(() => { if (B() && document.visibilityState === "visible" && curWid()) E.sync(); }, 90000);
 
   window.YFUI = { anchor, openCenter, closeCenter, runToast, terminal, viewTerminal, errButton, paintBadges, jumpTo };
 })();

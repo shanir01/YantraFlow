@@ -201,3 +201,30 @@ html[data-theme="light"] .rtoast{background:#fff}
 @media (max-height:700px) and (max-width:900px){.hero3d{display:none}.auth{padding-top:24px}}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* ---------------- v4.6 ---------------- */
+/* frozen top bar: body grows with the page (height:100% capped it, so the sticky bar scrolled away) */
+html{height:auto;min-height:100%}body{height:auto;min-height:100%;min-height:100dvh}
+.topbar{position:sticky;position:-webkit-sticky;top:0;z-index:40}
+.topbar .term-btn,.topbar .err-btn,.topbar .nav a[data-v="terminal"]{display:none!important}
+/* scroll slot: the list scrolls inside, footer stays on screen */
+.yf-slot{position:relative;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border:1px solid var(--hair,var(--line));border-radius:18px;padding:10px;background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,.01));box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 30px -22px rgba(0,0,0,.9);scrollbar-width:thin;scrollbar-color:rgba(124,92,255,.45) transparent}
+.yf-slot::-webkit-scrollbar{width:6px}.yf-slot::-webkit-scrollbar-thumb{background:rgba(124,92,255,.45);border-radius:9px}
+.yf-slot>.list{margin:0}.yf-slot>.grid{margin:0}.yf-slot .card.cred:last-child{margin-bottom:0}
+.yf-slot .empty{padding:30px 10px}
+html[data-theme="light"] .yf-slot{background:#fff}
+body.has-slot #view>.page{padding-bottom:10px}
+body.has-slot #sitefoot{padding-top:6px}
+body.has-slot #sitefoot .sf-in{padding-top:10px;gap:6px}
+/* Keys cards: closed by default, smooth open / close */
+.cred-sum{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:12px;cursor:pointer;border-radius:12px;-webkit-tap-highlight-color:transparent}
+.cred-sum:focus-visible{outline:2px solid var(--a1,#7c5cff);outline-offset:4px}
+.cred-sum .cred-chev{flex:none;color:var(--dim);transition:transform .25s var(--ease,ease)}
+.cred.open .cred-sum .cred-chev{transform:rotate(180deg)}
+.cred .st{margin-left:auto}
+.cred-body{overflow:hidden;transition:height .28s var(--ease,ease)}
+.cred-in{padding-top:2px}
+@media (prefers-reduced-motion:reduce){.cred-body{transition:none}}
+.cred .st{white-space:nowrap}
+.pj-slot>.site-hero{margin-top:0}.pj-slot>.pj-sub{margin:4px 2px 12px}.pj-slot>.vm-entry{margin-bottom:14px}
+.pj-head{margin-bottom:6px}

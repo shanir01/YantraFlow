@@ -31,6 +31,20 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 
 > YantraFlow is **inspired by** n8n's idea, but it is written from scratch — no n8n code is used. n8n has far more integrations; YantraFlow is small, simple and phone-friendly.
 
+## 🧩 What's new in v4.6
+
+Clean, premium UI round — every option in exactly one place.
+
+- **Frozen top bar** — logo, menu, version, GitHub and profile stay at the top on every page (phone + laptop); only the middle scrolls. (The old `html,body{height:100%}` let the sticky bar scroll away.)
+- **Scroll slots** — Run history, Keys & accounts and Public projects show their list inside a box that scrolls by itself, so the footer (Instagram / YouTube / Telegram / GitHub) always stays on screen.
+- **Top nav:** Workflows · Videos & Tutorial · Runs · Keys. "Videos & Tutorial" replaced "Projects" in the top bar and the phone bar, and left the avatar popup + footer.
+- **Terminal / Termux removed from the top bar.** The Terminal still opens from the editor on PC/laptop (bottom drawer) and at `#/terminal`.
+- **Error Center is per project:** the bug button is only inside a project (editor) and shows only that project's errors from its latest run — no history. A new Run replaces the old errors, a successful Run clears them; other projects' errors show when you open them. Pre-run "Workflow check" stays in the editor ⋮ menu.
+- **Profile = only profile.** Settings, Public projects, About, Developer and Log out live in the avatar popup; "Tips wapas dikhao" moved to Settings; the AI Project Generator lives on the Workflows page ("AI se banao"). No button shows in two places.
+- **Keys cards start closed** (icon, name, "n field(s)", saved badge). One tap opens with a smooth slide, the next tap closes and it stays closed (the old `<details>` toggle re-opened). Same for AI, Telegram and every card.
+- **Import icons:** Import → `import`, From file (.json) → `file-json`, From share link → `link` (Lucide).
+- 97 tests (6 new in `test/v46.test.js`).
+
 ## 🧩 What's new in v4.5
 
 **A premium new look, a real Error Center, a Terminal, and 22 new nodes in n8n-style categories.**

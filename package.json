@@ -1,7 +1,7 @@
 {
   "name": "yantraflow",
-  "version": "4.5.0",
-  "description": "Free n8n-style automation platform: 50+ nodes in Trigger / Core / Flow / AI / Social / Data / Media categories, Error Center (what failed, where, why, how to fix), Terminal (PC shell + website console), AI Agent with tools, AI Project Generator, Photo + Video Maker, Auto Video Maker (Shorts/Reels), Daily Funny Video to YouTube + Instagram + Telegram, admin panel, schedules and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
+  "version": "4.6.0",
+  "description": "Free n8n-style automation platform (v4.6: frozen top bar, scroll slots, per-project Error Center): 50+ nodes in Trigger / Core / Flow / AI / Social / Data / Media categories, Error Center (what failed, where, why, how to fix), Terminal (PC shell + website console), AI Agent with tools, AI Project Generator, Photo + Video Maker, Auto Video Maker (Shorts/Reels), Daily Funny Video to YouTube + Instagram + Telegram, admin panel, schedules and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
   "main": "src/server.js",
   "bin": {
     "yantraflow": "src/server.js"

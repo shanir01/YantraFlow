@@ -103,9 +103,9 @@ test("Error Center maps common errors to why + how-to-fix (Hinglish), with a gen
   const kinds = issues.map((i) => i.kind);
   assert.ok(kinds.includes("no-trigger")); assert.ok(kinds.includes("pc-only")); assert.ok(kinds.includes("unconnected")); assert.ok(kinds.includes("key:telegram"));
   assert.equal(issues.find((i) => i.kind === "key:telegram").nodeId, "c");
-  // UI wiring: bug icon in top bar + editor, badge, run toast with Details / Fix
+  // UI wiring: bug icon in the editor (v4.6: no longer in the top bar), badge, run toast with Details / Fix
   const ui = fs.readFileSync(path.join(PUB, "js", "ui-plus.js"), "utf8");
-  for (const s of ["errBtn", "data-err-badge", "Kyun aaya?", "Kaise fix karein", "data-jump", "Details", "Fix", "Clear all", "Resolved"]) assert.ok(ui.includes(s), s);
+  for (const s of ["data-err-badge", "Kyun aaya?", "Kaise fix karein", "data-jump", "Details", "Fix", "Clear all", "Resolved"]) assert.ok(ui.includes(s), s);
   assert.ok(fs.readFileSync(path.join(PUB, "js", "app.js"), "utf8").includes('errButton("edErr")'));
 });
 

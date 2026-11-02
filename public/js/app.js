@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const REPO = "https://github.com/shanir01/YantraFlow";
-  const VERSION = "4.5.0";
+  const VERSION = "4.6.0";
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -82,7 +82,7 @@
     const schedOn = list.some((w) => w.schedule && w.schedule.schedule && w.schedule.schedule.enabled);
     view().innerHTML = `<div class="page">${pageTips(schedOn ? [schedTip()] : [])}
       <div class="hero-h"><div><h1 class="h">Your <span class="g">automations</span></h1><p class="sub">Build once, it runs by itself — on your PC or your phone. Free &amp; local.</p></div>
-      <div class="row"><button class="btn" id="imp">${I("upload", 16)} Import</button><a class="btn" href="#/generator">${I("wand-sparkles", 16)} AI se banao</a><button class="btn primary" id="new">${I("plus", 16)} New workflow</button></div></div>
+      <div class="row"><button class="btn" id="imp">${I("import", 16)} Import</button><a class="btn" href="#/generator">${I("wand-sparkles", 16)} AI se banao</a><button class="btn primary" id="new">${I("plus", 16)} New workflow</button></div></div>
       ${list.length ? `<div class="grid">${list.map((w) => `
         <div class="card wf-card" data-id="${w.id}">
           <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><h3 style="flex:1;min-width:0">${esc(w.name)}</h3>
@@ -328,9 +328,9 @@
 
   function openImportMenu(anchor) {
     openPop([
-      { ic: "upload", label: "From file (.json)", act: importFlow },
-      { ic: "share-2", label: "From share link", act: importFromLink },
-    ], anchor, `${I("upload", 15)}<b>Import a workflow</b>`);
+      { ic: "file-json", label: "From file (.json)", act: importFlow },
+      { ic: "link", label: "From share link", act: importFromLink },
+    ], anchor, `${I("import", 15)}<b>Import a workflow</b>`);
   }
   async function importFromLink() {
     const txt = prompt("Paste the YantraFlow share link"); if (!txt) return;
@@ -383,7 +383,7 @@
     setNav("runs");
     const list = await B.listRuns();
     view().innerHTML = `<div class="page"><div class="hero-h"><div><h1 class="h">Run <span class="g">history</span></h1><p class="sub">Every run, every node, every output.</p></div>${list.length ? '<button class="btn sm danger" id="clr">Clear all</button>' : ""}</div>
-      ${list.length ? `<div class="list">${list.map((r) => `<a class="run-row" href="#/runs/${r.id}">${statusPill(r.status)}<span class="nm">${esc(r.workflowName)}</span><span class="meta hide-m">${esc(r.mode)}</span><span class="meta">${ago(r.startedAt)} · ${r.durationMs} ms</span></a>`).join("")}</div>`
+      ${list.length ? `<div class="yf-slot" data-slot><div class="list">${list.map((r) => `<a class="run-row" href="#/runs/${r.id}">${statusPill(r.status)}<span class="nm">${esc(r.workflowName)}</span><span class="meta hide-m">${esc(r.mode)}</span><span class="meta">${ago(r.startedAt)} · ${r.durationMs} ms</span></a>`).join("")}</div></div>`
         : `<div class="empty"><div class="big">${I("history", 44)}</div><p>No runs yet. Open a workflow and press Run.</p></div>`}</div>`;
     $("#clr") && ($("#clr").onclick = async () => { if (confirm("Delete all run history?")) { await B.clearRuns(); viewRuns(); } });
   }
@@ -401,8 +401,28 @@
       ${r.logs && r.logs.length ? `<h3 style="margin-top:22px">Logs</h3><pre class="json">${esc(r.logs.map((l) => `${l.t.slice(11, 19)}  [${l.node}]  ${l.msg}`).join("\n"))}</pre>` : ""}</div>`;
   }
 
-  async function viewKeys() {
+  /* v4.6: Keys cards start CLOSED (icon, name, "n field(s)", saved badge). One tap opens with a smooth
+     slide, the next tap closes and it stays closed — no <details> (its double toggle re-opened cards). */
+  let OPEN_CREDS = new Set();
+  function toggleCred(card, open) {
+    const btn = card.querySelector(".cred-sum"), body = card.querySelector(".cred-body"); if (!btn || !body) return;
+    const want = open === undefined ? btn.getAttribute("aria-expanded") !== "true" : !!open;
+    btn.setAttribute("aria-expanded", String(want)); card.classList.toggle("open", want);
+    if (want) OPEN_CREDS.add(card.dataset.cred); else OPEN_CREDS.delete(card.dataset.cred);
+    if (want) { body.hidden = false; body.style.height = "0px"; requestAnimationFrame(() => { body.style.height = body.scrollHeight + "px"; }); }
+    else { body.style.height = body.scrollHeight + "px"; requestAnimationFrame(() => { body.style.height = "0px"; }); }
+    clearTimeout(body._t); body._t = setTimeout(() => { if (want) body.style.height = ""; else body.hidden = true; }, 300);
+  }
+  function wireCredCards(openSet) {
+    $$(".cred[data-cred]").forEach((card) => {
+      const btn = $(".cred-sum", card);
+      btn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); toggleCred(card); };
+      if (openSet && openSet.has(card.dataset.cred)) { btn.setAttribute("aria-expanded", "true"); card.classList.add("open"); $(".cred-body", card).hidden = false; }
+    });
+  }
+  async function viewKeys(keepOpen) {
     setNav("keys");
+    OPEN_CREDS = new Set(typeof keepOpen === "string" ? [keepOpen] : []);
     const { schema, values } = await B.getCreds();
     const GD = window.YFGuides;
     const filled = (id) => Object.values(values[id] || {}).some((v) => v);
@@ -412,15 +432,16 @@
       return `<div><label class="lb" for="c-${sec.id}-${f.key}">${esc(f.label)}</label><input class="inp" id="c-${sec.id}-${f.key}" data-sec="${sec.id}" data-key="${f.key}" type="${f.secret ? "password" : "text"}" autocomplete="off" spellcheck="false" placeholder="${esc(ph)}" value="${esc(values[sec.id][f.key])}">${gi ? `<div class="fh"><span>${I("info", 12)} ${esc(gi.what)}</span></div>` : ""}</div>`;
     };
     view().innerHTML = `<div class="page">${webBanner()}<div class="hero-h"><div><h1 class="h">Keys &amp; <span class="g">accounts</span></h1><p class="sub">Saved only on ${B.edition === "web" ? "this browser" : "this device (data/credentials.json)"} — never uploaded anywhere. Nodes use these when their own key field is blank. Har card me <b>Guide</b> hai: key kahan milegi, steps, errors ka fix.</p></div></div>
-      ${schema.map((sec) => `<details class="card cred" ${sec.id === "ai" || sec.id === "telegram" ? "open" : ""}><summary><span class="ic">${I(sec.icon, 22)}</span><div><b>${esc(sec.title)}</b><div class="meta">${sec.fields.length} field(s)</div></div><span class="st ${filled(sec.id) ? "on" : "off"}">${filled(sec.id) ? "● saved" : "not set"}</span></summary>
-        <div class="row cred-top"><p class="help" style="margin:0;flex:1;min-width:200px">${esc(GD && GD.GUIDES[sec.id] ? GD.GUIDES[sec.id].what : sec.help)}</p>${GD && GD.GUIDES[sec.id] ? `<button class="btn sm" type="button" data-guide="${sec.id}">${I("book-open", 14)} Guide — kahan milega?</button>` : ""}</div>
+      <div class="yf-slot" data-slot>${schema.map((sec) => `<section class="card cred" data-cred="${sec.id}"><button type="button" class="cred-sum" aria-expanded="false" aria-controls="cb-${sec.id}"><span class="ic">${I(sec.icon, 22)}</span><div><b>${esc(sec.title)}</b><div class="meta">${sec.fields.length} field(s)</div></div><span class="st ${filled(sec.id) ? "on" : "off"}">${filled(sec.id) ? "● saved" : "not set"}</span>${I("chevron-down", 18, "cred-chev")}</button>
+        <div class="cred-body" id="cb-${sec.id}" hidden><div class="cred-in"><div class="row cred-top"><p class="help" style="margin:0;flex:1;min-width:200px">${esc(GD && GD.GUIDES[sec.id] ? GD.GUIDES[sec.id].what : sec.help)}</p>${GD && GD.GUIDES[sec.id] ? `<button class="btn sm" type="button" data-guide="${sec.id}">${I("book-open", 14)} Guide — kahan milega?</button>` : ""}</div>
         <div data-preset-scope>${sec.id === "ai" && GUI() ? GUI().presetSelect("#c-ai-baseUrl,#c-ai-model,#c-ai-apiKey", values.ai.baseUrl) : ""}
         <div class="two">${sec.fields.map((f) => fieldHtml(sec, f)).join("")}</div></div>
         ${GD && GD.GUIDES[sec.id] ? `<details class="gd-inline"><summary>${I("list-ordered", 14)} Setup steps + common errors</summary>${GUI().guideBody(sec.id)}</details>` : `<p class="help">${esc(sec.help)}</p>`}
-        <div class="row" style="margin-top:14px"><button class="btn sm primary" data-save="${sec.id}">Save</button>${sec.test ? `<button class="btn sm" data-test="${sec.id}">Test ${sec.id === "ai" ? "AI" : "Telegram"}</button>` : ""}<span class="meta" id="tr-${sec.id}"></span></div></details>`).join("")}
-      ${GUI() ? GUI().closable("keys-safety", `<div class="note">${I("shield-check", 15)} Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div>`) : ""}</div>`;
+        <div class="row" style="margin-top:14px"><button class="btn sm primary" data-save="${sec.id}">Save</button>${sec.test ? `<button class="btn sm" data-test="${sec.id}">Test ${sec.id === "ai" ? "AI" : "Telegram"}</button>` : ""}<span class="meta" id="tr-${sec.id}"></span></div></div></div></section>`).join("")}
+      ${GUI() ? GUI().closable("keys-safety", `<div class="note">${I("shield-check", 15)} Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div>`) : ""}</div></div>`;
+    wireCredCards(OPEN_CREDS);
     const collect = (secId) => { const o = { [secId]: {} }; $$(`[data-sec="${secId}"]`).forEach((i) => (o[secId][i.dataset.key] = i.value)); return o; };
-    $$("[data-save]").forEach((b) => (b.onclick = async () => { await B.saveCreds(collect(b.dataset.save)); toast("Saved on this device ✓", "ok"); viewKeys(); }));
+    $$("[data-save]").forEach((b) => (b.onclick = async () => { await B.saveCreds(collect(b.dataset.save)); toast("Saved on this device ✓", "ok"); viewKeys(b.dataset.save); }));
     $$("[data-test]").forEach((b) => (b.onclick = async () => {
       const id = b.dataset.test; await B.saveCreds(collect(id)); const out = $(`#tr-${id}`); out.textContent = "Testing…";
       try { const r = await B.testCred(id); out.innerHTML = r.ok ? `<span style="color:#7dffb0">${I("circle-check", 15)} Works!</span>` : `<span style="color:#ff9aac">${I("circle-x", 15)} ${esc(r.error)}</span>`; }
@@ -458,7 +479,7 @@
         <div class="termdrawer hidden" id="termdrawer"></div>
       </div>
       <div class="menu hidden" id="menu" role="menu">
-        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><button data-m="guide">${I("book-open", 16)} Setup guide</button><button data-m="check">${I("scan-search", 16)} Check workflow (errors)</button><button data-m="term">${I("square-terminal", 16)} Terminal</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
+        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("file-json", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><button data-m="guide">${I("book-open", 16)} Setup guide</button><button data-m="check">${I("scan-search", 16)} Check workflow (errors)</button><button data-m="term">${I("square-terminal", 16)} Terminal</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
       </div></div>`;
     const el = $("#drawflow");
     const ed = new Drawflow(el);
@@ -502,7 +523,7 @@
     $("#more").onclick = (e) => { e.stopPropagation(); const m = $("#menu"); m.classList.toggle("hidden"); if (!m.classList.contains("hidden")) window.YFUI.anchor(m, $("#more")); };
     $("#edErr").onclick = (e) => { e.stopPropagation(); window.YFUI.openCenter(); };
     $("#edTerm").onclick = (e) => { e.stopPropagation(); toggleTermDrawer(); };
-    window.YFUI.paintBadges();
+    window.YFUI.paintBadges(); window.YFErrors.sync().catch(() => {}); // v4.6: only THIS project's latest-run errors
     ED.creds = {}; B.getCreds().then((c) => { if (ED) ED.creds = c || {}; }).catch(() => {});
     const focusId = sessionStorage.getItem("yf_focus_node"); if (focusId) { sessionStorage.removeItem("yf_focus_node"); setTimeout(() => focusNode(focusId, true), 350); }
     document.addEventListener("click", hideMenu);
@@ -643,7 +664,7 @@
       ne.classList.add(`run-${r.status}`);
       $(".nf-badge", ne).textContent = r.status === "success" ? `✓ ${r.outputCount} item${r.outputCount === 1 ? "" : "s"}` : r.status === "error" ? "✗ error" : r.status === "stopped" ? "stopped" : r.status;
     }
-    if (B.edition === "full") dispatchEvent(new CustomEvent("yf:run", { detail: ex })); else window.YFErrors.fromExec(ex);
+    if (B.edition === "full") dispatchEvent(new CustomEvent("yf:run", { detail: ex })); else window.YFErrors.fromExec(ex, ED.wf);
     if (ex.status === "error") window.YFUI.runToast(ex);
     if (ex.status !== "error") toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : ex.status === "stopped" ? "Run stopped" : `Failed: ${ex.error}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err");
     const d = $("#drawer");
@@ -920,8 +941,25 @@
       if (e && e.locked) return;
       view().innerHTML = `<div class="page"><div class="empty"><div class="big">${I("triangle-alert", 44)}</div><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`;
     }
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0); fitSoon();
   }
+  /* v4.6 "slot": Run history, Keys and Public projects show their list inside a box that scrolls by itself,
+     sized so the footer (Instagram / YouTube / Telegram links) stays on screen under it. */
+  function fitSlots() {
+    const s = document.querySelector("#view [data-slot]");
+    document.body.classList.toggle("has-slot", !!s); if (!s) return;
+    // measure everything else on the page (header, notes under the slot, footer) with the slot squeezed to 0
+    s.style.maxHeight = "0px";
+    const base = s.offsetHeight; // padding + border
+    const foot = document.getElementById("sitefoot"); const pg = s.closest(".page");
+    const last = foot && !foot.classList.contains("hidden") ? foot : pg || s;
+    const bottom = last.getBoundingClientRect().bottom + window.scrollY;
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    s.style.maxHeight = Math.max(280, Math.floor(vh - bottom + base - 4)) + "px";
+  }
+  let fitT = null;
+  const fitSoon = () => { requestAnimationFrame(fitSlots); clearTimeout(fitT); fitT = setTimeout(fitSlots, 350); };
+  window.addEventListener("resize", fitSoon);
   window.addEventListener("hashchange", route);
   window.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s" && ED) { e.preventDefault(); save(true); } });
   window.addEventListener("beforeunload", (e) => { if (ED && ED.dirty) { e.preventDefault(); e.returnValue = ""; } });
@@ -945,7 +983,7 @@
     }
     route();
   }
-  window.YFApp = { VERSION, premiumHtml, pageTips, workflowGuide, get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
+  window.YFApp = { fitSlots: fitSoon, VERSION, premiumHtml, pageTips, workflowGuide, get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
 
   async function boot() {
     if (location.hash.startsWith("#/share/")) sessionStorage.setItem("yf_share", location.hash);

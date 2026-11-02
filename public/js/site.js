@@ -66,8 +66,10 @@
     if (!f) { f = document.createElement("footer"); f.id = "sitefoot"; const v = document.getElementById("view"); if (v && v.parentNode) v.parentNode.insertBefore(f, v.nextSibling); else document.body.appendChild(f); }
     f.innerHTML = `<div class="sf-in"><div class="sf-soc">${socialLinks(s)}</div>
       <div class="sf-tx">${esc(s.footer_text)}${s.contact_email ? ` · <a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a>` : ""}</div>
-      ${s.videos_enabled ? `<a class="sf-v" href="#/videos">${I("square-play", 14)} Videos / Tutorials</a>` : ""}</div>`;
+</div>`;
+    for (const a of document.querySelectorAll('.nav a[data-v="videos"], .bottomnav a[data-v="videos"]')) a.hidden = !s.videos_enabled;
     syncFooter();
+    if (window.YFApp && window.YFApp.fitSlots) window.YFApp.fitSlots();
   }
   function syncFooter() {
     const f = document.getElementById("sitefoot"); if (!f) return;
@@ -109,7 +111,7 @@
   async function viewVideos() {
     const A = window.YFApp; if (A && A.setNav) A.setNav("videos");
     const v = document.getElementById("view");
-    v.innerHTML = `<div class="page"><div class="hero-h"><div><h1 class="h">Videos <span class="g">/ Tutorials</span></h1><p class="sub">${esc(settings.site_name)} kaise use karein — step by step.</p></div></div><div id="vids"><p class="sub">${I("loader-circle", 16, "spin")} Loading…</p></div></div>`;
+    v.innerHTML = `<div class="page"><div class="hero-h"><div><h1 class="h">Videos <span class="g">&amp; Tutorial</span></h1><p class="sub">${esc(settings.site_name)} kaise use karein — step by step.</p></div></div><div id="vids"><p class="sub">${I("loader-circle", 16, "spin")} Loading…</p></div></div>`;
     let rows = [];
     try { rows = await fetchVideos(); } catch (_) { rows = []; }
     const list = C.sortVideos(rows).map(C.parseVideo).filter(Boolean);

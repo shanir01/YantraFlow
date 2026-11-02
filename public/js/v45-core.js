@@ -104,6 +104,15 @@
     if (!rows.length) rows.push({ key: `${ex.id}:run`, source: "run", at: ex.finishedAt || new Date().toISOString(), workflowId: ex.workflowId || null, workflowName: ex.workflowName || "", nodeId: null, nodeName: "", nodeType: "", error: ex.error, mode: ex.mode, executionId: ex.id });
     return rows;
   }
+  /* v4.6: the Error Center is per project and shows ONLY the latest run's errors (no history).
+     A new run of workflow W replaces every old row of W (a successful run clears W). */
+  function wfIdOf(ex, wf) { return (ex && ex.workflowId) || (wf && wf.id) || null; }
+  function replaceRunErrors(list, ex, wf) {
+    const wid = wfIdOf(ex, wf); const rows = fromExecution(ex, wf).map((r) => Object.assign({ resolved: false }, r, { workflowId: r.workflowId || wid }));
+    const keep = (list || []).filter((e) => !wid || e.workflowId !== wid);
+    return rows.concat(keep).slice(0, 200);
+  }
+  function errorsFor(list, wid) { return wid ? (list || []).filter((e) => e.workflowId === wid) : []; }
   /* "Check workflow": problems found before running. meta = node list, needs(wf, creds) = guide missing() */
   function lintWorkflow(wf, opt) {
     opt = opt || {}; const out = []; const meta = {}; for (const m of opt.meta || []) meta[m.type] = m;
@@ -182,5 +191,5 @@
   }
   const QUICK_PC = ["git pull", "npm install", "pkg install ffmpeg", "node -v", "ls", "yf help"];
   const QUICK_WEB = ["help", "list", "logs", "errors", "keys", "status", "clear"];
-  return { placeMenu, RULES, explain, fromExecution, lintWorkflow, parseCommand, consoleCommand, pickWorkflow, CONSOLE_HELP, QUICK_PC, QUICK_WEB };
+  return { placeMenu, RULES, explain, fromExecution, replaceRunErrors, errorsFor, lintWorkflow, parseCommand, consoleCommand, pickWorkflow, CONSOLE_HELP, QUICK_PC, QUICK_WEB };
 });
