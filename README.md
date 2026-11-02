@@ -2,7 +2,7 @@
 
 <p align="center"><img src="public/img/logo.svg" width="96" alt="YantraFlow logo"></p>
 <h1 align="center">YantraFlow</h1>
-<p align="center"><b>Free, n8n-style automation platform: free account, 23 ready-made Public Projects (Telegram, Instagram, YouTube, X, LinkedIn auto-post with SEED + schedules), and a drag-and-drop editor — on the web, your PC <i>and</i> your Android phone (Termux).</b><br>
+<p align="center"><b>Free, n8n-style automation platform: free account, 25 ready-made Public Projects (incl. Photo + Video Maker), an AI Project Generator (Telegram, Instagram, YouTube, X, LinkedIn auto-post with SEED + schedules), and a drag-and-drop editor — on the web, your PC <i>and</i> your Android phone (Termux).</b><br>
 Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhooks, schedules. Zero dependencies. Your keys never leave your device.</p>
 
 <p align="center">
@@ -30,6 +30,26 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 | Works with your [FreeLLM-Router](https://github.com/shanir01/FreeLLM-Router) | ✅ default AI URL | manual |
 
 > YantraFlow is **inspired by** n8n's idea, but it is written from scratch — no n8n code is used. n8n has far more integrations; YantraFlow is small, simple and phone-friendly.
+
+## 🧩 What's new in v4.4
+
+**Cleaner screens, help next to every key, and two new ways to build projects.**
+
+- **Close buttons on every note.** The "Web version", "Localhost PREMIUM" and "schedule tabhi chalega" boxes are now ONE slim **Tips** strip (tap to open). Every tip, the admin *Setup pending* banner, project notes and announcement banners have an **X**. A closed tip stays closed (saved in your browser). **Me → Tips wapas dikhao** brings them all back.
+- **Help next to every key field.** Open any node: *AI model*, *AI base URL*, *AI API key*, Telegram bot token / chat id, Instagram, Facebook, Pexels, Pixabay, Discord, Slack fields show an **example**, a one-line **"Kya daalna hai"** and a **"Kahan milega? (Guide)"** button.
+- **AI provider picker.** Pick **Groq / Gemini / OpenRouter / OpenAI / SangamAI (local)** and the Base URL + recommended model fill in by themselves (Groq → `openai/gpt-oss-120b`, Gemini → `gemini-3.8-flash`, SangamAI → `http://localhost:8787/v1` + key `local`). Works on the Keys page and inside nodes.
+- **A guide everywhere.** Every Keys card has a step-by-step Hinglish guide with direct links (console.groq.com/keys, aistudio.google.com/apikey, @BotFather, @userinfobot, pexels.com/api, pixabay.com/api/docs, Google Cloud + OAuth Playground, Meta Graph API Explorer, LinkedIn apps) and **common errors + fix**. Every project page has a **Guide** section: what the project does, which keys it needs (green = set, orange = missing), setup steps and errors. Editor → ⋮ → **Setup guide**.
+- **AI Project Generator** (Projects page, Workflows page, Me menu). Write in Hinglish what you want, e.g. *"har subah Telegram pe motivational quote photo ke saath bhejo"*, or tap one of 6 example chips. It uses **your own AI key** from the Keys page (on PC the key stays on the server, the browser never sees it). The AI's JSON is checked against the real node list: unknown nodes/params, a bad cron, broken connections or a missing trigger go back to the AI to fix (up to 3 tries). Keys/tokens are never taken from the AI. You see a preview (steps + which keys are missing), then **Use this project**.
+- **Photo + Video Maker (auto)**, a complete project. Fill **once**: topic / SEED, photo style (gradient, stock photo, dark, light), size (1080x1350 / 1080x1920 / 1080x1080), brand colours, handle, platforms (Telegram / YouTube / Instagram), daily time. It builds the workflow **and** the daily schedule. Each run: AI writes a fresh post → **Post Photo Maker** makes the image card (brand colours, optional free Pexels/Pixabay photo background, credit line added) → Auto Video Maker makes the short video → posts. No repeated inputs.
+- **New node: Post Photo Maker** (`imageMaker`). Website: drawn in the browser (PNG). PC/Termux: ffmpeg + libass (PNG). Telegram sends it as a photo.
+- **One clean top bar.** Logo, Workflows / Projects / Runs / Keys (Lucide icons), version badge (`v4.4 · Web` / `v4.4 · PC`), GitHub and profile menu in one row on desktop. Phone: tidy header + bottom tab bar.
+
+Honest notes: the photo is a text + brand design card, not an AI camera photo; the video is slide-style. On the website, schedules run while the tab is open (24x7 = PC/Termux). Instagram needs a public link, so website-made photos/videos go to Instagram only from PC/Termux.
+
+<p align="center"><img src="docs/screenshots/v44-field-help.jpg" width="30%" alt="Field help + provider picker"> <img src="docs/screenshots/v44-post-photo.jpg" width="30%" alt="Post Photo Maker output"></p>
+<p align="center"><img src="docs/screenshots/v44-project-generator.jpg" width="90%" alt="AI Project Generator preview"></p>
+
+**Hinglish me:** har note pe ab X hai, Me → "Tips wapas dikhao" se wapas. Har key ke neeche likha hai kya daalna hai + "Kahan milega?" guide. AI provider chuno to URL + model khud bhar jayega. "AI Project Generator" me likho kya chahiye, AI project bana dega. "Photo + Video Maker" me ek baar details do, roz khud photo + video banake post karega.
 
 ## 🎬 v4.3: Auto Video Maker + Daily Funny Video
 
@@ -381,7 +401,7 @@ cd YantraFlow && sh start.sh
 ## 🧪 Tests
 
 ```bash
-npm test     # 72 tests: engine, cron, expressions, templates, projects, v4 scheduler (incl. restart-resume), link preview + Telegram upload, SEED auto-generate, admin, time greeting, v4.3 video maker (plan, captions, real ffmpeg MP4), free video finder, licence credit — all with mocked APIs
+npm test     # 83 tests: engine, cron, expressions, templates, projects, v4 scheduler (incl. restart-resume), link preview + Telegram upload, SEED auto-generate, admin, time greeting, v4.3 video maker (plan, captions, real ffmpeg MP4), free video finder, licence credit, v4.4 tips close/remember, provider presets, guide coverage, AI Project Generator validation + repair loop, Post Photo Maker (real ffmpeg PNG), Photo + Video Maker setup — all with mocked APIs
 ```
 Every outside service (AI, Telegram, Instagram/Facebook Graph, Google/YouTube, X, Discord, Slack, SMTP, RSS, Sheets) is mocked in `test/helpers.js` — tests never touch the internet or real keys.
 
@@ -399,6 +419,11 @@ public/js/link-preview.js  OpenGraph/Twitter parser + Telegram caption
 public/js/content-gen.js   SEED prompt + no-repeat history + time greeting (AI Post Writer + AI Chat)
 public/js/video-core.js    v4.3 video plan, kinetic captions, ffmpeg args, Pexels/Pixabay picker + licence credit (shared, tested)
 public/js/video-web.js     v4.3 website video renderer (canvas + MediaRecorder) + YouTube/Telegram upload of made videos
+public/js/guides.js        v4.4 AI provider presets, step-by-step key guides, field help, closable-tips state (tested)
+public/js/guides-ui.js     v4.4 Tips strip with X buttons, "Kahan milega?" guide sheet, provider picker
+public/js/projgen.js       v4.4 AI Project Generator: prompt, JSON validation against the node list, repair loop (tested)
+public/js/image-core.js    v4.4 Post Photo Maker: text layout, website canvas, PC ffmpeg/ASS args, Pexels/Pixabay photos
+public/js/photovideo.js    v4.4 Photo + Video Maker "fill once" form -> workflow + daily schedule (tested)
 supabase/functions/link-preview/  optional proxy for the website's link previews
 public/js/admin.js         admin panel (#/admin): users, traffic, videos, site customise, setup
 public/js/site.js          applies Site customise for everyone, anonymous page views, public Videos page

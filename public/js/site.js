@@ -51,8 +51,10 @@
     let box = document.getElementById("sitebanners");
     if (!box) { box = document.createElement("div"); box.id = "sitebanners"; const tb = document.querySelector(".topbar"); if (tb && tb.parentNode) tb.parentNode.insertBefore(box, tb.nextSibling); else document.body.prepend(box); }
     const out = [];
-    if (s.maintenance_on) out.push(`<div class="sb sb-warn" role="status">${I("wrench", 15)}<span>${esc(s.maintenance_text)}</span></div>`);
-    if (s.banner_on && s.banner_text) out.push(`<div class="sb sb-${esc(s.banner_kind)}" role="status">${I("megaphone", 15)}<span>${esc(s.banner_text)}</span></div>`);
+    const key = (t) => "site-" + String(t || "").split("").reduce((h, c) => ((h * 31 + c.charCodeAt(0)) >>> 0), 7).toString(36); // new text = shows again
+    const cl = (id, html) => (window.YFGuideUI ? window.YFGuideUI.closable(id, html, "sb-wrap") : html);
+    if (s.maintenance_on) out.push(cl(key(s.maintenance_text), `<div class="sb sb-warn" role="status">${I("wrench", 15)}<span>${esc(s.maintenance_text)}</span></div>`));
+    if (s.banner_on && s.banner_text) out.push(cl(key(s.banner_text), `<div class="sb sb-${esc(s.banner_kind)}" role="status">${I("megaphone", 15)}<span>${esc(s.banner_text)}</span></div>`));
     box.innerHTML = out.join("");
   }
   function socialLinks(s) {

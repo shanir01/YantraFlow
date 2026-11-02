@@ -28,6 +28,7 @@
     getCreds: () => req("GET", "api/credentials"),
     saveCreds: (values) => req("PUT", "api/credentials", values),
     testCred: (service) => req("POST", "api/credentials/test", { service }),
+    aiComplete: (messages, opt) => req("POST", "api/ai/complete", Object.assign({ messages }, opt || {})).then((r) => r.text),
     webhookBase: () => `${location.origin}/webhook/`,
     // v4 schedules — the PC/Termux server keeps them running 24x7 (saved in data/schedules.json)
     listSchedules: () => req("GET", "api/schedules"),
@@ -153,6 +154,7 @@
       for (const sec of YF_CRED_SCHEMA) { const inc = values[sec.id]; if (!inc) continue; v[sec.id] = v[sec.id] || {}; for (const f of sec.fields) { if (!(f.key in inc)) continue; const x = String(inc[f.key] || "").trim(); if (f.secret && x.startsWith("••••••")) continue; v[sec.id][f.key] = x; } }
       LS.set("creds", v); return LocalBackend.getCreds();
     },
+    async aiComplete(messages, opt) { return (await YFWeb.aiComplete({ settings: LS.get("creds", {}), p: () => "" }, 0, messages, opt)).text; },
     async testCred(service) {
       const node = service === "ai" ? { id: "a", type: "aiChat", name: "AI test", params: { prompt: "Reply with exactly: YantraFlow connected ✅", maxTokens: 300 } } : { id: "a", type: "telegram", name: "Telegram test", params: { text: "✅ YantraFlow is connected to this chat!" } };
       const ex = await YFEngine.runWorkflow({ id: "test", name: "test", nodes: [{ id: "t", type: "manualTrigger", name: "Start", params: {} }, node], connections: [{ from: "t", fromOutput: 0, to: "a" }] }, { types: YFWeb.types, evaluate: YFWeb.evaluate, settings: LS.get("creds", {}) });

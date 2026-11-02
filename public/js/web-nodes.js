@@ -311,6 +311,37 @@
       all[key] = rec; try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { /* */ }
       return one(out);
     },
+    imageMaker: async (ctx) => {
+      const YI = window.YFImage; if (!YI) throw new Error("Photo maker load nahi hua — page refresh karo");
+      const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const it = ctx.items[i];
+        const plan = YI.planImage({ text: s(ctx.p("text", i)), title: s(ctx.p("title", i)), size: ctx.raw.size, style: ctx.raw.style, color1: s(ctx.p("color1", i)), color2: s(ctx.p("color2", i)), handle: s(ctx.p("handle", i)) });
+        let img = null; let credit = "";
+        if (plan.style === "photo") {
+          const q = YI.stockPhotoQuery(s(ctx.p("bgQuery", i)) || plan.text);
+          const st = ctx.settings || {}; const pk = s(ctx.p("pexelsKey", i) || (st.pexels || {}).apiKey).trim(); const xk = s(ctx.p("pixabayKey", i) || (st.pixabay || {}).apiKey).trim();
+          let list = [];
+          if (pk) { const r = await http(`${window.YF_PEXELS_API || "https://api.pexels.com"}/v1/search?query=${encodeURIComponent(q)}&per_page=30&orientation=portrait`, { headers: { authorization: pk } }).catch((e) => ({ ok: false, status: 0, data: e.message })); if (r.ok) list = YI.normalizePexelsPhotos(r.data); else ctx.log(apiError("Pexels", r).message); }
+          if (!list.length && xk) { const r = await http(`${window.YF_PIXABAY_API || "https://pixabay.com"}/api/?key=${encodeURIComponent(xk)}&q=${encodeURIComponent(q.slice(0, 100))}&image_type=photo&orientation=vertical&per_page=30&safesearch=true`).catch((e) => ({ ok: false, status: 0, data: e.message })); if (r.ok) list = YI.normalizePixabayPhotos(r.data); else ctx.log(apiError("Pixabay", r).message); }
+          if (!pk && !xk) ctx.log("Photo style: Pexels/Pixabay key nahi hai — gradient background use kiya");
+          const pick = list.length ? list[Math.floor(Math.random() * Math.min(list.length, 10))] : null;
+          if (pick) {
+            try {
+              const f = await downloadImage(pick.url, ctx.settings);
+              img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error("photo load fail")); im.src = URL.createObjectURL(f.blob); });
+              credit = YI.photoCredit(pick);
+            } catch (e) { ctx.log(`Stock photo nahi mili (${e.message}) — gradient`); }
+          }
+        }
+        const blob = await YI.renderCanvas(plan, img);
+        const ref = window.YFVideoWeb.put(blob, { ext: "png", kind: "image" });
+        const res = { ...it, image: ref, imageFile: ref, photo: ref, imagePreview: window.YFVideoWeb.get(ref).url, imageSize: plan.size, imageBy: "YantraFlow Post Photo Maker (website)" };
+        if (credit) res.credit = YV.addCredit(s(it.credit), credit);
+        out.push(res);
+      }
+      return one(out);
+    },
     videoMaker: async (ctx) => {
       const out = [];
       for (let i = 0; i < ctx.items.length; i++) {
@@ -469,5 +500,5 @@
     if (one && one[1].indexOf("{{") < 0 && one[1].indexOf("}}") < 0) return run(one[1]);
     return value.replace(/\{\{([\s\S]+?)\}\}/g, (_, c) => { const v = run(c); return v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v); });
   }
-  window.YFWeb = { types, evaluate, parseCsv, getPreview, downloadImage };
+  window.YFWeb = { types, evaluate, parseCsv, getPreview, downloadImage, aiComplete };
 })();

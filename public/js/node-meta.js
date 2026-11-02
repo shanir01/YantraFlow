@@ -669,6 +669,95 @@ window.YF_NODE_META = [
   "outputs": 1,
   "params": [
    {
+    "key": "text",
+    "label": "Photo text",
+    "type": "textarea",
+    "default": "{{ $json.quote || $json.caption || $json.text }}",
+    "help": "Hashtags / links / emoji apne aap hat jaate hain. Chhota text = bada font."
+   },
+   {
+    "key": "title",
+    "label": "Upar chhota title (optional)",
+    "type": "text",
+    "default": "{{ $json.greeting || '' }}"
+   },
+   {
+    "key": "size",
+    "label": "Size",
+    "type": "select",
+    "options": [
+     "1080x1350",
+     "1080x1920",
+     "1080x1080"
+    ],
+    "default": "1080x1350"
+   },
+   {
+    "key": "style",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "gradient",
+     "photo",
+     "dark",
+     "light"
+    ],
+    "default": "gradient",
+    "help": "photo = Pexels/Pixabay se free photo background (key chahiye; na mile to gradient)."
+   },
+   {
+    "key": "color1",
+    "label": "Brand colour 1",
+    "type": "text",
+    "default": "#7c5cff",
+    "placeholder": "#7c5cff"
+   },
+   {
+    "key": "color2",
+    "label": "Brand colour 2",
+    "type": "text",
+    "default": "#00d4ff",
+    "placeholder": "#00d4ff"
+   },
+   {
+    "key": "handle",
+    "label": "Handle / brand name (neeche)",
+    "type": "text",
+    "default": "",
+    "placeholder": "@mychannel"
+   },
+   {
+    "key": "bgQuery",
+    "label": "Photo background search (English)",
+    "type": "text",
+    "default": "{{ $json.topicUsed || $json.topic }}",
+    "placeholder": "sunrise, mountains, city..."
+   },
+   {
+    "key": "pexelsKey",
+    "label": "Pexels API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   },
+   {
+    "key": "pixabayKey",
+    "label": "Pixabay API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "imageMaker",
+  "label": "Post Photo Maker (quote / post card)",
+  "group": "Video",
+  "icon": "image-plus",
+  "color": "#ec4899",
+  "description": "Har run khud post photo banata hai: tumhara text + brand colours, 1080x1350 (Insta feed) / 1080x1920 (Story) / 1080x1080. Background: gradient ya free stock photo (Pexels/Pixabay key ho to). Website = browser me PNG, PC/Termux = ffmpeg PNG."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
     "key": "mode",
     "label": "Video source",
     "type": "select",

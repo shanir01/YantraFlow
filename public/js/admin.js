@@ -86,7 +86,7 @@
     A().view().innerHTML = `<div class="page adm">
       <div class="adm-head"><div class="adm-t">${I("shield-check", 24)}<div><h1 class="h">Admin <span class="g">panel</span></h1><p class="sub">${esc((user() && user().email) || "")}</p></div></div>
         <a class="btn sm ghost" href="#/workflows">${I("arrow-left", 15)} Site</a></div>
-      ${ck && !ck.ready && tab !== "setup" ? `<a class="adm-pend" href="#/admin/setup">${I("triangle-alert", 17)}<span><b>Setup pending (${ck.pending})</b> — kuch cheezein Supabase me baaki hain. Yahan tap karo, steps dikhenge.</span>${I("chevron-right", 16)}</a>` : ""}
+      ${ck && !ck.ready && tab !== "setup" ? (window.YFGuideUI ? window.YFGuideUI.closable("setup-pending", `<a class="adm-pend" href="#/admin/setup">${I("triangle-alert", 17)}<span><b>Setup pending (${ck.pending})</b> — kuch cheezein Supabase me baaki hain. Yahan tap karo, steps dikhenge.</span>${I("chevron-right", 16)}</a>`) : "") : ""}
       <nav class="adm-tabs" role="tablist">${TABS.map(([id, ic, label]) => `<a role="tab" href="#/admin/${id}" class="${id === tab ? "on" : ""}">${I(ic, 16)}<span>${label}</span>${id === "setup" && ck && !ck.ready ? `<i class="dot"></i>` : ""}</a>`).join("")}</nav>
       <div id="admBody">${inner}</div></div>`;
     const on = $(".adm-tabs a.on"); if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "center" });
@@ -101,7 +101,7 @@
     const g = await guard();
     if (!g.ok) return denied(g.reason);
     shell(tab, loading());
-    runCheck().then(() => { if (location.hash.startsWith("#/admin") && !$(".adm-pend") && S.check && !S.check.ready && tab !== "setup") { const head = $(".adm-head"); if (head) head.insertAdjacentHTML("afterend", `<a class="adm-pend" href="#/admin/setup">${I("triangle-alert", 17)}<span><b>Setup pending (${S.check.pending})</b> — kuch cheezein Supabase me baaki hain. Yahan tap karo, steps dikhenge.</span>${I("chevron-right", 16)}</a>`); const st = $(".adm-tabs a[href='#/admin/setup']"); if (st && !st.querySelector(".dot")) st.insertAdjacentHTML("beforeend", `<i class="dot"></i>`); } });
+    runCheck().then(() => { if (location.hash.startsWith("#/admin") && !$(".adm-pend") && !(window.YFGuides && window.YFGuides.Tips.isClosed(localStorage, "setup-pending")) && S.check && !S.check.ready && tab !== "setup") { const head = $(".adm-head"); if (head) head.insertAdjacentHTML("afterend", (window.YFGuideUI ? window.YFGuideUI.closable("setup-pending", `<a class="adm-pend" href="#/admin/setup">${I("triangle-alert", 17)}<span><b>Setup pending (${S.check.pending})</b> — kuch cheezein Supabase me baaki hain. Yahan tap karo, steps dikhenge.</span>${I("chevron-right", 16)}</a>`) : "")); const st = $(".adm-tabs a[href='#/admin/setup']"); if (st && !st.querySelector(".dot")) st.insertAdjacentHTML("beforeend", `<i class="dot"></i>`); } });
     const V = { overview, users, traffic, videos, customize, setup }[tab];
     try { await V(); } catch (e) { body().innerHTML = `<div class="card adm-miss">${I("circle-alert", 22)}<div><b>Kuch gadbad hui</b><p class="sub">${esc(e.message)}</p></div></div>`; }
   }

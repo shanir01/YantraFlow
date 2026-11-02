@@ -7,7 +7,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { Store } = require("./store");
 const { Runner } = require("./runner");
-const { publicNodeList, BY_TYPE } = require("./nodes");
+const { publicNodeList, BY_TYPE, aiComplete } = require("./nodes");
 const CRED_SCHEMA = require("../public/js/cred-schema.js");
 const engine = require("../public/js/engine-core.js");
 const SCH = require("../public/js/schedule-core.js");
@@ -210,6 +210,13 @@ async function api(req, res, url, store, runner) {
   if ((mm = p.match(/^\/api\/executions\/([\w-]+)$/))) { const ex = store.getExecution(mm[1]); return ex ? send(res, 200, ex) : send(res, 404, { error: "Run not found" }); }
   if (p === "/api/credentials" && m === "GET") return send(res, 200, { schema: CRED_SCHEMA, values: maskSettings(store.getSettings()) });
   if (p === "/api/credentials" && m === "PUT") { store.saveSettings(mergeSettings(store.getSettings(), await body())); return send(res, 200, { ok: true, values: maskSettings(store.getSettings()) }); }
+  if (p === "/api/ai/complete" && m === "POST") { // v4.4: AI Project Generator uses YOUR key from the Keys page (never sent to the browser)
+    const b = await body();
+    const msgs = Array.isArray(b.messages) ? b.messages.filter((x) => x && ["system", "user", "assistant"].includes(x.role)).map((x) => ({ role: x.role, content: String(x.content || "").slice(0, 20000) })).slice(0, 12) : [];
+    if (!msgs.length) return send(res, 400, { error: "messages required" });
+    try { const r = await aiComplete({ settings: store.getSettings(), p: () => "" }, 0, msgs, { temperature: Number(b.temperature) || 0.3, maxTokens: Math.min(Number(b.maxTokens) || 2500, 6000) }); return send(res, 200, { text: r.text, model: r.model }); }
+    catch (e) { return send(res, 502, { error: e.message }); }
+  }
   if (p === "/api/credentials/test" && m === "POST") {
     const b = await body();
     const tests = {

@@ -351,6 +351,7 @@
     A.view().innerHTML = page(`${SH && (SH.hero_title || SH.hero_subtitle) ? `<div class="site-hero"><h2>${esc(SH.hero_title)}</h2>${SH.hero_subtitle ? `<p>${esc(SH.hero_subtitle)}</p>` : ""}</div>` : ""}<div class="hero-h"><div><h1 class="h">${prefs.lang === "hi" ? "Public" : "Public"} <span class="g">${prefs.lang === "hi" ? "projects" : "projects"}</span></h1><p class="sub">${t("pubSub")}</p></div>
       <span class="allfree">${I("gift", 15)} ${prefs.lang === "hi" ? `Abhi saare ${list.length} projects FREE` : `All ${list.length} projects are FREE right now`}</span></div>
       ${A.premiumHtml ? A.premiumHtml() : ""}
+      <div class="gen-cta"><span class="pj-ic">${I("wand-sparkles", 22)}</span><div class="tx"><b>AI Project Generator</b>Hinglish me likho kaisa automation chahiye — AI tumhari key se poora project bana dega.</div><a class="btn primary" href="#/generator">${I("sparkles", 15)} Project banao</a></div>
       <a class="card vm-entry" href="#/video-maker"><span class="pj-ic">${I("clapperboard", 22)}</span><span><b>${prefs.lang === "hi" ? "Auto Video Maker — abhi try karo" : "Auto Video Maker — try it now"}</b><small>${prefs.lang === "hi" ? "Text do → Shorts/Reels video (captions + music). Video projects isi se khud video banate hain." : "Text in → Shorts/Reels video (captions + music). The video projects use it to make a video every run."}</small></span>${I("chevron-right", 18)}</a>
       <div class="pj-tools"><input class="inp" id="pq" type="search" placeholder="${prefs.lang === "hi" ? "Project dhoondo…" : "Search projects…"}" value="${esc(projQ)}" aria-label="Search projects"></div>
       <div class="cats" role="tablist">${CATS.map((c) => `<button class="cat ${c === projCat ? "on" : ""}" data-cat="${esc(c)}">${I(CAT_IC[c] || "tag", 15)}${esc(c)}${c === "All" ? "" : ` <small>${list.filter((p) => p.categories.includes(c)).length}</small>`}</button>`).join("")}</div>
@@ -378,14 +379,49 @@
     A.view().innerHTML = page(`<a class="backlink" href="#/projects">← ${t("pubProjects")}</a>
       <div class="pd-hero card"><div class="pj-ic big">${I(p.icon, 34)}</div><div style="flex:1;min-width:0"><div class="pj-badges">${tierBadge(p)}${runBadge(p)}${p.categories.map((c) => `<span class="ctag">${esc(c)}</span>`).join("")}</div>
         <h1 class="h" style="font-size:24px;margin-top:8px">${esc(p.title)}</h1><p class="sub">${esc(p.summary)}</p></div></div>
-      ${p.honest ? `<div class="note honest">${I("triangle-alert", 15)} <b>${prefs.lang === "hi" ? "Sach baat" : "Honest note"}:</b> ${esc(p.honest)}</div>` : ""}
+      ${p.honest ? (window.YFGuideUI ? window.YFGuideUI.closable("honest-" + p.id, `<div class="note honest">${I("triangle-alert", 15)} <b>${prefs.lang === "hi" ? "Sach baat" : "Honest note"}:</b> ${esc(p.honest)}</div>`) : "") : ""}
       <div class="two-col">
         <section class="card"><h3>${I("workflow", 18)} ${prefs.lang === "hi" ? "Isme kya steps hain" : "What's inside"}</h3><ol class="steps">${wf.nodes.map((n) => { const m = META[n.type] || { icon: "circle-help", label: n.type, color: "#888" }; return `<li class="${n.disabled ? "off" : ""}"><span class="chip" style="background:${m.color}26;color:${m.color}">${I(m.icon, 18)}</span><div><b>${esc(n.name)}</b><small>${esc(m.label)}${n.disabled ? " · OFF (optional)" : ""}${m.fullOnly ? " · PC/Termux version" : ""}</small></div></li>`; }).join("")}</ol></section>
         <section class="card"><h3>${I("key-round", 18)} ${prefs.lang === "hi" ? "Kya chahiye" : "You need"}</h3><ul class="needs">${(p.needs || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
           <h3 style="margin-top:16px">▶ ${prefs.lang === "hi" ? "Kaise chalayein" : "How to run"}</h3><ol class="howto">${(p.howTo || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ol></section>
       </div>
+      ${projectGuideHtml(p, wf)}
+      ${p.setup && window.YFPhotoVideo ? window.YFPhotoVideo.formHtml(p) : ""}
       <div class="pd-cta"><div><b>${p.tier === "free" ? (prefs.lang === "hi" ? "FREE — abhi ke liye bilkul free" : "FREE — no cost right now") : "₹" + esc(p.price)}</b><small>${prefs.lang === "hi" ? "Ek tap me tumhare workflows me copy hoga. Keys sirf tumhare device pe." : "Copies into your workflows in one tap. Keys stay on your device."}</small></div><button class="btn primary big" id="usep">${t("useProject")} →</button></div>`);
-    $("#usep").onclick = (e) => useProject(p.id, e.currentTarget);
+    $("#usep").onclick = (e) => (p.setup && $("#pvgo") ? $("#pvm").scrollIntoView({ behavior: "smooth", block: "start" }) : useProject(p.id, e.currentTarget));
+    if (p.setup && $("#pvgo")) $("#pvgo").onclick = async (e) => {
+      const btn = e.currentTarget; btn.disabled = true; $("#pvlog").textContent = "Ban raha hai…";
+      try {
+        const PV = window.YFPhotoVideo; const r = PV.apply(wf, PV.readForm(document));
+        r.workflow.active = false;
+        const saved = await A.B.importWorkflow(r.workflow);
+        let sch = ""; try { await A.B.setSchedule(saved.id, r.schedule); sch = ` · roz ${r.schedule.at} baje schedule ON`; } catch (err) { sch = ` · schedule: ${err.message}`; }
+        A.toast(`Project ready ✓${sch}`, "ok");
+        location.hash = `#/editor/${saved.id}`;
+      } catch (err) { $("#pvlog").textContent = err.message; btn.disabled = false; }
+    };
+    fillProjectNeeds(wf);
+  }
+  // ---------- v4.4: Guide inside every project — what it does, keys (with status), steps 1-2-3, errors + fix
+  function projectGuideHtml(p, wf) {
+    const GD = window.YFGuides; if (!GD) return "";
+    const g = GD.projectGuide(Object.assign({}, p, { workflow: wf }));
+    return `<section class="card pd-guide" id="pguide"><h3>${I("book-open", 18)} Guide</h3>
+      <p class="gd-what"><b>Ye project kya karta hai:</b> ${esc(g.what)}</p>
+      <h4>${I("key-round", 15)} Kaunsi keys chahiye</h4>
+      ${g.keys.length ? `<div class="gd-need" id="pneeds">${g.keys.map((k) => `<div data-need="${k.sec}">${I(k.optional ? "info" : "key-round", 15)}<b>${esc(k.title)}</b><small>${k.optional ? "optional" : "zaroori"}</small><button class="btn sm" type="button" data-guide="${k.sec}">Kahan milega?</button></div>`).join("")}</div>` : `<p class="help">Koi key nahi chahiye.</p>`}
+      <h4>${I("list-ordered", 15)} Setup steps</h4><ol class="gd-steps">${g.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
+      <details class="gd-inline"><summary>${I("wrench", 14)} Common errors + fix (${g.errors.length})</summary><div class="gd-err" style="margin-top:8px">${g.errors.map(([e, f]) => `<div><b>${esc(e)}</b><span>${esc(f)}</span></div>`).join("")}</div></details></section>`;
+  }
+  async function fillProjectNeeds(wf) {
+    const GD = window.YFGuides; if (!GD || !$("#pneeds")) return;
+    let creds = {}; try { creds = (await app().B.getCreds()).values; } catch (_) { return; }
+    for (const k of GD.missing(wf, creds)) {
+      const row = $(`#pneeds [data-need="${k.sec}"]`); if (!row) continue;
+      row.classList.add(k.ok ? "ok" : "miss");
+      const sm = row.querySelector("small"); if (sm) sm.textContent = k.ok ? "set hai" : k.optional ? "optional — abhi nahi" : "abhi missing";
+      const ic = row.querySelector("svg"); if (ic) ic.outerHTML = I(k.ok ? "circle-check" : k.optional ? "info" : "circle-alert", 15);
+    }
   }
   function viewProfile() {
     app().setNav("me");
@@ -401,7 +437,9 @@
         <label class="lb" for="pb">Bio</label><textarea class="inp" id="pb" maxlength="160" placeholder="${prefs.lang === "hi" ? "Main kya automate karta hoon…" : "What I automate…"}">${esc(p.bio || "")}</textarea>
         <div class="row" style="margin-top:12px"><button class="btn primary" id="psave">${t("save")}</button>${p.avatar ? `<button class="btn ghost" id="pdel">${prefs.lang === "hi" ? "Photo hatao" : "Remove photo"}</button>` : ""}</div>
         <p class="help">${prefs.lang === "hi" ? "Photo sirf is device pe save hoti hai." : "Your photo is stored only on this device."}</p></section>
-      <div class="menu-list card" style="margin-top:14px"><a href="#/settings">${I("settings", 18)} ${t("settings")}<span>${I("chevron-right", 16)}</span></a><a href="#/keys">${I("key-round", 18)} ${t("keys")}<span>${I("chevron-right", 16)}</span></a><a href="#/projects">${I("layout-grid", 18)} ${t("pubProjects")}<span>${I("chevron-right", 16)}</span></a><a href="#/about">${I("info", 18)} ${t("about")}<span>${I("chevron-right", 16)}</span></a><a href="#/developer">${I("code-xml", 18)} ${t("developer")}<span>${I("chevron-right", 16)}</span></a>${S.mode === "off" ? "" : `<button id="plo" class="danger">${I("log-out", 18)} ${t("logout")}</button>`}</div>`);
+      <div class="menu-list card" style="margin-top:14px"><a href="#/settings">${I("settings", 18)} ${t("settings")}<span>${I("chevron-right", 16)}</span></a><a href="#/keys">${I("key-round", 18)} ${t("keys")}<span>${I("chevron-right", 16)}</span></a><a href="#/projects">${I("layout-grid", 18)} ${t("pubProjects")}<span>${I("chevron-right", 16)}</span></a><a href="#/about">${I("info", 18)} ${t("about")}<span>${I("chevron-right", 16)}</span></a><a href="#/developer">${I("code-xml", 18)} ${t("developer")}<span>${I("chevron-right", 16)}</span></a><a href="#/generator">${I("wand-sparkles", 18)} AI Project Generator<span>${I("chevron-right", 16)}</span></a><button id="ptips" type="button">${I("lightbulb", 18)} Tips wapas dikhao<span class="meta" id="ptipsn"></span></button>${S.mode === "off" ? "" : `<button id="plo" class="danger">${I("log-out", 18)} ${t("logout")}</button>`}</div>`);
+    { const nT = window.YFGuides ? window.YFGuides.Tips.closedList(localStorage).length : 0; const pn = $("#ptipsn"); if (pn) pn.textContent = nT ? `${nT} band hain` : "sab dikh rahe hain"; }
+    $("#ptips").onclick = () => { if (window.YFGuideUI) window.YFGuideUI.resetTips(); A.toast("Saare tips / notes wapas dikhenge ✓", "ok"); viewProfile(); };
     A.B.listWorkflows().then((l) => { const b = $$("#pst b"); if (b[0]) b[0].textContent = l.length; }).catch(() => {});
     A.B.listRuns().then((l) => { const b = $$("#pst b"); if (b[1]) b[1].textContent = l.length; }).catch(() => {});
     $("#avf").onchange = (e) => { const f = e.target.files[0]; if (!f) return; resizeImage(f, 256).then((url) => { const q = getProfile(); q.avatar = url; setProfile(q); applyChrome(); viewProfile(); A.toast("Photo updated ✓", "ok"); }).catch((err) => A.toast(err.message, "err")); };

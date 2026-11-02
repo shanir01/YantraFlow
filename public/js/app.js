@@ -2,6 +2,7 @@
 (function () {
   "use strict";
   const REPO = "https://github.com/shanir01/YantraFlow";
+  const VERSION = "4.4.0";
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -47,28 +48,40 @@
     catch (e) { toast("Import failed: " + e.message, "err"); }
   }
   function setNav(name) { $$(".nav a, .bottomnav a").forEach((a) => a.classList.toggle("on", a.dataset.v === name)); }
-  function webBanner() {
-    if (B.edition !== "web") return "";
-    return `<div class="banner"><span class="bn-ic">${I("globe", 22)}</span><div style="flex:1;min-width:220px"><b>Web version</b> — works right here in your browser, saved on this device. Webhooks, Folder Watch, email &amp; file saving need the free <b>full version</b> on your PC or phone (Termux).</div><a class="btn sm primary" href="${REPO}" target="_blank" rel="noopener">${I("download", 16)} Download full version</a></div>${premiumHtml()}`;
+  // ---------- v4.4: all info notes live in ONE slim "Tips" strip; every tip has its own X (remembered per tip, Me → "Tips wapas dikhao")
+  const GUI = () => window.YFGuideUI;
+  const PREM_KEY = "yf_prem_note_x"; // v4.3 dismiss flag -> counts as "premium" tip closed
+  try { if (localStorage.getItem(PREM_KEY) === "1" && window.YFGuides) { window.YFGuides.Tips.close(localStorage, "premium"); localStorage.removeItem(PREM_KEY); } } catch (_) { /* */ }
+  function premNote() { const C = window.YFSite; if (!C || !C.premiumNote) return null; const RT = window.YFSiteRT; return C.premiumNote(RT ? RT.settings : {}, B.edition, false); }
+  function premTip() {
+    const n = premNote(); if (!n) return null;
+    return { id: "premium", icon: "laptop", kind: "prem", title: "PC / Termux pe PREMIUM", html: `${esc(n.text)} <span class="tip-feat">${n.features.map((f) => esc(f)).join(" · ")}</span> <a href="${REPO}#-pc--termux-setup" target="_blank" rel="noopener">${I("download", 13)} Setup (free)</a>` };
   }
-  // ---------- v4.3: "run on localhost for PREMIUM options" note (website only; admin can hide/reword it; user can dismiss it)
-  const PREM_KEY = "yf_prem_note_x";
+  function webTip() {
+    if (B.edition !== "web") return null;
+    return { id: "web-version", icon: "globe", kind: "info", title: "Web version", html: `browser me chalta hai, data isi device pe. Webhook, Folder Watch, email, file save ke liye free <a href="${REPO}" target="_blank" rel="noopener">full version</a> (PC / Termux).` };
+  }
+  function schedTip() {
+    if (B.alwaysOn) return { id: "schedule-pc", icon: "circle-check", kind: "ok", title: "PC/Termux: schedule 24x7", html: `jab tak YantraFlow on hai (restart ke baad bhi). Termux me pehle <code>termux-wake-lock</code>.` };
+    return { id: "schedule-web", icon: "triangle-alert", kind: "warn", title: "Website pe schedule tabhi chalega jab ye tab khula ho", html: `24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a>` };
+  }
+  function pageTips(extra) { return GUI() ? GUI().tipsHtml([webTip(), premTip()].concat(extra || [])) : ""; }
+  function webBanner() { return pageTips(); }
+  // premium note: compact = small closable box (run sheet, video maker); else a Tips strip
   function premiumHtml(compact) {
-    const C = window.YFSite; if (!C || !C.premiumNote) return "";
-    const RT = window.YFSiteRT; let dismissed = false; try { dismissed = !compact && localStorage.getItem(PREM_KEY) === "1"; } catch (_) { /* */ }
-    const n = C.premiumNote(RT ? RT.settings : {}, B.edition, dismissed);
-    if (!n) return "";
-    return `<div class="prem-note${compact ? " compact" : ""}" role="note"><span class="prem-ic">${I("laptop", 20)}</span><div class="prem-tx"><b>${esc(n.text)}</b><ul>${n.features.map((f) => `<li>${I("circle-check", 13)} ${esc(f)}</li>`).join("")}</ul><a href="${REPO}#-pc--termux-setup" target="_blank" rel="noopener">${I("download", 14)} PC / Termux setup (free)</a></div>${compact ? "" : `<button class="prem-x" type="button" aria-label="Note band karo" title="Band karo">${I("x-close", 16)}</button>`}</div>`;
+    const n = premNote(); if (!n || !GUI()) return "";
+    if (!compact) return GUI().tipsHtml([premTip()]);
+    return GUI().closable("premium", `<div class="prem-note compact" role="note"><span class="prem-ic">${I("laptop", 18)}</span><div class="prem-tx"><b>${esc(n.text)}</b><ul>${n.features.map((f) => `<li>${I("circle-check", 13)} ${esc(f)}</li>`).join("")}</ul><a href="${REPO}#-pc--termux-setup" target="_blank" rel="noopener">${I("download", 14)} PC / Termux setup (free)</a></div></div>`);
   }
-  document.addEventListener("click", (e) => { const x = e.target.closest && e.target.closest(".prem-x"); if (!x) return; try { localStorage.setItem(PREM_KEY, "1"); } catch (_) { /* */ } const box = x.closest(".prem-note"); if (box) box.remove(); });
 
   // ---------- views
   async function viewWorkflows() {
     setNav("workflows");
     const list = await B.listWorkflows();
-    view().innerHTML = `<div class="page">${webBanner()}
+    const schedOn = list.some((w) => w.schedule && w.schedule.schedule && w.schedule.schedule.enabled);
+    view().innerHTML = `<div class="page">${pageTips(schedOn ? [schedTip()] : [])}
       <div class="hero-h"><div><h1 class="h">Your <span class="g">automations</span></h1><p class="sub">Build once, it runs by itself — on your PC or your phone. Free &amp; local.</p></div>
-      <div class="row"><button class="btn" id="imp">${I("upload", 16)} Import</button><button class="btn primary" id="new">${I("plus", 16)} New workflow</button></div></div>
+      <div class="row"><button class="btn" id="imp">${I("upload", 16)} Import</button><a class="btn" href="#/generator">${I("wand-sparkles", 16)} AI se banao</a><button class="btn primary" id="new">${I("plus", 16)} New workflow</button></div></div>
       ${list.length ? `<div class="grid">${list.map((w) => `
         <div class="card wf-card" data-id="${w.id}">
           <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><h3 style="flex:1;min-width:0">${esc(w.name)}</h3>
@@ -100,7 +113,6 @@
       onExec: (ex) => toast(ex.status === "success" ? `First run done ✓` : `First run failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"),
       after: () => viewWorkflows(),
     })));
-    if (list.some((w) => w.schedule && w.schedule.schedule && w.schedule.schedule.enabled) && !B.alwaysOn) $(".page").insertAdjacentHTML("afterbegin", alwaysOnNote());
     watchRunBtns();
   }
 
@@ -209,8 +221,8 @@
   // ---------- v4: Run sheet — Run once / Repeat every N / Daily at HH:MM (min 30 min)
   const TZS = ["Asia/Kolkata", "Asia/Dubai", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Singapore", "Europe/London", "America/New_York", "UTC"];
   function alwaysOnNote() {
-    if (B.alwaysOn) return `<div class="sched-note ok">${I("circle-check", 15)}<span><b>PC/Termux version</b> — schedule 24x7 chalega jab tak YantraFlow on hai (restart ke baad bhi apne aap resume). Termux me pehle <code>termux-wake-lock</code> chalao.</span></div>`;
-    return `<div class="sched-note warn">${I("triangle-alert", 15)}<span><b>Website pe schedule tabhi chalega jab ye tab khula ho.</b> 24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a></span></div>${premiumHtml(true)}`;
+    if (B.alwaysOn) return GUI().closable("schedule-pc", `<div class="sched-note ok">${I("circle-check", 15)}<span><b>PC/Termux version</b> — schedule 24x7 chalega jab tak YantraFlow on hai (restart ke baad bhi apne aap resume). Termux me pehle <code>termux-wake-lock</code> chalao.</span></div>`);
+    return GUI().closable("schedule-web", `<div class="sched-note warn">${I("triangle-alert", 15)}<span><b>Website pe schedule tabhi chalega jab ye tab khula ho.</b> 24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a></span></div>`) + premiumHtml(true);
   }
   function schedPill(info) {
     if (!info || !info.schedule || !info.schedule.enabled) return "";
@@ -396,13 +408,21 @@
   async function viewKeys() {
     setNav("keys");
     const { schema, values } = await B.getCreds();
+    const GD = window.YFGuides;
     const filled = (id) => Object.values(values[id] || {}).some((v) => v);
-    view().innerHTML = `<div class="page">${webBanner()}<div class="hero-h"><div><h1 class="h">Keys &amp; <span class="g">accounts</span></h1><p class="sub">Saved only on ${B.edition === "web" ? "this browser" : "this device (data/credentials.json)"} — never uploaded anywhere. Nodes use these when their own key field is blank.</p></div></div>
+    const fieldHtml = (sec, f) => {
+      const gi = GD && GD.GUIDES[sec.id] && GD.GUIDES[sec.id].fields[f.key];
+      const ph = f.placeholder || (gi ? `e.g. ${gi.eg}` : "");
+      return `<div><label class="lb" for="c-${sec.id}-${f.key}">${esc(f.label)}</label><input class="inp" id="c-${sec.id}-${f.key}" data-sec="${sec.id}" data-key="${f.key}" type="${f.secret ? "password" : "text"}" autocomplete="off" spellcheck="false" placeholder="${esc(ph)}" value="${esc(values[sec.id][f.key])}">${gi ? `<div class="fh"><span>${I("info", 12)} ${esc(gi.what)}</span></div>` : ""}</div>`;
+    };
+    view().innerHTML = `<div class="page">${webBanner()}<div class="hero-h"><div><h1 class="h">Keys &amp; <span class="g">accounts</span></h1><p class="sub">Saved only on ${B.edition === "web" ? "this browser" : "this device (data/credentials.json)"} — never uploaded anywhere. Nodes use these when their own key field is blank. Har card me <b>Guide</b> hai: key kahan milegi, steps, errors ka fix.</p></div></div>
       ${schema.map((sec) => `<details class="card cred" ${sec.id === "ai" || sec.id === "telegram" ? "open" : ""}><summary><span class="ic">${I(sec.icon, 22)}</span><div><b>${esc(sec.title)}</b><div class="meta">${sec.fields.length} field(s)</div></div><span class="st ${filled(sec.id) ? "on" : "off"}">${filled(sec.id) ? "● saved" : "not set"}</span></summary>
-        <p class="help" style="margin-top:12px">${esc(sec.help)}</p>
-        <div class="two">${sec.fields.map((f) => `<div><label class="lb" for="c-${sec.id}-${f.key}">${esc(f.label)}</label><input class="inp" id="c-${sec.id}-${f.key}" data-sec="${sec.id}" data-key="${f.key}" type="${f.secret ? "password" : "text"}" autocomplete="off" spellcheck="false" placeholder="${esc(f.placeholder || "")}" value="${esc(values[sec.id][f.key])}"></div>`).join("")}</div>
+        <div class="row cred-top"><p class="help" style="margin:0;flex:1;min-width:200px">${esc(GD && GD.GUIDES[sec.id] ? GD.GUIDES[sec.id].what : sec.help)}</p>${GD && GD.GUIDES[sec.id] ? `<button class="btn sm" type="button" data-guide="${sec.id}">${I("book-open", 14)} Guide — kahan milega?</button>` : ""}</div>
+        <div data-preset-scope>${sec.id === "ai" && GUI() ? GUI().presetSelect("#c-ai-baseUrl,#c-ai-model,#c-ai-apiKey", values.ai.baseUrl) : ""}
+        <div class="two">${sec.fields.map((f) => fieldHtml(sec, f)).join("")}</div></div>
+        ${GD && GD.GUIDES[sec.id] ? `<details class="gd-inline"><summary>${I("list-ordered", 14)} Setup steps + common errors</summary>${GUI().guideBody(sec.id)}</details>` : `<p class="help">${esc(sec.help)}</p>`}
         <div class="row" style="margin-top:14px"><button class="btn sm primary" data-save="${sec.id}">Save</button>${sec.test ? `<button class="btn sm" data-test="${sec.id}">Test ${sec.id === "ai" ? "AI" : "Telegram"}</button>` : ""}<span class="meta" id="tr-${sec.id}"></span></div></details>`).join("")}
-      <div class="note">${I("shield-check", 15)} Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div></div>`;
+      ${GUI() ? GUI().closable("keys-safety", `<div class="note">${I("shield-check", 15)} Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div>`) : ""}</div>`;
     const collect = (secId) => { const o = { [secId]: {} }; $$(`[data-sec="${secId}"]`).forEach((i) => (o[secId][i.dataset.key] = i.value)); return o; };
     $$("[data-save]").forEach((b) => (b.onclick = async () => { await B.saveCreds(collect(b.dataset.save)); toast("Saved on this device ✓", "ok"); viewKeys(); }));
     $$("[data-test]").forEach((b) => (b.onclick = async () => {
@@ -440,7 +460,7 @@
         <div class="drawer hidden" id="drawer"></div>
       </div>
       <div class="menu hidden" id="menu">
-        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
+        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><button data-m="guide">${I("book-open", 16)} Setup guide</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
       </div></div>`;
     const el = $("#drawflow");
     const ed = new Drawflow(el);
@@ -640,6 +660,23 @@
     }
     return [...keys];
   }
+  function nodeGuideBtns(type) {
+    const GD = window.YFGuides; if (!GD) return "";
+    const secs = (GD.NODE_SECTIONS[type] || []).map((r) => r.replace("?", "").split("|")[0]);
+    if (!secs.length) return "";
+    return `<div class="node-guides">${secs.map((sec) => `<button type="button" class="btn sm" data-guide="${sec}">${I("book-open", 13)} Guide: ${esc(GD.GUIDES[sec].short)}</button>`).join("")}</div>`;
+  }
+  async function workflowGuide(wf) {
+    const GD = window.YFGuides; let creds = {};
+    try { creds = (await B.getCreds()).values; } catch (_) { /* */ }
+    const miss = GD.missing(wf, creds);
+    GUI().sheet(`<h3 class="gd-h">${I("book-open", 18)} Setup guide — ${esc(wf.name)}</h3>
+      <p class="gd-what">${esc(wf.description || "Is workflow ko chalane ke liye ye cheezein chahiye:")}</p>
+      <h4>${I("key-round", 15)} Kaunsi keys chahiye</h4>
+      ${miss.length ? `<div class="gd-need">${miss.map((k) => `<div class="${k.ok ? "ok" : "miss"}">${I(k.ok ? "circle-check" : k.optional ? "info" : "circle-alert", 15)}<b>${esc(k.title)}</b><small>${k.ok ? "set hai" : k.optional ? "optional" : "abhi missing"}</small><button class="btn sm" type="button" data-guide="${k.sec}">Guide</button></div>`).join("")}</div>` : `<p class="help">Koi key nahi chahiye — seedha Run dabao.</p>`}
+      <h4>${I("list-ordered", 15)} Steps</h4><ol class="gd-steps"><li>Upar ki missing keys Keys page pe bharo (har ek ka Guide button).</li><li>Har node pe tap karke uske fields dekho — har key field ke neeche "Kya daalna hai" likha hai.</li><li>Run dabao. Sab theek ho to Run → Daily / Repeat se schedule lagao.</li></ol>
+      <h4>${I("wrench", 15)} Common errors</h4><div class="gd-err">${GD.COMMON_ERRORS.map(([e, f]) => `<div><b>${esc(e)}</b><span>${esc(f)}</span></div>`).join("")}</div>`);
+  }
   function openPanel(dfId) {
     const n = ED.map[dfId]; if (!n) return;
     const m = META[n.type];
@@ -654,13 +691,17 @@
       if (f.type === "select") input = `<select class="inp" id="${id}" data-k="${f.key}">${f.options.map((o) => `<option ${String(o) === String(v) ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
       else if (f.type === "boolean") input = `<label class="switch"><input type="checkbox" id="${id}" data-k="${f.key}" data-bool ${v === true || v === "true" ? "checked" : ""}><span class="tr"></span></label>`;
       else if (["textarea", "json", "code"].includes(f.type)) input = `<textarea class="inp ${f.type === "code" || f.type === "json" ? "code" : ""}" id="${id}" data-k="${f.key}" spellcheck="false" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ""} ${f.type === "json" ? 'style="min-height:80px"' : f.upload ? 'style="min-height:150px"' : ""}>${esc(v)}</textarea>${f.upload ? `<div class="row seed-up"><button class="btn sm" data-upload="${id}">${I("upload", 14)} Upload .txt / .md / .pdf</button><span class="meta" id="${id}-n">${esc(String(v || "").length)} chars · sirf is device / tumhare account me save</span></div>` : ""}`;
-      else input = `<input class="inp" id="${id}" data-k="${f.key}" type="${f.type === "secret" ? "password" : f.type === "number" ? "number" : "text"}" step="any" autocomplete="off" spellcheck="false" placeholder="${esc(f.placeholder || (f.type === "secret" ? "blank = use Keys page" : ""))}" value="${esc(v)}">`;
-      return `<label class="lb" for="${id}">${esc(f.label)}</label>${input}${f.help ? `<div class="help">${esc(f.help)}</div>` : ""}`;
+      const gi = window.YFGuides ? window.YFGuides.fieldInfo(n.type, f.key) : null;
+      const fh = gi && GUI() ? GUI().fieldHelp(gi, f.placeholder ? f.placeholder : `e.g. ${gi.eg}  (khaali = Keys page wala)`) : null;
+      if (!input) input = `<input class="inp" id="${id}" data-k="${f.key}" type="${f.type === "secret" ? "password" : f.type === "number" ? "number" : "text"}" step="any" autocomplete="off" spellcheck="false" placeholder="${esc(fh ? fh.placeholder : f.placeholder || (f.type === "secret" ? "blank = use Keys page" : ""))}" value="${esc(v)}">`;
+      const pre = gi && gi.preset && GUI() ? GUI().presetSelect("#f-baseUrl,#f-model,#f-apiKey", v) : "";
+      return `${pre}<label class="lb" for="${id}">${esc(f.label)}</label>${input}${fh ? fh.below : ""}${f.help ? `<div class="help">${esc(f.help)}</div>` : ""}`;
     };
     const hookUrl = n.type === "webhookTrigger" ? B.webhookBase() + encodeURIComponent(n.params.path || "my-hook") : "";
     p.innerHTML = `<div class="panel-h"><div class="nf-ic" style="background:${m.color}26;color:${m.color}">${I(m.icon, 20)}</div><input class="nm" id="pname" value="${esc(n.name)}" aria-label="Node name"><button class="btn sm ghost" id="pclose" aria-label="Close">${I("close", 16)}</button></div>
       <div class="panel-b">
         <p class="help" style="font-size:13px;margin-top:12px">${esc(m.description)}</p>
+        ${nodeGuideBtns(n.type)}
         ${m.fullOnly && B.edition === "web" ? `<div class="note">${I("laptop", 15)} ${esc(m.fullOnly)} <a href="${REPO}" target="_blank" rel="noopener">Download</a></div>` : ""}
         ${hookUrl ? `<label class="lb">Webhook URL (when workflow is Active)</label><div class="hookurl"><code id="hook">${esc(hookUrl)}</code><button class="btn sm" id="copyhook">Copy</button></div>` : ""}
         ${(m.params || []).map(field).join("")}
@@ -711,6 +752,7 @@
     if (a === "import") importFlow();
     if (a === "dup") { const wf = collect(); delete wf.id; wf.name += " (copy)"; wf.active = false; const s = await B.saveWorkflow(wf); location.hash = `#/editor/${s.id}`; }
     if (a === "runs") location.hash = "#/runs";
+    if (a === "guide") workflowGuide(collect());
     if (a === "del") { if (!ED.wf.id) { location.hash = "#/workflows"; return; } if (confirm(`Delete "${ED.wf.name}"?`)) { await B.deleteWorkflow(ED.wf.id); ED.dirty = false; location.hash = "#/workflows"; } }
   }
 
@@ -770,6 +812,45 @@
       btn.disabled = false;
     };
   }
+
+  // ---------- v4.4: AI Project Generator — Hinglish -> valid workflow (uses YOUR AI key), preview, then save
+  async function viewGenerator() {
+    setNav("projects");
+    const PG = window.YFProjGen, GD = window.YFGuides;
+    let creds = {}; try { creds = (await B.getCreds()).values; } catch (_) { /* */ }
+    const aiSet = !!String((creds.ai || {}).apiKey || "").trim() || (B.edition === "full" && !!String((creds.ai || {}).baseUrl || "").trim());
+    view().innerHTML = `<div class="page"><a class="backlink" href="#/projects">← Projects</a>
+      <div class="hero-h"><div><h1 class="h">AI Project <span class="g">Generator</span></h1><p class="sub">Hinglish me likho kaisa automation chahiye — AI (tumhari apni key se) poora project bana dega. Pehle preview, phir "Use this project".</p></div></div>
+      ${aiSet ? "" : `<div class="note warn">${I("key-round", 15)} Pehle Keys page pe AI key daalo (Groq / Gemini free hain). <button class="fh-g" type="button" data-guide="ai">${I("book-open", 12)} Kahan milega? (Guide)</button> <a href="#/keys">Keys page</a></div>`}
+      <section class="card gen-box"><label class="lb" for="gq">Kaisa automation chahiye?</label>
+        <textarea class="inp" id="gq" maxlength="800" placeholder="e.g. har subah 8 baje Telegram pe motivational quote photo ke saath bhejo"></textarea>
+        <div class="gen-chips">${PG.EXAMPLES.map((e) => `<button type="button" class="gen-chip" data-chip="${esc(e)}">${esc(e)}</button>`).join("")}</div>
+        <div class="row"><button class="btn primary" id="ggo">${I("wand-sparkles", 16)} Project banao</button><span class="gen-log" id="glog"></span></div></section>
+      <div id="gres"></div></div>`;
+    $$("[data-chip]").forEach((c) => (c.onclick = () => { $("#gq").value = c.dataset.chip; $("#gq").focus(); }));
+    let made = null;
+    const render = (res) => {
+      const wf = res.workflow; made = wf;
+      const miss = GD.missing(wf, creds);
+      $("#gres").innerHTML = `<section class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0"><h3 style="margin:0">${esc(wf.name)}</h3><p class="help" style="margin:4px 0 0">${esc(wf.description)}</p></div><span class="pill full">${I("circle-check", 12)} valid · ${res.tries} try</span></div>
+        ${chain(wf.nodes.map((n) => n.type))}
+        <h4 style="margin:14px 0 4px">Steps</h4><ol class="gen-steps">${wf.nodes.map((n, i) => `<li>${icon(n.type, 28)}<span><b>${i + 1}. ${esc(n.name)}</b></span><span class="meta">${esc(nodeMeta(n.type).label)}</span></li>`).join("")}</ol>
+        <h4 style="margin:14px 0 6px">Keys</h4>${miss.length ? `<div class="gd-need">${miss.map((k) => `<div class="${k.ok ? "ok" : "miss"}">${I(k.ok ? "circle-check" : k.optional ? "info" : "circle-alert", 15)}<b>${esc(k.title)}</b><small>${k.ok ? "set hai" : k.optional ? "optional" : "missing"}</small><button class="btn sm" type="button" data-guide="${k.sec}">Guide</button></div>`).join("")}</div>` : `<p class="help">Koi key nahi chahiye.</p>`}
+        <details class="gd-inline"><summary>${I("code", 14)} JSON dekho</summary><pre class="json">${esc(JSON.stringify(wf, null, 2))}</pre></details>
+        <div class="row" style="margin-top:14px"><button class="btn primary" id="guse">${I("plus", 16)} Use this project</button><button class="btn" id="gagain">${I("refresh-cw", 15)} Dobara banao</button></div></section>`;
+      $("#guse").onclick = async () => { try { const saved = await B.importWorkflow(made); toast("Project ban gaya ✓ — keys check karke Run dabao", "ok"); location.hash = `#/editor/${saved.id}`; } catch (e) { toast(e.message, "err"); } };
+      $("#gagain").onclick = () => $("#ggo").click();
+    };
+    $("#ggo").onclick = async () => {
+      const text = $("#gq").value.trim(); if (!text) { toast("Pehle likho kaisa automation chahiye", "err"); return; }
+      const btn = $("#ggo"); btn.disabled = true; $("#gres").innerHTML = "";
+      try {
+        const res = await PG.generate({ text, meta: window.YF_NODE_META, callAI: (messages) => B.aiComplete(messages, { temperature: 0.3, maxTokens: 2500 }), onStep: (m) => ($("#glog").textContent = m) });
+        $("#glog").textContent = ""; render(res);
+      } catch (e) { $("#glog").innerHTML = `<span class="err-c">${I("circle-x", 13)} ${esc(e.message)}</span>`; }
+      btn.disabled = false;
+    };
+  }
   // ---------- router
   let current = "";
   async function route() {
@@ -799,6 +880,7 @@
       else if (v === "admin") await PV.admin(id);
       else if (v === "videos") await PV.videos();
       else if (v === "video-maker") await viewVideoMaker();
+      else if (v === "generator") await viewGenerator();
       else await viewWorkflows();
     } catch (e) {
       if (e && e.locked) return;
@@ -829,7 +911,7 @@
     }
     route();
   }
-  window.YFApp = { premiumHtml, get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
+  window.YFApp = { VERSION, premiumHtml, pageTips, workflowGuide, get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
 
   async function boot() {
     if (location.hash.startsWith("#/share/")) sessionStorage.setItem("yf_share", location.hash);
@@ -841,8 +923,8 @@
       try { const c = new AbortController(); setTimeout(() => c.abort(), 1500); const r = await fetch("api/health", { signal: c.signal }); const j = await r.json(); B = j && j.edition === "full" ? YFBackends.ServerBackend : YFBackends.LocalBackend; }
       catch (_) { B = YFBackends.LocalBackend; }
     }
-    $("#edition").textContent = B.edition === "full" ? "● Full · local" : "● Web version";
-    $("#edition").className = `pill ${B.edition}`;
+    $("#edition").textContent = `v${VERSION.replace(/\.0$/, "")} · ${B.edition === "full" ? "PC" : "Web"}`;
+    $("#edition").className = `pill ver-pill ${B.edition}`;
     if (await window.YFPlatform.gate(B)) start();
   }
   boot();

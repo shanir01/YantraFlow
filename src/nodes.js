@@ -624,6 +624,54 @@ const VIDEO_PARAMS = [
   { key: "watermark", label: "Watermark / handle", type: "text", default: "", placeholder: "@mychannel" },
 ];
 def({
+  type: "imageMaker", label: "Post Photo Maker (quote / post card)", group: "Video", icon: "image-plus", color: "#ec4899",
+  description: "Har run khud post photo banata hai: tumhara text + brand colours, 1080x1350 (Insta feed) / 1080x1920 (Story) / 1080x1080. Background: gradient ya free stock photo (Pexels/Pixabay key ho to). Website = browser me PNG, PC/Termux = ffmpeg PNG.",
+  params: [
+    { key: "text", label: "Photo text", type: "textarea", default: "{{ $json.quote || $json.caption || $json.text }}", help: "Hashtags / links / emoji apne aap hat jaate hain. Chhota text = bada font." },
+    { key: "title", label: "Upar chhota title (optional)", type: "text", default: "{{ $json.greeting || '' }}" },
+    { key: "size", label: "Size", type: "select", options: ["1080x1350", "1080x1920", "1080x1080"], default: "1080x1350" },
+    { key: "style", label: "Style", type: "select", options: ["gradient", "photo", "dark", "light"], default: "gradient", help: "photo = Pexels/Pixabay se free photo background (key chahiye; na mile to gradient)." },
+    { key: "color1", label: "Brand colour 1", type: "text", default: "#7c5cff", placeholder: "#7c5cff" },
+    { key: "color2", label: "Brand colour 2", type: "text", default: "#00d4ff", placeholder: "#00d4ff" },
+    { key: "handle", label: "Handle / brand name (neeche)", type: "text", default: "", placeholder: "@mychannel" },
+    { key: "bgQuery", label: "Photo background search (English)", type: "text", default: "{{ $json.topicUsed || $json.topic }}", placeholder: "sunrise, mountains, city..." },
+    { key: "pexelsKey", label: "Pexels API key " + CRED, type: "secret", default: "" },
+    { key: "pixabayKey", label: "Pixabay API key " + CRED, type: "secret", default: "" },
+  ],
+  async run(ctx) {
+    const YI = require("../public/js/image-core.js");
+    const out = [];
+    for (let i = 0; i < ctx.items.length; i++) {
+      const it = ctx.items[i];
+      const plan = YI.planImage({ text: s(ctx.p("text", i)), title: s(ctx.p("title", i)), size: ctx.raw.size, style: ctx.raw.style, color1: s(ctx.p("color1", i)), color2: s(ctx.p("color2", i)), handle: s(ctx.p("handle", i)) });
+      if (!(await VM.hasFfmpeg())) throw new Error(VM.NO_FFMPEG);
+      const work = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "yf-img-"));
+      let bg = null; let credit = "";
+      if (plan.style === "photo") {
+        const q = YI.stockPhotoQuery(s(ctx.p("bgQuery", i)) || plan.text);
+        const pk = s(ctx.p("pexelsKey", i) || (ctx.settings.pexels || {}).apiKey).trim(); const xk = s(ctx.p("pixabayKey", i) || (ctx.settings.pixabay || {}).apiKey).trim();
+        let list = [];
+        if (pk) { const r = await http(`${API.pexels()}/v1/search?query=${encodeURIComponent(q)}&per_page=30&orientation=portrait`, { headers: { authorization: pk }, timeoutMs: 30000 }).catch((e) => ({ ok: false, status: 0, data: e.message })); if (r.ok) list = YI.normalizePexelsPhotos(r.data); else ctx.log(apiError("Pexels", r).message); }
+        if (!list.length && xk) { const r = await http(`${API.pixabay()}/api/?key=${encodeURIComponent(xk)}&q=${encodeURIComponent(q.slice(0, 100))}&image_type=photo&orientation=vertical&per_page=30&safesearch=true`, { timeoutMs: 30000 }).catch((e) => ({ ok: false, status: 0, data: e.message })); if (r.ok) list = YI.normalizePixabayPhotos(r.data); else ctx.log(apiError("Pixabay", r).message); }
+        if (!pk && !xk) ctx.log("Photo style: Pexels/Pixabay key nahi hai — gradient background use kiya");
+        const pick = list.length ? list[Math.floor(Math.random() * Math.min(list.length, 10))] : null;
+        if (pick) { try { bg = await saveDownload(ctx, pick.url, "imgbg"); credit = YI.photoCredit(pick); } catch (e) { ctx.log(`Stock photo download fail (${e.message}) — gradient`); } }
+      }
+      if (!bg) { bg = path.join(work, "bg.ppm"); fs.writeFileSync(bg, Buffer.from(YV.gradientPPM(108, Math.round(108 * plan.height / plan.width), plan.colors.bg1, plan.colors.bg2, Date.now() % 97))); }
+      fs.writeFileSync(path.join(work, "card.ass"), YI.assForImage(plan));
+      const dir = path.join(ctx.filesDir || ".", "images"); fs.mkdirSync(dir, { recursive: true });
+      const file = path.join(dir, `yantraflow-post-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}-${i}.png`);
+      const r = await VM.run(process.env.YANTRAFLOW_FFMPEG || "ffmpeg", YI.imageArgs(plan, { bg, ass: "card.ass", out: file, photo: !bg.endsWith(".ppm") }), { cwd: work, timeoutMs: 120000 });
+      try { fs.rmSync(work, { recursive: true, force: true }); } catch (_) { /* */ }
+      if (r.code !== 0 || !fs.existsSync(file)) throw new Error(`Photo nahi bani (ffmpeg): ${s(r.out).slice(-300)}`);
+      const res = { ...it, image: file, imageFile: file, photo: file, imageSize: plan.size, imageBy: "YantraFlow Post Photo Maker" };
+      if (credit) { res.credit = YV.addCredit(s(it.credit), credit); }
+      out.push(res);
+    }
+    return one(out);
+  },
+});
+def({
   type: "videoMaker", label: "Auto Video Maker (Shorts / Reels)", group: "Video", icon: "clapperboard", color: "#f43f5e",
   description: "Har run khud vertical video banata hai (1080x1920, 15-60 s): AI ke text se kinetic captions + photo / free stock clip / gradient background + music (+ voice on PC). Template / slide-style video hai — camera footage nahi. PC/Termux = MP4 (ffmpeg). Website = browser me banti hai.",
   params: [
@@ -1157,4 +1205,4 @@ const BY_TYPE = Object.fromEntries(NODES.map((n) => [n.type, n]));
 function publicNodeList() {
   return NODES.map(({ run, poll, pollEverySeconds, ...meta }) => meta);
 }
-module.exports = { NODES, BY_TYPE, publicNodeList, testCondition, API, getPreview, download };
+module.exports = { NODES, BY_TYPE, publicNodeList, testCondition, API, getPreview, download, aiComplete };

@@ -307,6 +307,25 @@ const videoStep = (extra) => ["videoMaker", "Auto Video Maker", Object.assign({ 
   ];
   const V43 = [
     {
+      id: "photo-video-maker", icon: "image-plus", categories: ["Telegram", "YouTube", "Instagram", "Video", "AI Content"], isNew: true,
+      title: "Photo + Video Maker (auto) — ek baar details do, roz khud banake post", title_hi: "Photo + Video Maker (auto)",
+      summary: "Topic / SEED, style, brand colours, platform aur time EK BAAR bharo → har run AI naya post likhta hai, usse post PHOTO (1080x1350 / 1080x1920 card, brand colours, optional free stock photo) aur short VIDEO (Auto Video Maker) banata hai, phir Telegram / YouTube / Instagram pe post. Baar-baar input nahi.",
+      runsIn: "web", needs: ["AI key (Groq / Gemini free)", "Telegram bot (aur/ya YouTube, Instagram)", "Optional: Pexels / Pixabay key = photo background"],
+      honest: "Photo = text + brand colours wala design card (AI camera photo nahi). Video = slide-style. Website pe tab khula rakho; 24x7 ke liye PC/Termux. Instagram ko public link chahiye — website pe bani photo/video Instagram pe seedha nahi jaati, PC/Termux se jaati hai.",
+      howTo: ["Neeche 'Ek baar setup' form bharo → 'Ready project banao'", "Keys page: AI key + jo platform chuna uski key (har ek ka Guide hai)", "Project khulega → Run dabao → photo + video bante dikhenge", "Schedule pehle se set hai (tumhara time) — 24x7 ke liye PC/Termux"],
+      setup: true,
+      workflow: flow("Photo + Video Maker (auto)", "Topic -> AI post -> post photo (card) + short video -> Telegram / YouTube / Instagram", [
+        start,
+        seedPost("video", { seed: "Topic: roz ek motivational / useful post. Language: Hinglish, short lines, positive. Title = 1 line quote (max 12 words).", topic: "motivation", tone: "positive, energetic" }),
+        ["imageMaker", "Post Photo Maker", { text: "{{ $json.title || $json.text }}", title: "", size: "1080x1350", style: "gradient", color1: "#7c5cff", color2: "#00d4ff", handle: "", bgQuery: "{{ $json.topicUsed || 'motivation' }}", pexelsKey: "", pixabayKey: "" }],
+        videoStep({ mode: "make", seconds: 20, voice: "auto", cta: "Follow karo roz ke liye" }),
+        ["telegram", "Photo to Telegram", { operation: "photo", text: "{{ $json.caption || $json.text }}", media: "{{ $json.image }}", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }, { continueOnFail: true }],
+        ["telegram", "Video to Telegram", { operation: "video", text: "{{ $json.title }}", media: "{{ $json.media }}", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }, { continueOnFail: true }],
+        ["youtube", "Video to YouTube Shorts", { file: "{{ $json.videoFile || $json.media }}", title: "{{ $json.title }} #shorts", description: "{{ $json.description }}", tags: "{{ $json.tags }}", privacy: "private", categoryId: "22", firstComment: "" }, { continueOnFail: true, disabled: true }],
+        ["instagram", "Reel to Instagram (PC/Termux)", { kind: "REELS", mediaUrl: "{{ $json.videoUrl || $json.media }}", caption: "{{ $json.caption || $json.text }}", shareToFeed: true, firstComment: "", userId: "", accessToken: "" }, { continueOnFail: true, disabled: true }],
+      ]),
+    },
+    {
       id: "daily-funny-video", icon: "film", categories: ["YouTube", "Instagram", "Telegram", "Video"], isNew: true,
       title: "Daily Funny Video → YouTube Shorts + Instagram Reels + Telegram", title_hi: "Roz ek funny video → YouTube + Insta + Telegram",
       summary: "Topic do (funny, cats, memes...) → har run ek NAYA copyright-free short video dhundhta hai (Pexels / Pixabay free licence ya tumhare apne clips), edit karta hai (9:16, max 59 s, hook text, end CTA, watermark; English bol-chaal ho to Hindi captions + Hindi voice on PC), AI Hinglish title + description + hashtags + pehla comment likhta hai (credit line apne aap), phir YouTube Shorts + Instagram Reels + Telegram pe upload.",
