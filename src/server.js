@@ -10,6 +10,7 @@ const { Runner } = require("./runner");
 const { publicNodeList, BY_TYPE } = require("./nodes");
 const CRED_SCHEMA = require("../public/js/cred-schema.js");
 const engine = require("../public/js/engine-core.js");
+const SCH = require("../public/js/schedule-core.js");
 const pkg = require("../package.json");
 
 const PUBLIC = path.join(__dirname, "..", "public");
@@ -158,10 +159,20 @@ async function api(req, res, url, store, runner) {
   }
   if (p === "/api/workflows" && m === "GET") {
     const runs = store.listExecutions();
+    const scheds = runner.listSchedules();
     return send(res, 200, store.listWorkflows().map((wf) => {
       const last = runs.find((r) => r.workflowId === wf.id);
-      return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null };
+      return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null, schedule: scheds[wf.id] || null };
     }));
+  }
+  if (p === "/api/schedules" && m === "GET") return send(res, 200, runner.listSchedules());
+  if ((mm = p.match(/^\/api\/workflows\/([\w-]+)\/schedule$/))) {
+    if (m === "GET") return send(res, 200, runner.getSchedule(mm[1]) || { schedule: null });
+    if (m === "PUT" || m === "POST") {
+      try { return send(res, 200, await runner.setSchedule(mm[1], await body())); }
+      catch (e) { return send(res, e.status || 400, { error: e.message }); }
+    }
+    if (m === "DELETE") return send(res, 200, runner.stopSchedule(mm[1]) || { schedule: null });
   }
   if ((p === "/api/workflows" || p === "/api/import") && m === "POST") {
     const wf = await body();
@@ -175,7 +186,7 @@ async function api(req, res, url, store, runner) {
     const id = mm[1];
     if (m === "GET") { const wf = store.getWorkflow(id); return wf ? send(res, 200, wf) : send(res, 404, { error: "Workflow not found" }); }
     if (m === "PUT") { const wf = await body(); engine.validate(wf); wf.id = id; return send(res, 200, store.saveWorkflow(wf)); }
-    if (m === "DELETE") return send(res, store.deleteWorkflow(id) ? 200 : 404, { ok: true });
+    if (m === "DELETE") { runner.removeSchedule(id); return send(res, store.deleteWorkflow(id) ? 200 : 404, { ok: true }); }
   }
   if ((mm = p.match(/^\/api\/workflows\/([\w-]+)\/run$/)) && m === "POST") {
     const b = await body();
@@ -226,6 +237,8 @@ if (require.main === module) {
     process.exit(1);
   });
   server.listen(port, host, () => {
+    const sch = Object.values(server.runner.listSchedules()).filter((x) => x && x.schedule && x.schedule.enabled);
+    if (sch.length) console.log(`\n  Resumed ${sch.length} schedule(s) from data/schedules.json:` + sch.map((x) => `\n   - ${(server.store.getWorkflow(x.workflowId) || {}).name || x.workflowId}: ${x.describe}, next ${SCH.fmt(Date.parse(x.nextRunAt), x.schedule.tz)}`).join(""));
     const shown = host === "0.0.0.0" ? "localhost" : host;
     const line = "═".repeat(44);
     console.log(`\n  YantraFlow ${pkg.version} is running\n  Open: http://${shown === "127.0.0.1" ? "localhost" : shown}:${port}\n\n  ${line}\n  YantraFlow password:  ${server.password}\n  ${line}\n  (New password every time you start. Type it on the lock screen.)\n\n  Webhooks (no password needed): http://localhost:${port}/webhook/<path>\n  Data folder: ${server.store.dir}\n  Stop: Ctrl+C\n`);

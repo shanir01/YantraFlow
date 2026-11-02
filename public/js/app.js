@@ -64,7 +64,7 @@
           <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><h3 style="flex:1;min-width:0">${esc(w.name)}</h3>
             <label class="switch" title="Active = runs by itself"><input type="checkbox" data-act="${w.id}" ${w.active ? "checked" : ""}><span class="tr"></span></label>
             <button class="kebab" data-kebab="${w.id}" aria-label="More actions for ${esc(w.name)}" title="More (or right-click / long-press)">${I("ellipsis-vertical", 18)}</button></div>
-          ${chain(w.nodeTypes)}
+          ${chain(w.nodeTypes)}${schedPill(w.schedule)}
           <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? `<span class="ok-c">${I("circle-check", 13)}</span>` : `<span class="err-c">${I("circle-x", 13)}</span>`}` : "never run"}</span>
           <div class="row"><button class="btn sm" data-run="${w.id}">${I("play", 14)} Run</button><a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
         </div>`).join("")}</div>`
@@ -78,12 +78,17 @@
       try { await B.setActive(el.dataset.act, el.checked); toast(el.checked ? "Active — it will run by itself" : "Paused", "ok"); }
       catch (e) { el.checked = !el.checked; toast(e.message, "err"); }
     }));
-    $$("[data-run]").forEach((el) => (el.onclick = async () => {
-      el.disabled = true; el.textContent = "Running…";
-      try { const ex = await B.runWorkflow(el.dataset.run); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✓` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"); }
-      catch (e) { toast(e.message, "err"); }
-      viewWorkflows();
-    }));
+    $$("[data-run]").forEach((el) => (el.onclick = () => openRunSheet(el.dataset.run, {
+      runOnce: async () => {
+        el.disabled = true; el.textContent = "Running…";
+        try { const ex = await B.runWorkflow(el.dataset.run); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✓` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"); }
+        catch (e) { toast(e.message, "err"); }
+        viewWorkflows();
+      },
+      onExec: (ex) => toast(ex.status === "success" ? `First run done ✓` : `First run failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"),
+      after: () => viewWorkflows(),
+    })));
+    if (list.some((w) => w.schedule && w.schedule.schedule && w.schedule.schedule.enabled) && !B.alwaysOn) $(".page").insertAdjacentHTML("afterbegin", alwaysOnNote());
   }
 
 
@@ -185,6 +190,82 @@
     });
     $("#shf").onclick = () => download(fileName(wf), clean);
     $("#shx").onclick = closePop;
+  }
+
+
+  // ---------- v4: Run sheet — Run once / Repeat every N / Daily at HH:MM (min 30 min)
+  const TZS = ["Asia/Kolkata", "Asia/Dubai", "Asia/Kathmandu", "Asia/Dhaka", "Asia/Singapore", "Europe/London", "America/New_York", "UTC"];
+  function alwaysOnNote() {
+    if (B.alwaysOn) return `<div class="sched-note ok">${I("circle-check", 15)}<span><b>PC/Termux version</b> — schedule 24x7 chalega jab tak YantraFlow on hai (restart ke baad bhi apne aap resume). Termux me pehle <code>termux-wake-lock</code> chalao.</span></div>`;
+    return `<div class="sched-note warn">${I("triangle-alert", 15)}<span><b>Website pe schedule tabhi chalega jab ye tab khula ho.</b> 24x7 ke liye PC/Termux pe chalao. <a href="${REPO}#-v4-auto-post--schedule-24x7" target="_blank" rel="noopener">Setup</a></span></div>`;
+  }
+  function schedPill(info) {
+    if (!info || !info.schedule || !info.schedule.enabled) return "";
+    return `<span class="sched-pill" title="Schedule ON">${I("calendar-clock", 13)} ${esc(info.describe)} · next ${esc(YFSchedule.fmt(Date.parse(info.nextRunAt), info.schedule.tz))}</span>`;
+  }
+  async function openRunSheet(wfId, opts = {}) {
+    closePop();
+    let info = null; try { info = await B.getSchedule(wfId); } catch (_) { /* */ }
+    const cur = (info && info.schedule) || { mode: "every", every: 30, unit: "minutes", at: "09:00", tz: "Asia/Kolkata", enabled: false };
+    const on = !!(info && info.schedule && info.schedule.enabled);
+    const myTz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (_) { return ""; } })();
+    const tzs = [...new Set([cur.tz || "Asia/Kolkata", ...TZS, myTz].filter(Boolean))];
+    const bd = document.createElement("div"); bd.id = "ctxb"; bd.className = "ctx-back on"; bd.onclick = closePop;
+    const p = document.createElement("div"); p.id = "ctxm"; p.className = "ctx dialog run-sheet";
+    p.innerHTML = `<div class="ctx-h">${I("play", 16)}<b>Run kaise karna hai?</b><span class="spacer"></span><button class="btn sm ghost icon" id="rsx" aria-label="Close">${I("close", 16)}</button></div>
+      <div id="rs-status"></div>
+      <div class="rs-opts" role="radiogroup">
+        <label class="rs-opt"><input type="radio" name="rsm" value="once" ${on ? "" : "checked"}><span>${I("play", 16)}<b>Run once</b><small>Abhi ek baar chalao</small></span></label>
+        <label class="rs-opt"><input type="radio" name="rsm" value="every" ${on && cur.mode === "every" ? "checked" : ""}><span>${I("repeat", 16)}<b>Repeat</b><small>Har N minute / ghante / din</small></span></label>
+        <label class="rs-opt"><input type="radio" name="rsm" value="daily" ${on && cur.mode === "daily" ? "checked" : ""}><span>${I("calendar-clock", 16)}<b>Daily at</b><small>Roz fixed time pe</small></span></label>
+      </div>
+      <div class="rs-row" id="rs-every"><span>Har</span><input class="inp" id="rse" type="number" min="1" value="${esc(cur.mode === "every" ? cur.every : 30)}" style="width:90px"><select class="inp" id="rsu" style="width:130px">${["minutes", "hours", "days"].map((u) => `<option value="${u}" ${cur.unit === u ? "selected" : ""}>${{ minutes: "minute", hours: "ghante", days: "din" }[u]}</option>`).join("")}</select></div>
+      <div class="rs-row" id="rs-daily"><span>Roz</span><input class="inp" id="rsa" type="time" value="${esc(cur.at || "09:00")}" style="width:130px"><span>baje</span></div>
+      <div class="rs-row" id="rs-tz"><span>Timezone</span><select class="inp" id="rst">${tzs.map((z) => `<option ${z === (cur.tz || "Asia/Kolkata") ? "selected" : ""}>${esc(z)}</option>`).join("")}</select></div>
+      <label class="rs-check" id="rs-now"><input type="checkbox" id="rsn" checked> Pehla run abhi turant</label>
+      <p class="help" id="rs-min">Minimum gap ${YFSchedule.MIN_MINUTES} minute hai (Telegram/LinkedIn/X pe spam ya ban se bachne ke liye).</p>
+      ${alwaysOnNote()}
+      <div class="row" style="margin-top:12px;flex-wrap:wrap"><button class="btn primary" id="rsgo">${I("play", 15)} <span>Run now</span></button>${on ? `<button class="btn danger" id="rsstop">${I("square", 15)} Stop schedule</button>` : ""}<button class="btn ghost" id="rsclose">Close</button></div>
+      <div id="rs-log"></div>`;
+    document.body.appendChild(bd); document.body.appendChild(p);
+    document.addEventListener("keydown", popKey);
+    const mode = () => (p.querySelector("input[name=rsm]:checked") || {}).value || "once";
+    const sync = () => {
+      const m = mode();
+      $("#rs-every").style.display = m === "every" ? "" : "none";
+      $("#rs-daily").style.display = m === "daily" ? "" : "none";
+      $("#rs-tz").style.display = m === "daily" ? "" : "none";
+      $("#rs-now").style.display = m === "once" ? "none" : "";
+      $("#rs-min").style.display = m === "every" ? "" : "none";
+      $("#rsgo span").textContent = m === "once" ? "Run now" : on ? "Update schedule" : "Start schedule";
+    };
+    const draw = (inf) => {
+      const st = $("#rs-status"); if (!st) return;
+      const en = inf && inf.schedule && inf.schedule.enabled;
+      st.innerHTML = en ? `<div class="sched-live">${I("loader-circle", 15, inf.running ? "spin" : "")}<div><b>Schedule ON — ${esc(inf.describe)}</b><small>Next run: <b>${esc(YFSchedule.fmt(Date.parse(inf.nextRunAt), inf.schedule.tz))}</b> · ${inf.runs || 0} runs${inf.lastRunAt ? ` · last ${esc(ago(inf.lastRunAt))}` : ""}</small></div></div>` : (inf && inf.schedule ? `<div class="sched-live off">${I("square", 15)}<div><b>Schedule stopped</b><small>${esc(inf.describe)}</small></div></div>` : "");
+      const lg = $("#rs-log"); if (!lg) return;
+      const rows = (inf && inf.log) || [];
+      lg.innerHTML = rows.length ? `<label class="lb">Run log</label><div class="rs-loglist">${rows.slice(0, 8).map((r) => `<a class="rs-logrow" href="${r.executionId ? `#/runs/${r.executionId}` : "#/runs"}">${statusPill(r.status)}<span>${esc(YFSchedule.fmt(Date.parse(r.at), (inf.schedule || {}).tz))}</span>${r.error ? `<small class="err-c">${esc(String(r.error).slice(0, 90))}</small>` : ""}</a>`).join("")}</div>` : "";
+    };
+    p.querySelectorAll("input[name=rsm]").forEach((r) => (r.onchange = sync));
+    sync(); draw(info);
+    const timer = setInterval(async () => { if (!document.getElementById("rs-status")) return clearInterval(timer); try { draw(await B.getSchedule(wfId)); } catch (_) { /* */ } }, 10000);
+    $("#rsx").onclick = closePop; $("#rsclose").onclick = closePop;
+    $("#rsstop") && ($("#rsstop").onclick = async () => { try { await B.stopSchedule(wfId); toast("Schedule stopped", "ok"); closePop(); if (opts.after) opts.after(); } catch (e) { toast(e.message, "err"); } });
+    $("#rsgo").onclick = async (e) => {
+      const btn = e.currentTarget; const m = mode();
+      try {
+        if (opts.beforeSave) wfId = (await opts.beforeSave()) || wfId;
+        if (m === "once") { closePop(); return opts.runOnce ? opts.runOnce() : null; }
+        btn.disabled = true; btn.innerHTML = `${I("loader-circle", 15, "spin")} <span>Starting…</span>`;
+        const res = await B.setSchedule(wfId, { mode: m, every: Number($("#rse").value), unit: $("#rsu").value, at: $("#rsa").value, tz: $("#rst").value, runNow: $("#rsn").checked });
+        (res.warnings || []).forEach((w) => toast(w, "err"));
+        if (res.execution && opts.onExec) opts.onExec(res.execution);
+        const inf = res.info;
+        toast(`Schedule ON — ${inf.describe}. Next: ${YFSchedule.fmt(Date.parse(inf.nextRunAt), inf.schedule.tz)}`, "ok");
+        closePop(); if (opts.after) opts.after();
+      } catch (err) { toast(err.message, "err"); btn.disabled = false; sync(); }
+    };
   }
 
   function openImportMenu(anchor) {
@@ -294,6 +375,7 @@
         <input class="name" id="wfname" value="${esc(wf.name)}" aria-label="Workflow name"><span class="dirty-dot" title="Unsaved changes"></span>
         <label class="switch" title="Active = runs by itself (schedule, webhook, folder…)"><input type="checkbox" id="active" ${wf.active ? "checked" : ""}><span class="tr"></span><span class="lbl-txt">Active</span></label>
         <button class="btn sm" id="save">${I("save", 16)}<span class="lbl-txt">Save</span></button>
+        <span id="ed-sched" class="hide-m"></span>
         <button class="btn sm run" id="run">${I("play", 16)}<span class="lbl-txt">Run</span></button>
         <button class="btn sm icon" id="more" aria-label="More">${I("ellipsis-vertical", 18)}</button>
       </div>
@@ -337,7 +419,8 @@
     $("#psearch").oninput = (e) => renderPalette(e.target.value);
     $("#wfname").oninput = () => setDirty(true);
     $("#save").onclick = () => save(true);
-    $("#run").onclick = runNow;
+    $("#run").onclick = () => openRunSheet(ED.wf.id, { beforeSave: async () => (await save(false)).id, runOnce: runNow, onExec: (ex) => showExec(ex), after: () => refreshSchedPill() });
+    refreshSchedPill();
     $("#active").onchange = toggleActive;
     $("#zin").onclick = () => ed.zoom_in();
     $("#zout").onclick = () => ed.zoom_out();
@@ -442,6 +525,22 @@
     try { await save(false); await B.setActive(ED.wf.id, el.checked); ED.wf.active = el.checked; toast(el.checked ? "Active — it will run by itself" : "Paused", "ok"); }
     catch (e) { el.checked = !el.checked; toast(e.message, "err"); }
   }
+  // SEED upload: txt/md read directly; PDF text via pdf.js (loaded only when you pick a PDF)
+  async function readSeedFile(file) {
+    if (file.size > 15 * 1024 * 1024) throw new Error("File 15 MB se badi hai");
+    if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") return await file.text();
+    let pdfjs;
+    try { pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs"; }
+    catch (_) { throw new Error("PDF reader load nahi hua (internet?). PDF ka text copy karke Seed box me paste karo."); }
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const pages = [];
+    for (let i = 1; i <= Math.min(doc.numPages, 40); i++) { const c = await (await doc.getPage(i)).getTextContent(); pages.push(c.items.map((x) => x.str + (x.hasEOL ? "\n" : " ")).join("")); }
+    return pages.join("\n\n").replace(/[ \t]+\n/g, "\n").trim();
+  }
+  async function refreshSchedPill() {
+    const el = $("#ed-sched"); if (!el || !ED.wf || !ED.wf.id) return;
+    try { const inf = await B.getSchedule(ED.wf.id); el.innerHTML = schedPill(inf); } catch (_) { /* */ }
+  }
   async function runNow() {
     const btn = $("#run"); btn.disabled = true; btn.innerHTML = `${I("loader-circle", 16, "spin")}<span class='lbl-txt'>Running…</span>`;
     $$(".drawflow-node").forEach((n) => n.classList.remove("run-success", "run-error", "run-skipped", "run-disabled"));
@@ -496,7 +595,7 @@
       let input;
       if (f.type === "select") input = `<select class="inp" id="${id}" data-k="${f.key}">${f.options.map((o) => `<option ${String(o) === String(v) ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
       else if (f.type === "boolean") input = `<label class="switch"><input type="checkbox" id="${id}" data-k="${f.key}" data-bool ${v === true || v === "true" ? "checked" : ""}><span class="tr"></span></label>`;
-      else if (["textarea", "json", "code"].includes(f.type)) input = `<textarea class="inp ${f.type === "code" || f.type === "json" ? "code" : ""}" id="${id}" data-k="${f.key}" spellcheck="false" ${f.type === "json" ? 'style="min-height:80px"' : ""}>${esc(v)}</textarea>`;
+      else if (["textarea", "json", "code"].includes(f.type)) input = `<textarea class="inp ${f.type === "code" || f.type === "json" ? "code" : ""}" id="${id}" data-k="${f.key}" spellcheck="false" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ""} ${f.type === "json" ? 'style="min-height:80px"' : f.upload ? 'style="min-height:150px"' : ""}>${esc(v)}</textarea>${f.upload ? `<div class="row seed-up"><button class="btn sm" data-upload="${id}">${I("upload", 14)} Upload .txt / .md / .pdf</button><span class="meta" id="${id}-n">${esc(String(v || "").length)} chars · sirf is device / tumhare account me save</span></div>` : ""}`;
       else input = `<input class="inp" id="${id}" data-k="${f.key}" type="${f.type === "secret" ? "password" : f.type === "number" ? "number" : "text"}" step="any" autocomplete="off" spellcheck="false" placeholder="${esc(f.placeholder || (f.type === "secret" ? "blank = use Keys page" : ""))}" value="${esc(v)}">`;
       return `<label class="lb" for="${id}">${esc(f.label)}</label>${input}${f.help ? `<div class="help">${esc(f.help)}</div>` : ""}`;
     };
@@ -519,6 +618,23 @@
       const upd = () => { n.params[inp.dataset.k] = inp.hasAttribute("data-bool") ? inp.checked : inp.type === "number" ? (inp.value === "" ? "" : Number(inp.value)) : inp.value; setDirty(true); if (inp.dataset.k === "path" && $("#hook")) $("#hook").textContent = B.webhookBase() + encodeURIComponent(inp.value); };
       inp.addEventListener("input", upd); inp.addEventListener("change", upd);
     });
+    $$("[data-upload]", p).forEach((b) => (b.onclick = async () => {
+      const ta = $("#" + b.dataset.upload);
+      const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".txt,.md,.markdown,.csv,.json,.pdf,text/plain,application/pdf";
+      inp.onchange = async () => {
+        const file = inp.files && inp.files[0]; if (!file) return;
+        b.disabled = true;
+        try {
+          const text = await readSeedFile(file);
+          if (!text.trim()) throw new Error("File me text nahi mila (scanned PDF? text copy karke paste karo)");
+          ta.value = text.slice(0, 20000); ta.dispatchEvent(new Event("input"));
+          const cnt = $("#" + b.dataset.upload + "-n"); if (cnt) cnt.textContent = `${ta.value.length} chars from ${file.name}`;
+          toast(`Seed loaded: ${file.name}`, "ok");
+        } catch (e) { toast(e.message, "err"); }
+        b.disabled = false;
+      };
+      inp.click();
+    }));
     $$("[data-ins]", p).forEach((c) => (c.onclick = () => {
       const f = ED.focusField && document.body.contains(ED.focusField) && ED.focusField.tagName !== "SELECT" ? ED.focusField : $$("textarea[data-k], input[data-k][type=text]", p)[0];
       if (!f) return; const s = f.selectionStart ?? f.value.length, e2 = f.selectionEnd ?? f.value.length;

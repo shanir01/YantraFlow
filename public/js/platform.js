@@ -8,8 +8,8 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const LOGO = "img/logo.svg";
   const DEV = { name: "Nirbhay Sharma", nick: "Nishu", github: "https://github.com/shanir01", youtube: "https://www.youtube.com/@JavaGoat9", telegram: "https://t.me/javagoat", email: "shanir01.ai@gmail.com", repo: "https://github.com/shanir01/YantraFlow" };
-  const CATS = ["All", "YouTube", "Instagram", "Telegram", "Gmail", "AI Content", "Video"];
-  const CAT_IC = { All: "layout-grid", YouTube: "youtube", Instagram: "instagram", Telegram: "telegram", Gmail: "gmail", "AI Content": "sparkles", Video: "film" };
+  const CATS = ["All", "Telegram", "Instagram", "YouTube", "X", "LinkedIn", "Gmail", "AI Content", "Video"];
+  const CAT_IC = { All: "layout-grid", YouTube: "youtube", Instagram: "instagram", Telegram: "telegram", Gmail: "gmail", X: "x", LinkedIn: "linkedin", "AI Content": "sparkles", Video: "film" };
   const I = (n, s = 18, c) => window.yfIcon(n, s, c);
 
   // ---------------------------------------------------------------- prefs + i18n
@@ -330,7 +330,7 @@
       <div class="pj-tools"><input class="inp" id="pq" type="search" placeholder="${prefs.lang === "hi" ? "Project dhoondo…" : "Search projects…"}" value="${esc(projQ)}" aria-label="Search projects"></div>
       <div class="cats" role="tablist">${CATS.map((c) => `<button class="cat ${c === projCat ? "on" : ""}" data-cat="${esc(c)}">${I(CAT_IC[c] || "tag", 15)}${esc(c)}${c === "All" ? "" : ` <small>${list.filter((p) => p.categories.includes(c)).length}</small>`}</button>`).join("")}</div>
       ${shown.length ? `<div class="grid pj-grid">${shown.map((p) => `<article class="card pj" data-open="${p.id}">
-        <div class="pj-top"><div class="pj-ic">${I(p.icon, 24)}</div><div class="pj-badges">${tierBadge(p)}${runBadge(p)}</div></div>
+        <div class="pj-top"><div class="pj-ic">${I(p.icon, 24)}</div><div class="pj-badges">${p.isNew ? `<span class="new-b">NEW</span>` : ""}${tierBadge(p)}${runBadge(p)}</div></div>
         <h3>${esc(prefs.lang === "hi" ? p.title_hi || p.title : p.title)}</h3><p>${esc(p.summary)}</p>
         ${A.chain(projectTypes(p))}
         <div class="pj-cats">${p.categories.map((c) => `<span>${esc(c)}</span>`).join("")}</div>

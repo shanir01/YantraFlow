@@ -83,6 +83,9 @@ class Store {
   // ---- settings (credentials) & poll state
   getSettings() { return this.readJson(path.join(this.dir, "credentials.json"), {}); }
   saveSettings(s) { this.writeJson(path.join(this.dir, "credentials.json"), s); try { fs.chmodSync(path.join(this.dir, "credentials.json"), 0o600); } catch (_) { /* windows */ } }
+  // ---- v4 schedules ("Run once / every N / daily at HH:MM") — survive restarts
+  getSchedules() { return this.readJson(path.join(this.dir, "schedules.json"), {}); }
+  saveSchedules(o) { this.writeJson(path.join(this.dir, "schedules.json"), o); }
   getState() { return this.readJson(path.join(this.dir, "trigger-state.json"), {}); }
   saveState(s) { this.writeJson(path.join(this.dir, "trigger-state.json"), s); }
 }

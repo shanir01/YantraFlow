@@ -2,6 +2,7 @@
 # YantraFlow — one-command start for Android (Termux), Linux and macOS.
 #   sh start.sh            (opens http://localhost:5679)
 #   PORT=5680 sh start.sh  (other port)    NO_BROWSER=1 sh start.sh  (don't open browser)
+#   KEEP_ALIVE=1 NO_BROWSER=1 sh start.sh  (24x7: auto-restart if it ever stops)
 cd "$(dirname "$0")" || exit 1
 PORT="${PORT:-5679}"
 
@@ -43,4 +44,8 @@ if [ -z "$NO_BROWSER" ]; then
   ) &
 fi
 
+# KEEP_ALIVE=1 sh start.sh  -> if YantraFlow ever stops, start it again (schedules resume from data/schedules.json)
+if [ -n "$KEEP_ALIVE" ]; then
+  while true; do PORT="$PORT" node src/server.js; echo "YantraFlow stopped — restarting in 5s (Ctrl+C twice to quit)"; sleep 5; done
+fi
 PORT="$PORT" exec node src/server.js

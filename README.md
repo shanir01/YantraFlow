@@ -2,7 +2,7 @@
 
 <p align="center"><img src="public/img/logo.svg" width="96" alt="YantraFlow logo"></p>
 <h1 align="center">YantraFlow</h1>
-<p align="center"><b>Free, n8n-style automation platform: free account, 17 ready-made Public Projects, and a drag-and-drop editor — on the web, your PC <i>and</i> your Android phone (Termux).</b><br>
+<p align="center"><b>Free, n8n-style automation platform: free account, 23 ready-made Public Projects (Telegram, Instagram, YouTube, X, LinkedIn auto-post with SEED + schedules), and a drag-and-drop editor — on the web, your PC <i>and</i> your Android phone (Termux).</b><br>
 Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhooks, schedules. Zero dependencies. Your keys never leave your device.</p>
 
 <p align="center">
@@ -30,6 +30,64 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 | Works with your [FreeLLM-Router](https://github.com/shanir01/FreeLLM-Router) | ✅ default AI URL | manual |
 
 > YantraFlow is **inspired by** n8n's idea, but it is written from scratch — no n8n code is used. n8n has far more integrations; YantraFlow is small, simple and phone-friendly.
+
+## 🚀 v4: Auto-post & Schedule 24x7
+
+**New in v4 (Nov 2026):**
+
+| | What it does |
+|---|---|
+| 🔗 **Link preview → Telegram** | Paste **any** link (article, YouTube, Instagram, any website) → its preview **photo + title + description + link** is posted to your Telegram bot / channel. The photo is **downloaded and uploaded as a file**, so Telegram's `400: failed to get HTTP URL content` error is gone. Project: *Any link → preview post on your Telegram bot*. New node: **Link Preview**. Telegram node: new send type **linkPreview**. |
+| 📤 **Telegram media fix** | Telegram node → **Media sending** = `auto` (default): first sends the link; if Telegram can't open it, YantraFlow downloads the photo/video and uploads the bytes. `upload` = always upload, `url` = old behaviour. |
+| 🌱 **SEED projects** | 5 new ready projects: **Telegram, Instagram, YouTube, X (Twitter), LinkedIn** auto-post. Each has an **AI Post Writer (seed)** node: paste your SEED document (brand info, topics, links, style, what NOT to say) or **Upload .txt / .md / .pdf**. The AI writes only from the seed. |
+| ✨ **Auto message generate** | `Auto message generate = on` → every run the AI writes a **new, different** post. It remembers the last N posts (default 20) and re-writes if a draft is too similar. `off` → sends your fixed message. Optional **Photos / videos to rotate** list → next item each run (`{{ $json.media }}`). |
+| ⏰ **Schedule on Run** | Press **Run** → choose **Run once** / **Repeat every N minutes / hours / days** / **Daily at HH:MM** (timezone, default `Asia/Kolkata`) → **Start schedule**. Shows next-run time, run count and a run log. **Stop** any time. Minimum gap **30 minutes** (anything faster is raised to 30 — spam/ban safety for Telegram, LinkedIn, X…). |
+| 🔁 **Keeps running by itself** | Fixed: "Run runs once and stops". A started schedule keeps running without pressing Run again. |
+
+### Where does it run 24x7? (honest)
+
+- **Website** (yantraflow.sites.tab.bot): the schedule runs **only while that browser tab is open** (browsers stop pages that are closed). Your schedule is saved in the browser and resumes when you open the site again (a missed run runs once). A yellow note in the app says this.
+- **PC / Termux (full version)**: runs **24x7** as long as YantraFlow is on. Schedules are saved in `data/schedules.json` and **resume automatically after a restart**. Missed runs (PC was off) run once, then the normal gap continues.
+  - Termux: `start.sh` already calls `termux-wake-lock`. Also turn off battery optimisation for Termux (Android Settings → Apps → Termux → Battery → Unrestricted).
+  - Auto-restart if it ever stops: `KEEP_ALIVE=1 NO_BROWSER=1 sh start.sh`
+  - Start on phone boot: install **Termux:Boot**, then `mkdir -p ~/.termux/boot && printf '#!/data/data/com.termux/files/usr/bin/sh\ntermux-wake-lock\ncd ~/YantraFlow && KEEP_ALIVE=1 NO_BROWSER=1 sh start.sh\n' > ~/.termux/boot/yantraflow && chmod +x ~/.termux/boot/yantraflow`
+  - Windows: put a shortcut to `start.bat` in `shell:startup`, or use `npx pm2 start src/server.js --name yantraflow`.
+
+### Posting needs each platform's own keys (no fake success)
+
+| Platform | What you need (Keys page) | Website | PC / Termux |
+|---|---|---|---|
+| **Telegram** | Bot token from @BotFather + chat ID / `@channel` (bot = admin) | ✅ | ✅ |
+| **Instagram** | Business/Creator account linked to a Facebook Page + Meta developer app + long-lived token with `instagram_content_publish` + IG user ID. Media must be a **public https link**. | ✅ | ✅ |
+| **YouTube** | Google Cloud project, YouTube Data API v3, OAuth client + **refresh token** (scope `youtube.upload`). ≈6 uploads/day free quota. Community posts are not in the API. | ❌ | ✅ |
+| **X (Twitter)** | developer.x.com app (Read+Write) — API key/secret + access token/secret. **Posting through the X API is paid** (paid plan / credits). | ❌ (X blocks browsers) | ✅ |
+| **LinkedIn** | linkedin.com/developers → app → products *Share on LinkedIn* + *Sign In with LinkedIn using OpenID Connect* → token with `w_member_social openid profile` (≈60 days). Optional *Author URN*, *API version* (YYYYMM, default 202610). | ❌ (LinkedIn blocks browsers) | ✅ |
+
+If a key is missing or wrong, the node fails with the platform's own error — it never pretends it posted.
+
+### Link preview on the website (proxy)
+
+Browsers can't read other websites (CORS), so the **website** asks a metadata service:
+1. your own **Supabase Edge Function** (Keys page → *Link preview* → proxy URL), else
+2. the free public **microlink.io** API (no key, ~50 links/day), and for YouTube links the YouTube oEmbed.
+Photos are fetched directly, through your proxy, or through the free `images.weserv.nl` image proxy, then **uploaded** to Telegram.
+The **PC/Termux version reads pages itself** — no limit, no proxy.
+
+Deploy your own unlimited proxy (free Supabase plan is enough):
+```bash
+npm i -g supabase            # or: npx supabase ...
+supabase login
+supabase link --project-ref <your-project-ref>
+supabase functions deploy link-preview --no-verify-jwt   # code: supabase/functions/link-preview/index.ts
+```
+Then paste `https://<your-project-ref>.supabase.co/functions/v1/link-preview` on the Keys page.
+
+### Hinglish mein (short)
+1. **Projects** → *Telegram auto-post (SEED se)* → **Ye project use karo**.
+2. *AI Post Writer (seed)* node kholo → SEED box me apna brand/topic/style likho ya **Upload** dabao.
+3. **Keys** page: AI (Groq/Gemini key) + Telegram bot.
+4. **Run** → *Repeat* → `30 minute` (ya *Daily at* `09:00`) → **Start schedule**. Har baar naya post jayega.
+5. 24x7 chahiye? PC/Termux pe `sh start.sh` chalao — website tab band hone pe ruk jati hai.
 
 ## 📸 Screenshots
 
@@ -71,7 +129,7 @@ The live website **https://yantraflow.sites.tab.bot/** is now a small platform:
 
 - **Free account** — email + password only (Sign up / Log in / Forgot password). Each account gets its own workflows, runs and keys (keys stay in that browser, never on a server).
 - **Profile** — avatar (initials or your photo), name, bio. **Settings**: theme (Dark / AMOLED / Light), language (English / Hinglish), Keys page, export data, delete data, change password, delete account. **About** and **Developer** pages.
-- **🧩 Public Projects** — 17 ready-made automations with category filters (YouTube, Instagram, Telegram, Gmail, AI Content, Video). Every project has a `tier`/`price` field in [`public/js/projects.js`](public/js/projects.js) — **all FREE right now**. One tap on **Use this project** copies it into your workflows.
+- **🧩 Public Projects** — 23 ready-made automations (v4 added Link preview → Telegram and SEED auto-post for Telegram, Instagram, YouTube, X, LinkedIn) with category filters (YouTube, Instagram, Telegram, Gmail, AI Content, Video). Every project has a `tier`/`price` field in [`public/js/projects.js`](public/js/projects.js) — **all FREE right now**. One tap on **Use this project** copies it into your workflows.
 
 | Project | Category | Where it runs |
 |---|---|---|
@@ -233,7 +291,7 @@ cd YantraFlow && sh start.sh
 ## 🧪 Tests
 
 ```bash
-npm test     # 27 tests: engine, cron, expressions, all 6 templates end-to-end with mocked APIs
+npm test     # 49 tests: engine, cron, expressions, templates, projects, v4 scheduler (incl. restart-resume), link preview parser + Telegram upload, SEED auto-generate — all with mocked APIs
 ```
 Every outside service (AI, Telegram, Instagram/Facebook Graph, Google/YouTube, X, Discord, Slack, SMTP, RSS, Sheets) is mocked in `test/helpers.js` — tests never touch the internet or real keys.
 
@@ -241,12 +299,16 @@ Every outside service (AI, Telegram, Instagram/Facebook Graph, Google/YouTube, X
 
 ```
 src/server.js      HTTP server, API, webhooks
-src/runner.js      scheduler (cron/interval) + folder/sheet polling
+src/runner.js      scheduler (cron/interval, v4 Run schedules in data/schedules.json) + folder/sheet polling
 src/nodes.js       every node (add your own here!)
 public/            the editor UI (vanilla JS + Drawflow)
 public/js/engine-core.js   workflow engine (shared by server & web version)
+public/js/schedule-core.js Run once / every N / daily at HH:MM (min 30 min)
+public/js/link-preview.js  OpenGraph/Twitter parser + Telegram caption
+public/js/content-gen.js   SEED prompt + no-repeat history
+supabase/functions/link-preview/  optional proxy for the website's link previews
 public/templates/  ready workflows
-data/              your workflows, runs, keys (git-ignored)
+data/              your workflows, runs, keys, schedules.json, post-history.json (git-ignored)
 ```
 
 **Add your own node:** copy any `def({...})` block in `src/nodes.js`, change `type`, `label`, `params` and `run()`, then `npm run build:meta`.

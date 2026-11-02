@@ -125,7 +125,7 @@
         });
         const evalFor = (value, i) => opts.evaluate(value, exprBase(i || 0));
         const ctx = Object.assign({}, opts.extraCtx || {}, {
-          node, raw, items, settings: opts.settings || {}, nodeData,
+          node, raw, items, settings: opts.settings || {}, nodeData, workflow: { id: wf.id || null, name: wf.name || "" },
           p: (key, i) => evalFor(raw[key] !== undefined ? raw[key] : defaultOf(def, key), i || 0),
           evalFor,
           log: (msg) => exec.logs.push({ t: new Date().toISOString(), node: node.name, msg: String(msg) }),

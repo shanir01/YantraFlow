@@ -16,7 +16,7 @@
         { key: "botToken", label: "Bot token", secret: true, placeholder: "123456:ABC-DEF…" },
         { key: "chatId", label: "Default chat ID / @channel", placeholder: "123456789 or @mychannel" },
       ] },
-    { id: "instagram", title: "Instagram (Graph API)", icon: "instagram", help: "Needs an Instagram Business/Creator account linked to a Facebook Page + a Meta developer app (developers.facebook.com). Get a long-lived token with instagram_content_publish permission, and your IG user ID.",
+    { id: "instagram", title: "Instagram (Graph API)", icon: "instagram", help: "Needs an Instagram Business/Creator account linked to a Facebook Page + a Meta developer app (developers.facebook.com). Get a long-lived token with instagram_content_publish permission, and your IG user ID. Photo/Reel ka link public hona chahiye (Instagram khud download karta hai) — Google Drive/localhost link nahi chalega.",
       fields: [
         { key: "userId", label: "Instagram user ID", placeholder: "1784…" },
         { key: "accessToken", label: "Access token", secret: true },
@@ -32,12 +32,22 @@
         { key: "clientSecret", label: "OAuth client secret", secret: true },
         { key: "refreshToken", label: "Refresh token", secret: true },
       ] },
-    { id: "x", title: "X / Twitter", icon: "x", help: "developer.x.com → your app → Keys and tokens (app permission: Read and Write).",
+    { id: "x", title: "X / Twitter", icon: "x", help: "developer.x.com → your app → User authentication: Read and Write → Keys and tokens. Dhyan: X API se post karna ab paid hai (paid plan / pay-per-use credits) — free account se post fail ho sakta hai. Posting sirf full version (PC/Termux) se.",
       fields: [
         { key: "apiKey", label: "API key", secret: true },
         { key: "apiSecret", label: "API key secret", secret: true },
         { key: "accessToken", label: "Access token", secret: true },
         { key: "accessSecret", label: "Access token secret", secret: true },
+      ] },
+    { id: "linkedin", title: "LinkedIn", icon: "linkedin", help: "linkedin.com/developers → Create app → Products: add \"Share on LinkedIn\" (+ \"Sign In with LinkedIn using OpenID Connect\") → Auth → OAuth 2.0 tools → token with scopes w_member_social openid profile. Token ~60 din chalta hai, phir naya banao. Posting sirf full version (PC/Termux) se — LinkedIn browser calls block karta hai.",
+      fields: [
+        { key: "accessToken", label: "Access token", secret: true },
+        { key: "authorUrn", label: "Author URN (optional)", placeholder: "blank = auto (urn:li:person:…)" },
+        { key: "version", label: "API version (YYYYMM)", placeholder: "202610" },
+      ] },
+    { id: "linkpreview", title: "Link preview (website only)", icon: "link", help: "Website pe link ka preview padhne ke liye: khaali = free public service (microlink.io, ~50 links/din, no key). Apna unlimited chahiye to Supabase Edge Function deploy karo (README → v4 → Link preview proxy) aur uska URL yahan daalo. PC/Termux version ko iski zaroorat nahi.",
+      fields: [
+        { key: "proxyUrl", label: "Your proxy URL (optional)", placeholder: "https://<project>.supabase.co/functions/v1/link-preview" },
       ] },
     { id: "smtp", title: "Email (SMTP)", icon: "mail", help: "Gmail: smtp.gmail.com, port 465, your Gmail + an App Password (Google Account → Security → App passwords).",
       fields: [

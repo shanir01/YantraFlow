@@ -29,6 +29,12 @@
     saveCreds: (values) => req("PUT", "api/credentials", values),
     testCred: (service) => req("POST", "api/credentials/test", { service }),
     webhookBase: () => `${location.origin}/webhook/`,
+    // v4 schedules — the PC/Termux server keeps them running 24x7 (saved in data/schedules.json)
+    listSchedules: () => req("GET", "api/schedules"),
+    getSchedule: (id) => req("GET", `api/workflows/${id}/schedule`),
+    setSchedule: (id, sch) => req("PUT", `api/workflows/${id}/schedule`, sch),
+    stopSchedule: (id) => req("DELETE", `api/workflows/${id}/schedule`),
+    alwaysOn: true,
   };
 
   // ---------------- web edition (browser only)
@@ -57,6 +63,26 @@
     saveRun(ex);
     return ex;
   }
+
+  function startNode(wf) { const t = YFEngine.findTriggers(wf, YFWeb.types); const n = t.find((x) => x.type === "manualTrigger" || x.type === "scheduleTrigger") || t[0]; return n ? n.id : undefined; }
+  function schedInfo(wid) {
+    const e = LS.get("schedules", {})[wid]; if (!e) return null;
+    const now = Date.now(); const next = YFSchedule.nextRun(e.schedule, e, now);
+    return { workflowId: wid, schedule: e.schedule, startedAt: e.startedAt, lastRunAt: e.lastRunAt, nextRunAt: next == null ? null : new Date(Math.max(next, now)).toISOString(), running: schedRunning.has(wid), runs: e.runs || 0, log: (e.log || []).slice(-20).reverse(), describe: YFSchedule.describe(e.schedule) };
+  }
+  const schedRunning = new Set();
+  async function runScheduled(wid) {
+    if (schedRunning.has(wid)) return null;
+    const wf = wfs()[wid]; let all = LS.get("schedules", {});
+    if (!wf) { delete all[wid]; LS.set("schedules", all); return null; }
+    const now = new Date().toISOString();
+    all[wid].lastRunAt = now; LS.set("schedules", all); // claim the slot first (no double runs, even with 2 tabs)
+    schedRunning.add(wid);
+    let ex; try { ex = await run(wf, startNode(wf), "schedule"); } catch (e) { ex = { status: "error", error: e.message }; } finally { schedRunning.delete(wid); }
+    all = LS.get("schedules", {});
+    if (all[wid]) { all[wid].runs = (all[wid].runs || 0) + 1; all[wid].log = (all[wid].log || []).concat([{ at: now, status: ex.status, error: ex.error || null, executionId: ex.id || null }]).slice(-50); LS.set("schedules", all); }
+    return ex;
+  }
   const LocalBackend = {
     edition: "web",
     async health() { return { ok: true, edition: "web" }; },
@@ -64,7 +90,7 @@
       const runs = LS.get("runs", []);
       return Object.values(wfs()).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt))).map((wf) => {
         const last = runs.find((r) => r.workflowId === wf.id);
-        return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null };
+        return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null, schedule: schedInfo(wf.id) };
       });
     },
     async getWorkflow(wid) { const w = wfs()[wid]; if (!w) throw new Error("Workflow not found"); return w; },
@@ -76,7 +102,22 @@
       all[wf.id] = { id: wf.id, name: wf.name || "My workflow", active: !!wf.active, description: wf.description || "", nodes: wf.nodes, connections: wf.connections, createdAt: (old && old.createdAt) || now, updatedAt: now };
       LS.set("workflows", all); return all[wf.id];
     },
-    async deleteWorkflow(wid) { const all = wfs(); delete all[wid]; LS.set("workflows", all); return { ok: true }; },
+    async deleteWorkflow(wid) { const all = wfs(); delete all[wid]; LS.set("workflows", all); const sc = LS.get("schedules", {}); delete sc[wid]; LS.set("schedules", sc); return { ok: true }; },
+    // v4 schedules — website: runs only while this tab is open (saved in this browser, resumes when you reopen)
+    alwaysOn: false,
+    async listSchedules() { const out = {}; for (const id of Object.keys(LS.get("schedules", {}))) out[id] = schedInfo(id); return out; },
+    async getSchedule(wid) { return schedInfo(wid) || { schedule: null }; },
+    async setSchedule(wid, input) {
+      const wf = wfs()[wid]; if (!wf) throw new Error("Save the workflow first");
+      const { schedule, warnings } = YFSchedule.normalize(input || {});
+      if (schedule.mode === "once") { const execution = await run(wf, startNode(wf), "manual"); return { info: schedInfo(wid), warnings, execution }; }
+      const all = LS.get("schedules", {}); const prev = all[wid] || {};
+      all[wid] = { schedule, startedAt: new Date().toISOString(), lastRunAt: null, runs: prev.runs || 0, log: prev.log || [] };
+      LS.set("schedules", all);
+      let execution; if (input && input.runNow) execution = await runScheduled(wid);
+      return { info: schedInfo(wid), warnings, execution };
+    },
+    async stopSchedule(wid) { const all = LS.get("schedules", {}); if (all[wid]) { all[wid].schedule.enabled = false; LS.set("schedules", all); } return schedInfo(wid) || { schedule: null }; },
     async importWorkflow(wf) {
       YFEngine.validate(wf);
       const bad = wf.nodes.filter((n) => !YFWeb.types[n.type]).map((n) => n.type);
@@ -115,6 +156,12 @@
       const last = {};
       const tick = async () => {
         const now = new Date();
+        // v4 schedules (Run once / every N / daily at HH:MM)
+        const sc = LS.get("schedules", {});
+        for (const [wid, e] of Object.entries(sc)) {
+          if (!e || !e.schedule || !e.schedule.enabled || schedRunning.has(wid)) continue;
+          if (YFSchedule.isDue(e.schedule, e, now.getTime())) { const ex = await runScheduled(wid); if (ex) onRun(ex); }
+        }
         const mk = `${now.getHours()}:${now.getMinutes()}`;
         for (const wf of Object.values(wfs())) {
           if (!wf.active) continue;
@@ -135,7 +182,7 @@
           }
         }
       };
-      setInterval(() => tick().catch(() => {}), 15000);
+      setInterval(() => tick().catch((e) => console.warn("[scheduler]", e && e.message)), 15000);
     },
   };
   function cronMatch(expr, d) {

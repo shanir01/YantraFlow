@@ -57,6 +57,81 @@
     });
   }
 
+
+  // ---- v4: link preview, uploads, AI helper
+  const LP = window.YFLinkPreview; const YC = window.YFContent;
+  const tgOk = (r) => r && r.ok && !(r.data && r.data.ok === false);
+  const tgDesc = (r) => s(r && r.data && (r.data.description || r.data.error)) || s(r && r.data);
+  async function tgCall(token, method, fields, file) {
+    const url = `${window.YF_TELEGRAM_API || "https://api.telegram.org"}/bot${token}/${method}`;
+    if (file) {
+      // multipart/form-data is a "simple" CORS request too, so the browser can upload bytes to Telegram
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(fields)) if (v !== undefined && v !== null && v !== "") fd.append(k, typeof v === "object" ? JSON.stringify(v) : String(v));
+      fd.append(file.field, file.blob, file.name || "file");
+      return http(url, { method: "POST", body: fd });
+    }
+    const form = new URLSearchParams(); for (const [k, v] of Object.entries(fields)) if (v !== undefined && v !== null && v !== "") form.set(k, typeof v === "object" ? JSON.stringify(v) : v);
+    return http(url, { method: "POST", body: form });
+  }
+  const proxyOf = (settings) => s(((settings || {}).linkpreview || {}).proxyUrl).trim().replace(/\/+$/, "");
+  /* Browsers can't read most pages (CORS), so the website asks a metadata service:
+     1) your own Supabase Edge Function (Keys page) 2) microlink.io free API (no key, ~50/day) 3) YouTube oEmbed for YouTube links. */
+  async function getPreview(url, settings) {
+    url = s(url).trim(); if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    const proxy = proxyOf(settings); const errs = [];
+    if (proxy) {
+      try { const r = await http(`${proxy}?url=${encodeURIComponent(url)}`); if (r.ok && r.data && !LP.looksEmpty(LP.fromService(r.data, url))) return LP.fromService(r.data, url); errs.push(`your proxy answered ${r.status}`); } catch (e) { errs.push("your proxy: " + e.message); }
+    }
+    try {
+      const r = await http(`${window.YF_MICROLINK_API || "https://api.microlink.io"}/?url=${encodeURIComponent(url)}`);
+      if (r.ok && r.data && r.data.status === "success") { const p = LP.fromService(r.data, url); if (!LP.looksEmpty(p) && !(LP.youtubeId(url) && /^\s*-?\s*YouTube\s*$/i.test(p.title))) return p; }
+      errs.push(`microlink answered ${r.status}${r.data && r.data.message ? ": " + r.data.message : ""}`);
+    } catch (e) { errs.push("microlink: " + e.message); }
+    const yt = LP.youtubeId(url);
+    if (yt) {
+      try { const o = await http(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`); if (o.ok && o.data && o.data.title) return { url, canonicalUrl: url, title: o.data.title, description: o.data.author_name ? `by ${o.data.author_name}` : "", image: `https://i.ytimg.com/vi/${yt}/hqdefault.jpg`, siteName: "YouTube", type: "video", video: "" }; } catch (_) { /* */ }
+      return { url, canonicalUrl: url, title: "", description: "", image: `https://i.ytimg.com/vi/${yt}/hqdefault.jpg`, siteName: "YouTube", type: "video", video: "" };
+    }
+    throw new Error(`Is link ka preview website se nahi mil paaya (${errs.join("; ")}). Free service ki daily limit khatam ho sakti hai — Keys page pe apna Supabase proxy URL daalo, ya PC/Termux version use karo (wahan koi limit nahi).`);
+  }
+  async function blobOf(r, url) {
+    if (!r.ok) throw new Error(`${new URL(url).host} answered ${r.status}`);
+    const blob = await r.blob();
+    if (/text\/html/i.test(blob.type)) throw new Error("ye link web page hai, photo/video file nahi");
+    let name = "file"; try { name = decodeURIComponent(new URL(url).pathname.split("/").pop() || "file"); } catch (_) { /* */ }
+    const ext = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "video/mp4": ".mp4" }[blob.type] || "";
+    if (!/\.[a-z0-9]{2,4}$/i.test(name)) name += ext;
+    return { blob, name: name.replace(/[^\w.\-]+/g, "_").slice(-80) };
+  }
+  async function downloadDirect(url) {
+    let r; try { r = await fetch(url); } catch (_) { throw new Error(`browser is file ko download nahi kar sakta (${new URL(url).host} CORS block karta hai). Full version (PC/Termux) se bhejo, ya "Media sending" = url rakho.`); }
+    return blobOf(r, url);
+  }
+  // photo bytes: direct, else your proxy, else images.weserv.nl (free image proxy, CORS-enabled, resizes to <=1280px jpg)
+  async function downloadImage(url, settings) {
+    try { return await downloadDirect(url); } catch (_) { /* try a proxy */ }
+    const proxy = proxyOf(settings);
+    const via = [];
+    if (proxy) via.push(`${proxy}?image=1&url=${encodeURIComponent(url)}`);
+    via.push(`${window.YF_IMAGE_PROXY || "https://images.weserv.nl"}/?url=${encodeURIComponent(url.replace(/^https?:\/\//, ""))}&w=1280&we&output=jpg`);
+    let last = "";
+    for (const u of via) { try { const f = await blobOf(await fetch(u), u); if (f.blob.size > 0) { f.name = "preview.jpg"; return f; } } catch (e) { last = e.message; } }
+    throw new Error(`photo download nahi hui (${last})`);
+  }
+  async function aiComplete(ctx, i, messages, opt) {
+    const st = ctx.settings.ai || {};
+    const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
+    const pick = AIM.pickModel(base, s(ctx.p("model", i) || st.model));
+    const badM = AIM.badModel && AIM.badModel(base, pick.model); if (badM) throw new Error(badM);
+    let r;
+    try { r = await http(`${base}/chat/completions`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s(ctx.p("apiKey", i) || st.apiKey || "local")}` }, body: JSON.stringify({ ...pick.extra, model: pick.model, messages, temperature: (opt && opt.temperature) ?? 0.9, max_tokens: (opt && opt.maxTokens) || 900 }) }); }
+    catch (e) { throw new Error(`Could not reach the AI at ${base}. Keys page pe online AI Base URL + key daalo (e.g. https://api.groq.com/openai/v1).`); }
+    if (!r.ok) { const e = apiError("AI", r); const f = AIM.modelError(base, pick.model, r.status, e.message.replace(/^AI answered \d+: /, "")); throw f ? new Error(f) : e; }
+    const c = r.data && r.data.choices && r.data.choices[0];
+    return { text: s(c && c.message && c.message.content).trim(), model: (r.data && r.data.model) || pick.model };
+  }
+
   const impl = {
     manualTrigger: async (ctx) => { let d = {}; try { d = JSON.parse(ctx.raw.testData || "{}"); } catch (_) { throw new Error("Test data is not valid JSON"); } return one(Array.isArray(d) ? d : [d]); },
     scheduleTrigger: async () => one([{ firedAt: new Date().toISOString() }]),
@@ -113,16 +188,75 @@
       for (let i = 0; i < ctx.items.length; i++) {
         const token = need(ctx.p("botToken", i) || st.botToken, "Telegram bot token"); const chatId = need(ctx.p("chatId", i) || st.chatId, "Telegram chat ID");
         const op = ctx.raw.operation || "text"; const pm = ctx.raw.parseMode && ctx.raw.parseMode !== "none" ? ctx.raw.parseMode : undefined;
-        let text = s(ctx.p("text", i)); let body;
-        if (op === "text") body = { chat_id: chatId, text: need(text, "Text").slice(0, 4096), parse_mode: pm };
-        else { const media = need(ctx.p("media", i), "Media URL"); if (!/^https?:\/\//.test(media)) throw new Error("Web version can send media by URL only. Local files need the full version."); body = { chat_id: chatId, [op]: media, caption: text.slice(0, 1024) || undefined, parse_mode: pm }; }
-        const method = { text: "sendMessage", photo: "sendPhoto", video: "sendVideo", document: "sendDocument" }[op];
-        // form-encoded = "simple" CORS request (Telegram's API answers browsers, but not preflight checks)
-        const form = new URLSearchParams(); for (const [k, v] of Object.entries(body)) if (v !== undefined) form.set(k, v);
-        const r = await http(`${window.YF_TELEGRAM_API || "https://api.telegram.org"}/bot${token}/${method}`, { method: "POST", body: form });
-        if (!r.ok || (r.data && r.data.ok === false)) throw apiError("Telegram", r);
-        out.push({ ...ctx.items[i], telegram: { ok: true, messageId: r.data.result && r.data.result.message_id } });
+        const mode = ctx.raw.upload || "auto";
+        let text = s(ctx.p("text", i)); let r; let via = "api"; let preview;
+        if (op === "text") r = await tgCall(token, "sendMessage", { chat_id: chatId, text: need(text, "Text").slice(0, 4096), parse_mode: pm });
+        else if (op === "linkPreview") {
+          const link = need(ctx.p("link", i) || ctx.items[i].url || ctx.items[i].link, "Link");
+          const it = ctx.items[i];
+          preview = it.title && (it.url === link || it.link === link) && it.image !== undefined ? it : await getPreview(link, ctx.settings);
+          preview = Object.assign({}, preview, { url: link });
+          const own = text.trim() && text.trim() !== "Hello from YantraFlow 🚀";
+          const capPm = own ? pm : "HTML";
+          r = null;
+          if (preview.image) {
+            try { const f = await downloadImage(preview.image, ctx.settings); r = await tgCall(token, "sendPhoto", { chat_id: chatId, caption: own ? text.slice(0, 1024) : LP.caption(preview, 1024), parse_mode: capPm }, { field: "photo", blob: f.blob, name: f.name }); via = "photo-upload"; }
+            catch (e) { ctx.log(`Preview photo could not be loaded (${e.message}) — sending text + link preview instead`); }
+            if (r && !tgOk(r)) { ctx.log(`Telegram refused the photo (${tgDesc(r)}) — sending text + link preview instead`); r = null; }
+          }
+          if (!r) { r = await tgCall(token, "sendMessage", { chat_id: chatId, text: own ? text.slice(0, 4096) : LP.caption(preview, 4096), parse_mode: capPm, link_preview_options: { url: link, prefer_large_media: true, show_above_text: true } }); via = "message+preview"; }
+        } else {
+          const media = need(ctx.p("media", i), "Media URL");
+          if (!/^https?:\/\//.test(media)) throw new Error("Web version can send media by link only. Local files need the full version (PC/Termux).");
+          const method = { photo: "sendPhoto", video: "sendVideo", document: "sendDocument" }[op];
+          const fields = { chat_id: chatId, caption: text.slice(0, 1024) || undefined, parse_mode: pm };
+          if (mode !== "upload") { r = await tgCall(token, method, { ...fields, [op]: media }); via = "url"; }
+          if (mode === "upload" || (mode === "auto" && !tgOk(r) && r.status === 400 && LP.TG_URL_FAIL.test(tgDesc(r)))) {
+            const f = op === "photo" ? await downloadImage(media, ctx.settings) : await downloadDirect(media);
+            r = await tgCall(token, method, fields, { field: op, blob: f.blob, name: f.name }); via = "upload";
+          }
+        }
+        if (!tgOk(r)) {
+          const d = tgDesc(r);
+          if (LP.TG_URL_FAIL.test(d)) throw new Error(`Telegram answered ${r.status}: ${d}. Telegram ye link khol nahi paaya — "Media sending" = upload rakho, ya direct photo/video file ka link do (web page ka nahi).`);
+          throw apiError("Telegram", r);
+        }
+        out.push({ ...ctx.items[i], ...(preview ? { preview } : {}), telegram: { ok: true, messageId: r.data.result && r.data.result.message_id, via } });
       }
+      return one(out);
+    },
+    linkPreview: async (ctx) => {
+      const out = [];
+      for (let i = 0; i < ctx.items.length; i++) { const p = await getPreview(need(ctx.p("url", i), "Link"), ctx.settings); out.push({ ...ctx.items[i], ...p, link: p.url }); }
+      return one(out);
+    },
+    aiPost: async (ctx) => {
+      const KEY = "yf_" + (window.YF_NS || "") + "posthist";
+      let all = {}; try { all = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (_) { all = {}; }
+      const key = `${(ctx.workflow && ctx.workflow.id) || "wf"}:${ctx.node.id}`;
+      const rec = all[key] || { posts: [], mediaIndex: 0 }; const out = [];
+      for (let i = 0; i < ctx.items.length; i++) {
+        const platform = ctx.raw.platform || "telegram";
+        const lang = { Hinglish: "Hinglish (Hindi in English letters, simple words)", Hindi: "Hindi (Devanagari)", English: "simple English" }[ctx.raw.language] || ctx.raw.language;
+        let res; let similarity = 0; let tries = 0;
+        if ((ctx.raw.autoGenerate || "on") === "off") res = { text: need(ctx.p("fixedText", i), "Fixed message") };
+        else {
+          let avoid = "";
+          for (tries = 1; tries <= 2; tries++) {
+            const msgs = YC.buildMessages({ platform, seed: ctx.p("seed", i), topic: s(ctx.p("topic", i)), language: lang, tone: s(ctx.p("tone", i)), history: rec.posts, avoid });
+            const ai = await aiComplete(ctx, i, msgs, { temperature: tries === 1 ? 0.9 : 1.1, maxTokens: platform === "x" ? 300 : 1200 });
+            res = YC.parseOutput(platform, ai.text); res.model = ai.model;
+            if (!res.text) throw new Error("AI ne khaali jawab diya — Keys page pe AI model check karo");
+            similarity = YC.maxSimilarity(res.text, rec.posts);
+            if (similarity < YC.REPEAT_LIMIT) break;
+            avoid = res.text;
+          }
+        }
+        const pmd = YC.pickMedia(ctx.p("mediaList", i), rec.mediaIndex); if (pmd.total) rec.mediaIndex = pmd.index + 1;
+        rec.posts = YC.pushHistory(rec.posts, { text: res.text, at: new Date().toISOString() }, Number(ctx.raw.history) || 20);
+        out.push({ ...ctx.items[i], ...res, platform, media: pmd.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
+      }
+      all[key] = rec; try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { /* storage full */ }
       return one(out);
     },
     instagram: async (ctx) => {
@@ -201,5 +335,5 @@
     if (one && one[1].indexOf("{{") < 0 && one[1].indexOf("}}") < 0) return run(one[1]);
     return value.replace(/\{\{([\s\S]+?)\}\}/g, (_, c) => { const v = run(c); return v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v); });
   }
-  window.YFWeb = { types, evaluate, parseCsv };
+  window.YFWeb = { types, evaluate, parseCsv, getPreview, downloadImage };
 })();

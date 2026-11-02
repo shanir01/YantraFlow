@@ -445,6 +445,111 @@ window.YF_NODE_META = [
   "outputs": 1,
   "params": [
    {
+    "key": "platform",
+    "label": "Platform",
+    "type": "select",
+    "options": [
+     "telegram",
+     "instagram",
+     "x",
+     "linkedin",
+     "youtube"
+    ],
+    "default": "telegram"
+   },
+   {
+    "key": "autoGenerate",
+    "label": "Auto message generate",
+    "type": "select",
+    "options": [
+     "on",
+     "off"
+    ],
+    "default": "on",
+    "help": "on = har run pe AI naya, alag message banayega. off = neeche wala fixed message hi bhejega."
+   },
+   {
+    "key": "seed",
+    "label": "SEED document (brand info, topics, style)",
+    "type": "textarea",
+    "upload": true,
+    "default": "",
+    "placeholder": "Apne brand / channel ke baare me likho: kya karte ho, topics, links, kaisi language, kya NAHI bolna..."
+   },
+   {
+    "key": "topic",
+    "label": "Topic / instruction (optional)",
+    "type": "text",
+    "default": "",
+    "placeholder": "khaali = AI seed se naya topic chunega"
+   },
+   {
+    "key": "language",
+    "label": "Language",
+    "type": "select",
+    "options": [
+     "Hinglish",
+     "Hindi",
+     "English"
+    ],
+    "default": "Hinglish"
+   },
+   {
+    "key": "tone",
+    "label": "Tone",
+    "type": "text",
+    "default": "friendly, useful, energetic"
+   },
+   {
+    "key": "fixedText",
+    "label": "Fixed message (when auto = off)",
+    "type": "textarea",
+    "default": ""
+   },
+   {
+    "key": "mediaList",
+    "label": "Photos / videos to rotate (optional, one link or file path per line)",
+    "type": "textarea",
+    "default": "",
+    "help": "Har run me agla item -> {{ $json.media }}. Instagram/YouTube ke liye zaroori."
+   },
+   {
+    "key": "history",
+    "label": "Remember last N posts (no repeat)",
+    "type": "number",
+    "default": 20
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiPost",
+  "label": "AI Post Writer (seed)",
+  "group": "AI",
+  "icon": "sprout",
+  "color": "#22c55e",
+  "description": "Writes a NEW post every run for Telegram / Instagram / X / LinkedIn / YouTube from your SEED document. Remembers the last posts so it never repeats."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
     "key": "operation",
     "label": "Send",
     "type": "select",
@@ -452,21 +557,43 @@ window.YF_NODE_META = [
      "text",
      "photo",
      "video",
-     "document"
+     "document",
+     "linkPreview"
     ],
-    "default": "text"
+    "default": "text",
+    "help": "linkPreview = koi bhi link do (article, YouTube, Insta, website) -> uski photo + title + description + link bot pe jayega."
    },
    {
     "key": "text",
     "label": "Text / caption",
     "type": "textarea",
-    "default": "Hello from YantraFlow 🚀"
+    "default": "Hello from YantraFlow 🚀",
+    "help": "linkPreview me khaali chhodo = auto caption (title + description + link)."
    },
    {
     "key": "media",
     "label": "Photo / video / file (URL or file path)",
     "type": "text",
     "default": ""
+   },
+   {
+    "key": "link",
+    "label": "Link (for linkPreview)",
+    "type": "text",
+    "default": "",
+    "placeholder": "https://... (article / YouTube / Instagram / any page)"
+   },
+   {
+    "key": "upload",
+    "label": "Media sending",
+    "type": "select",
+    "options": [
+     "auto",
+     "upload",
+     "url"
+    ],
+    "default": "auto",
+    "help": "auto = pehle link se bhejo; Telegram link na khol paaye (\"failed to get HTTP URL content\") to YantraFlow file download karke upload karega. upload = hamesha upload. url = sirf link."
    },
    {
     "key": "chatId",
@@ -497,7 +624,26 @@ window.YF_NODE_META = [
   "group": "Social & Messaging",
   "icon": "telegram",
   "color": "#0ea5e9",
-  "description": "Send text, photo, video or file to a chat, group or channel (@channelname — add your bot as admin)."
+  "description": "Send text, photo, video, file or a LINK PREVIEW (any link -> photo + title + description + link) to a chat, group or channel (@channelname — add your bot as admin)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "url",
+    "label": "Link",
+    "type": "text",
+    "default": "{{ $json.link }}",
+    "placeholder": "https://..."
+   }
+  ],
+  "type": "linkPreview",
+  "label": "Link Preview",
+  "group": "Data",
+  "icon": "link",
+  "color": "#0ea5e9",
+  "description": "Any link -> its preview: title, description, image (thumbnail), site name. Same data Telegram/WhatsApp show."
  },
  {
   "inputs": 1,
@@ -610,7 +756,7 @@ window.YF_NODE_META = [
   "params": [
    {
     "key": "file",
-    "label": "Video file path",
+    "label": "Video file path or direct video link",
     "type": "text",
     "default": "{{ $json.path }}"
    },
@@ -676,6 +822,41 @@ window.YF_NODE_META = [
   "icon": "x",
   "color": "#64748b",
   "description": "Post a text tweet with the X API v2 (your own developer app keys)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "text",
+    "label": "Post text (max 3000)",
+    "type": "textarea",
+    "default": "{{ $json.text }}"
+   },
+   {
+    "key": "link",
+    "label": "Link to share (optional)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "visibility",
+    "label": "Who can see",
+    "type": "select",
+    "options": [
+     "PUBLIC",
+     "CONNECTIONS"
+    ],
+    "default": "PUBLIC"
+   }
+  ],
+  "type": "linkedinPost",
+  "fullOnly": "LinkedIn blocks browser calls (CORS) — use the full version (PC/Termux).",
+  "label": "LinkedIn Post",
+  "group": "Social & Messaging",
+  "icon": "linkedin",
+  "color": "#0a66c2",
+  "description": "Post text (+ optional link) on your LinkedIn profile with the official Posts API (needs your LinkedIn developer app token with w_member_social)."
  },
  {
   "inputs": 1,

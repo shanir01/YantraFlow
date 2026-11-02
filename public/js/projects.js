@@ -228,6 +228,82 @@ return items.map((it) => {
       runsIn: "full", needs: ["Full version (webhook ke liye server)", "AI key"], howTo: ["Full version chalao", "POST localhost:5679/webhook/ask"],
     },
   ];
+
+  // ---- v4: SEED + auto-generate + schedule projects
+  const SEED_EXAMPLE = "Brand: YantraFlow (free n8n-style automation tool by Nirbhay Sharma)\nWebsite: https://yantraflow.sites.tab.bot\nGitHub: https://github.com/shanir01/YantraFlow\nKya karta hai: Telegram, YouTube, Instagram, Gmail, AI ko jodkar kaam automatic karta hai. PC + Termux + Website pe chalta hai. 100% free, API keys sirf tumhare device pe.\nTopics: automation tips, free AI tools, Telegram bot ideas, Termux tricks, student productivity\nStyle: Hinglish, dost jaisa, short lines, 1-2 emoji\nMat bolna: fake offers, price, guarantee";
+  const seedPost = (platform, extra) => ["aiPost", "AI Post Writer (seed)", Object.assign({ platform, autoGenerate: "on", seed: SEED_EXAMPLE, topic: "", language: "Hinglish", tone: "friendly, useful, energetic", fixedText: "", mediaList: "", history: 20, model: "", baseUrl: "", apiKey: "" }, extra || {})];
+  const start = ["manualTrigger", "Start", { testData: "{}" }];
+  const seedHow = (platformStep) => ["'AI Post Writer (seed)' node kholo → SEED box me apna document paste karo ya Upload (.txt/.md/.pdf)", "Keys page: AI key" + (platformStep ? " + " + platformStep : ""), "▶ Run → 'Repeat' ya 'Daily at' chuno (minimum 30 min) → Start schedule", "Auto message generate = on: har run naya post, pichhle 20 se alag"];
+  const V4 = [
+    {
+      id: "link-preview-telegram", icon: "link", categories: ["Telegram"], isNew: true,
+      title: "Any link → preview post on your Telegram bot", title_hi: "Koi bhi link → Telegram pe preview post",
+      summary: "Article, YouTube, Instagram, koi bhi link do → uski photo + title + description + link tumhare bot/channel pe post. (\"failed to get HTTP URL content\" error ka fix — photo download karke upload hoti hai.)",
+      runsIn: "web", needs: ["Telegram bot (Keys page)"],
+      honest: "Website pe link padhne ke liye free microlink.io service use hoti hai (~50 links/din). Unlimited ke liye apna Supabase proxy (README) ya PC/Termux version. Instagram kabhi-kabhi login maangta hai — tab sirf title/link jayega.",
+      howTo: ["Keys page: Telegram bot token + chat ID", "Start node me apna link paste karo", "▶ Run → Run once"],
+      workflow: flow("Link → Telegram preview", "Any link -> photo + title + description + link on Telegram", [
+        ["manualTrigger", "Start (paste your link)", { testData: JSON.stringify({ link: "https://github.com/shanir01/YantraFlow" }, null, 2) }],
+        ["linkPreview", "Read link preview", { url: "{{ $json.link }}" }],
+        ["telegram", "Post preview to Telegram", { operation: "linkPreview", text: "", media: "", link: "{{ $json.link }}", upload: "auto", chatId: "", parseMode: "none", botToken: "" }],
+      ]),
+    },
+    {
+      id: "seed-telegram-autopost", icon: "telegram", categories: ["Telegram", "AI Content"], isNew: true,
+      title: "Telegram auto-post from your SEED (new post every run)", title_hi: "Telegram auto-post (SEED se)",
+      summary: "Apna SEED document daalo (brand, topics, style) → AI har 30 min / ghante / roz naya, alag post likh ke tumhare Telegram channel/bot pe bhejta hai.",
+      runsIn: "web", needs: ["AI key", "Telegram bot"],
+      honest: "Website pe tab khula rehna chahiye. 24x7 ke liye PC/Termux version chalao (schedule restart ke baad bhi resume).",
+      howTo: seedHow("Telegram"),
+      workflow: flow("Telegram auto-post (SEED)", "SEED -> AI writes a fresh post -> Telegram", [
+        start, seedPost("telegram"),
+        ["telegram", "Post to Telegram", { operation: "text", text: "{{ $json.text }}", media: "", link: "", upload: "auto", chatId: "", parseMode: "none", botToken: "" }],
+      ]),
+    },
+    {
+      id: "seed-instagram-autopost", icon: "instagram", categories: ["Instagram", "AI Content"], isNew: true,
+      title: "Instagram auto-post from your SEED (AI caption + rotating photos/Reels)", title_hi: "Instagram auto-post (SEED se)",
+      summary: "SEED + photos/Reels ki list do → har run AI naya caption + hashtags likhta hai, list ka agla photo/Reel Instagram pe post.",
+      runsIn: "setup", needs: ["Instagram Business/Creator account + Meta app token (instagram_content_publish)", "Photos/Reels ke PUBLIC https links", "AI key"],
+      honest: "Instagram sirf official Graph API se post hota hai: Business/Creator account + Facebook Page + Meta developer app token chahiye. Media ka link public hona chahiye (Drive/localhost nahi). Instagram 24 ghante me ~50 API posts allow karta hai.",
+      howTo: ["'AI Post Writer' node: SEED paste karo + 'Photos / videos to rotate' me har line pe ek public link", "Keys page: Instagram user ID + token, AI key", "Instagram node me Post type: IMAGE (photo) ya REELS (video)", "▶ Run → Daily at 18:00 → Start schedule"],
+      workflow: flow("Instagram auto-post (SEED)", "SEED -> AI caption -> next photo/Reel -> Instagram", [
+        start, seedPost("instagram", { mediaList: "# har line pe ek PUBLIC image/video link\nhttps://example.com/post1.jpg\nhttps://example.com/post2.jpg" }),
+        ["instagram", "Post to Instagram", { kind: "IMAGE", mediaUrl: "{{ $json.media }}", caption: "{{ $json.text }}", shareToFeed: true, userId: "", accessToken: "" }],
+      ]),
+    },
+    {
+      id: "seed-youtube-autopost", icon: "youtube", categories: ["YouTube", "Video", "AI Content"], isNew: true,
+      title: "YouTube auto-upload from your SEED (AI title, description, tags)", title_hi: "YouTube auto-upload (SEED se)",
+      summary: "Videos ki list (file path ya direct link) + SEED → har run agla video, AI ka naya title/description/tags ke saath YouTube pe upload.",
+      runsIn: "full", needs: ["Full version (PC/Termux)", "YouTube OAuth: client ID + secret + refresh token (youtube.upload)", "AI key"],
+      honest: "YouTube API se upload ke liye Google OAuth refresh token chahiye aur upload server se hota hai — sirf PC/Termux version. Free quota ≈ 6 uploads/din. Community posts API se nahi hote.",
+      howTo: ["Full version chalao", "'AI Post Writer': SEED + 'Photos / videos to rotate' me video file paths (ya direct .mp4 links)", "Keys page: YouTube + AI", "▶ Run → Daily at → Start schedule"],
+      workflow: flow("YouTube auto-upload (SEED)", "SEED -> AI title/desc/tags -> next video -> YouTube", [
+        start, seedPost("youtube", { mediaList: "# har line pe ek video: file path (PC/Termux) ya direct .mp4 link\nvideos/short1.mp4\nvideos/short2.mp4" }),
+        ["youtube", "Upload to YouTube", { file: "{{ $json.media }}", title: "{{ $json.title }}", description: "{{ $json.description }}", tags: "{{ $json.tags }}", privacy: "private", categoryId: "22" }],
+      ]),
+    },
+    {
+      id: "seed-x-autopost", icon: "x", categories: ["X", "AI Content"], isNew: true,
+      title: "X (Twitter) auto-tweet from your SEED", title_hi: "X auto-tweet (SEED se)",
+      summary: "SEED se AI har run ek naya tweet (max 280) likhta hai aur tumhare X account pe post karta hai — pichhle tweets repeat nahi.",
+      runsIn: "full", needs: ["Full version (PC/Termux)", "X developer app keys (Read+Write) — X API posting paid hai (paid plan / credits)", "AI key"],
+      honest: "X browser se API calls block karta hai, isliye sirf PC/Termux. X API se post karna ab paid hai — bina paid plan/credits ke X error dega. Spam se bachne ke liye 30 min se kam gap allowed nahi.",
+      howTo: seedHow("X keys (full version)"),
+      workflow: flow("X auto-tweet (SEED)", "SEED -> AI tweet -> X", [start, seedPost("x"), ["xPost", "Post on X", { text: "{{ $json.text }}" }]]),
+    },
+    {
+      id: "seed-linkedin-autopost", icon: "linkedin", categories: ["LinkedIn", "AI Content"], isNew: true,
+      title: "LinkedIn auto-post from your SEED", title_hi: "LinkedIn auto-post (SEED se)",
+      summary: "SEED se AI professional LinkedIn post likhta hai (hook + short lines + hashtags) aur tumhari profile pe post karta hai — har run naya.",
+      runsIn: "full", needs: ["Full version (PC/Termux)", "LinkedIn developer app + access token (w_member_social)", "AI key"],
+      honest: "LinkedIn official API se post hota hai: linkedin.com/developers pe app + 'Share on LinkedIn' product + token (≈60 din valid). Browser se LinkedIn API block hai — sirf PC/Termux.",
+      howTo: seedHow("LinkedIn token (full version)"),
+      workflow: flow("LinkedIn auto-post (SEED)", "SEED -> AI LinkedIn post -> LinkedIn", [start, seedPost("linkedin"), ["linkedinPost", "Post on LinkedIn", { text: "{{ $json.text }}", link: "", visibility: "PUBLIC" }]]),
+    },
+  ];
+  P.unshift(...V4);
   // every project is FREE for now — change tier/price here later to make one paid
   for (const p of P) { p.tier = p.tier || "free"; p.price = p.price || 0; p.currency = p.currency || "INR"; }
   return P;

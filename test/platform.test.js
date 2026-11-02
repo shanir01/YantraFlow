@@ -12,7 +12,7 @@ const { BY_TYPE } = require("../src/nodes");
 
 test("public projects: 12+ projects, all FREE, valid nodes and connections", () => {
   assert.ok(PROJECTS.length >= 12, "at least 12 projects");
-  const cats = new Set(["YouTube", "Instagram", "Telegram", "Gmail", "AI Content", "Video"]);
+  const cats = new Set(["YouTube", "Instagram", "Telegram", "Gmail", "AI Content", "Video", "X", "LinkedIn"]);
   const tplIndex = JSON.parse(fs.readFileSync(path.join(PUB, "templates/index.json"), "utf8"));
   const ids = new Set();
   for (const p of PROJECTS) {
