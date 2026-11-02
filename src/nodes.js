@@ -479,6 +479,7 @@ def({
   params: [
     { key: "platform", label: "Platform", type: "select", options: ["telegram", "instagram", "x", "linkedin", "youtube"], default: "telegram" },
     { key: "autoGenerate", label: "Auto message generate", type: "select", options: ["on", "off"], default: "on", help: "on = har run pe AI naya, alag message banayega. off = neeche wala fixed message hi bhejega." },
+    { key: "timeGreeting", label: "Time greeting", type: "select", options: ["on", "off"], default: "on", help: "on = post time ke hisaab se shuru hoga: Good Morning (5-12), Good Afternoon (12-17), Good Evening (17-21), Good Night (21-5), India time. Har baar alag wording, repeat nahi." },
     { key: "seed", label: "SEED document (brand info, topics, style)", type: "textarea", upload: true, default: "", placeholder: "Apne brand / channel ke baare me likho: kya karte ho, topics, links, kaisi language, kya NAHI bolna..." },
     { key: "topic", label: "Topic / instruction (optional)", type: "text", default: "", placeholder: "khaali = AI seed se naya topic chunega" },
     { key: "language", label: "Language", type: "select", options: ["Hinglish", "Hindi", "English"], default: "Hinglish" },
@@ -500,14 +501,16 @@ def({
       const platform = ctx.raw.platform || "telegram";
       const lang = { Hinglish: "Hinglish (Hindi in English letters, simple words)", Hindi: "Hindi (Devanagari)", English: "simple English" }[ctx.raw.language] || ctx.raw.language;
       let res; let similarity = 0; let tries = 0;
+      const greeting = (ctx.raw.timeGreeting || "on") !== "off" ? Object.assign(YC.timeOfDay(new Date(), "Asia/Kolkata"), YC.pickGreeting(YC.timeOfDay(new Date(), "Asia/Kolkata").slot, rec.posts, Date.now())) : null;
       if ((ctx.raw.autoGenerate || "on") === "off") {
         res = { text: need(ctx.p("fixedText", i), "Fixed message") };
       } else {
         let avoid = "";
         for (tries = 1; tries <= 2; tries++) {
-          const msgs = YC.buildMessages({ platform, seed: ctx.p("seed", i), topic: s(ctx.p("topic", i)), language: lang, tone: s(ctx.p("tone", i)), history: rec.posts, avoid });
+          const msgs = YC.buildMessages({ platform, seed: ctx.p("seed", i), topic: s(ctx.p("topic", i)), language: lang, tone: s(ctx.p("tone", i)), history: rec.posts, avoid, greeting });
           const ai = await aiComplete(ctx, i, msgs, { temperature: tries === 1 ? 0.9 : 1.1, maxTokens: platform === "x" ? 300 : 1200 });
           res = YC.parseOutput(platform, ai.text); res.model = ai.model;
+          if (greeting && platform !== "youtube") res.text = YC.ensureGreeting(res.text, greeting.slot, greeting);
           similarity = YC.maxSimilarity(res.text, rec.posts);
           if (!res.text) throw new Error("AI ne khaali jawab diya — Keys page pe AI model check karo");
           if (similarity < YC.REPEAT_LIMIT) break;
@@ -517,7 +520,7 @@ def({
       const pm = YC.pickMedia(ctx.p("mediaList", i), rec.mediaIndex);
       if (pm.total) rec.mediaIndex = pm.index + 1;
       rec.posts = YC.pushHistory(rec.posts, { text: res.text, at: new Date().toISOString() }, Number(ctx.raw.history) || 20);
-      out.push({ ...ctx.items[i], ...res, platform, media: pm.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
+      out.push({ ...ctx.items[i], ...res, platform, timeOfDay: greeting ? greeting.slot : "", media: pm.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
     }
     all[key] = rec; store.write(all);
     return one(out);

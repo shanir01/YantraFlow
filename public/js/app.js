@@ -730,6 +730,8 @@
       else if (v === "runs" && id) await viewRun(id);
       else if (v === "runs") await viewRuns();
       else if (v === "keys") await viewKeys();
+      else if (v === "admin") await PV.admin(id);
+      else if (v === "videos") await PV.videos();
       else await viewWorkflows();
     } catch (e) {
       if (e && e.locked) return;

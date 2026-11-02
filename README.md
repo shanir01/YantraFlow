@@ -43,6 +43,7 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 | ✨ **Auto message generate** | `Auto message generate = on` → every run the AI writes a **new, different** post. It remembers the last N posts (default 20) and re-writes if a draft is too similar. `off` → sends your fixed message. Optional **Photos / videos to rotate** list → next item each run (`{{ $json.media }}`). |
 | ⏰ **Schedule on Run** | Press **Run** → choose **Run once** / **Repeat every N minutes / hours / days** / **Daily at HH:MM** (timezone, default `Asia/Kolkata`) → **Start schedule**. Shows next-run time, run count and a run log. **Stop** any time. Minimum gap **30 minutes** (anything faster is raised to 30 — spam/ban safety for Telegram, LinkedIn, X…). |
 | ⏹ **Run ⇄ Stop button** | While a schedule is ON or a run is going on, the **Run** button (editor + every workflow card) turns into a red **Stop** button. Press **Stop** → the schedule stops and a run in progress is cancelled (status *Stopped*), and the button turns back into **Run**. It stays correct after a page reload and is the same in the editor and the list. Works on the website and on PC/Termux. |
+| 👋 **Time greeting** | AI Post Writer → **Time greeting** = `on` (default): every auto-generated post starts with the right greeting for India time — **Good Morning** (5–12), **Good Afternoon** (12–17), **Good Evening** (17–21), **Good Night** (21–5). The wording changes every time (*Suprabhat*, *Good morning doston*, *Shubh sandhya*, *Raat ka wrap-up*…) and never reuses a recent opening; the time of day goes into the AI prompt so the content fits (morning motivation, night wrap-up). Website + PC/Termux scheduler. `off` = no greeting. |
 | 🔁 **Keeps running by itself** | Fixed: "Run runs once and stops". A started schedule keeps running without pressing Run again. |
 
 ### Where does it run 24x7? (honest)
@@ -89,6 +90,43 @@ Then paste `https://<your-project-ref>.supabase.co/functions/v1/link-preview` on
 3. **Keys** page: AI (Groq/Gemini key) + Telegram bot.
 4. **Run** → *Repeat* → `30 minute` (ya *Daily at* `09:00`) → **Start schedule**. Har baar naya post jayega.
 5. 24x7 chahiye? PC/Termux pe `sh start.sh` chalao — website tab band hone pe ruk jati hai.
+
+## 🛡 Admin panel (v4.2)
+
+Open **https://yantraflow.sites.tab.bot/#/admin** (or **Me → Admin panel**). Only admins can open it: `shanir01.ai@gmail.com` always, plus emails in `window.YF_ADMIN_EMAILS` (`public/config.js`) and users you make admin from the panel. Everyone else sees *"Access nahi hai"*. The real lock is in Supabase: Row Level Security (`supabase/admin.sql`) and the `admin` Edge Function, which checks the caller's login token itself. **No secret key is ever in the website.**
+
+| Tab | What it does |
+|---|---|
+| **Overview** | Users, cloud workflows, visits (30 days), videos + a 30-day chart |
+| **Users** | List (email, signup date, last login, workflow count), search, **Block / Unblock** (real Supabase ban), **Make admin**, **Delete** |
+| **Traffic** | Own first-party analytics: today / 7 days / 30 days visits + unique visitors, 30-day chart, top pages, referrers, mobile / tablet / PC split, country (from timezone). Anonymous: page, referrer site, device, a random visitor id — **no email, no user id, no IP, no full URL**. The admin's own panel visits and the local PC/Termux version are not counted. |
+| **Videos** | Add a **YouTube link** or **upload an mp4** (Supabase Storage bucket `videos`, max 50 MB on the free plan), title, description, order (up / down), show / hide, edit, delete. Public page: **#/videos** (*Videos / Tutorials*, also in the footer + menu). |
+| **Site customise** | Site name, logo (upload or link), primary + accent colours, hero title / subtitle (login screen + Projects page), announcement banner (on/off, text, colour), footer text, contact email, Instagram / YouTube / Telegram / GitHub links, **signups on/off** (+ message), **maintenance banner**, videos page on/off, analytics on/off. Saved to `site_settings` and applied for every visitor on load (defaults if the table is missing). |
+| **Setup** | Checks what is missing in Supabase (tables, buckets, function, admin) and shows the steps with **Copy** buttons. A yellow *Setup pending* banner shows on every tab until it's all green. |
+
+### Admin setup (one time, ~5 min, from your phone or PC)
+
+**Step 1 — SQL (tables + security)**
+1. Supabase Dashboard → your project → **SQL Editor** → **New query**
+2. Paste the whole of [`supabase/admin.sql`](supabase/admin.sql) (Admin panel → Setup → **SQL copy karo** copies it for you) → **Run**
+3. "Success. No rows returned" = done. Safe to run again.
+
+It creates `profiles` (blocked / is_admin / last login), `site_settings`, `page_views`, `videos`, the storage buckets `videos` + `site`, and RLS so only admins can read users/traffic or change settings/videos.
+
+**Step 2 — Edge Function `admin` (users list / block / delete)**
+- *Dashboard:* **Edge Functions → Deploy a new function → Via Editor** → name **`admin`** → paste [`supabase/functions/admin/index.ts`](supabase/functions/admin/index.ts) (Setup → **Function code copy karo**) → **Deploy** → open the function's settings → **Verify JWT / Enforce JWT = OFF** → Save. (The function verifies the login token itself.)
+- *CLI:* `supabase functions deploy admin --no-verify-jwt --project-ref kpmafhsvyozulwcuprpu`
+- The service key is given to the function by Supabase automatically (`SUPABASE_SERVICE_ROLE_KEY`). Never paste it in the website. If your project has no legacy service key, add a function secret `SB_SECRET_KEY` = your **secret** key (Project Settings → API Keys). Optional secret `ADMIN_EMAILS` = more admin emails, comma separated.
+
+<p align="center"><img src="docs/screenshots/admin-overview.jpg" width="30%" alt="Admin overview"> <img src="docs/screenshots/admin-traffic.jpg" width="30%" alt="Admin traffic"></p>
+
+**Step 3 —** open `#/admin` → **Setup** → *Dobara check karo* → all green.
+
+Optional: run [`docs/supabase-setup.sql`](docs/supabase-setup.sql) too (cloud sync), so the Users tab can show workflow counts. To stop signups for real, also turn off Authentication → Sign In / Providers → *Allow new users to sign up*.
+
+Without the SQL the site works exactly as before (default look); without the function the Users tab still lists users from the database, Block works as a website login block and Make admin works — only Delete and the hard ban need the function.
+
+**Hinglish:** Supabase → SQL Editor → `admin.sql` paste → Run. Phir Edge Functions → naya function `admin` → code paste → Deploy → Verify JWT OFF. Bas. Admin panel ka Setup tab sab green dikhayega.
 
 ## 📸 Screenshots
 
@@ -308,6 +346,11 @@ public/js/schedule-core.js Run once / every N / daily at HH:MM (min 30 min)
 public/js/link-preview.js  OpenGraph/Twitter parser + Telegram caption
 public/js/content-gen.js   SEED prompt + no-repeat history
 supabase/functions/link-preview/  optional proxy for the website's link previews
+public/js/admin.js         admin panel (#/admin): users, traffic, videos, site customise, setup
+public/js/site.js          applies Site customise for everyone, anonymous page views, public Videos page
+public/js/site-core.js     settings defaults, admin guard, analytics payload + aggregation (tested)
+supabase/admin.sql         admin tables + Row Level Security (run once in the SQL Editor)
+supabase/functions/admin/  admin Edge Function (users list / block / delete / make admin)
 public/templates/  ready workflows
 data/              your workflows, runs, keys, schedules.json, post-history.json (git-ignored)
 ```
@@ -317,6 +360,7 @@ data/              your workflows, runs, keys, schedules.json, post-history.json
 ## 🔒 Security notes
 - Keys are stored in plain JSON on your device (`data/credentials.json`) — keep your device safe, never commit `data/`.
 - The Code node runs JavaScript with full access to your computer — only import workflows you trust.
+- Admin panel: the website only hides the page; the real lock is Supabase RLS + the `admin` Edge Function. The service/secret key lives only inside the Edge Function, never in `public/`.
 - By default the server listens on `127.0.0.1` only, and the editor is locked with a new random password printed at every start.
 
 ## 📬 Contact

@@ -110,10 +110,26 @@
       ${inner}
       <div class="auth-foot"><button class="linkbtn" id="langT">${prefs.lang === "hi" ? "English" : "Hinglish"}</button> · <a href="#" id="aboutL">${t("about")}</a> · Created by Nirbhay Sharma &amp; Tab</div>
     </div></div>`;
+    if (window.YFSiteRT) window.YFSiteRT.apply();
     $("#langT").onclick = () => { prefs.lang = prefs.lang === "hi" ? "en" : "hi"; savePrefs(); applyTheme(); showAuth(authMode); };
     $("#aboutL").onclick = (e) => { e.preventDefault(); toastMsg("YantraFlow — free n8n-style automation. Made by Nirbhay Sharma (Nishu) & Tab."); };
   }
   function toastMsg(m, k) { if (app()) app().toast(m, k); else alert(m); }
+  function signupsOff() { const s = window.YFSiteRT && window.YFSiteRT.settings; return s && s.signups_enabled === false ? (s.signups_off_message || "New signups are turned off right now.") : ""; }
+  // after login: "last seen" + blocked/admin flags from the admin SQL (silently skipped if not set up)
+  async function checkMe() {
+    if (!S.client || !S.user) return null;
+    try {
+      const r = await Promise.race([S.client.rpc("yf_me"), new Promise((ok) => setTimeout(() => ok({ error: "timeout" }), 4000))]);
+      if (!r.error && r.data) S.me = r.data;
+    } catch (_) { /* SQL not run yet */ }
+    if (S.me && S.me.blocked && !(window.YFSite && window.YFSite.isAdminEmail(S.user.email, window.YF_ADMIN_EMAILS))) {
+      await S.client.auth.signOut().catch(() => {});
+      S.user = null; S.blockedOut = true;
+      return false;
+    }
+    return true;
+  }
   function showAuth(mode) {
     authMode = mode || "login";
     splash(false);
@@ -143,6 +159,7 @@
     const isUp = authMode === "signup";
     authShell(`<div class="auth-tabs" role="tablist"><button role="tab" class="${isUp ? "" : "on"}" data-m="login">${t("login")}</button><button role="tab" class="${isUp ? "on" : ""}" data-m="signup">${t("signup")}</button></div>
       <h2 class="auth-h">${isUp ? t("signupTitle") : t("loginTitle")}</h2><p class="auth-sub">${isUp ? t("signupSub") : t("loginSub")}</p>
+      ${isUp && signupsOff() ? `<div class="auth-msg err" style="display:block">${esc(signupsOff())}</div>` : ""}
       <form id="af" class="auth-f" novalidate>
         <label class="lb" for="ae">${t("email")}</label><input class="inp" id="ae" type="email" autocomplete="email" inputmode="email" required placeholder="you@gmail.com">
         <label class="lb" for="ap">${t("password")}</label><div class="pw"><input class="inp" id="ap" type="password" autocomplete="${isUp ? "new-password" : "current-password"}" minlength="6" required placeholder="${isUp ? (prefs.lang === "hi" ? "kam se kam 6 characters" : "at least 6 characters") : "••••••••"}"><button type="button" class="pw-eye" aria-label="Show password">${I("eye", 18, "eye-on")}${I("eye-off", 18, "eye-off")}</button></div>
@@ -156,11 +173,13 @@
     $("#sw").onclick = (e) => { e.preventDefault(); showAuth(isUp ? "login" : "signup"); };
     $("#fg") && ($("#fg").onclick = (e) => { e.preventDefault(); showAuth("forgot"); });
     if (S.linkError) { msg(S.linkError); S.linkError = ""; }
+    if (S.blockedOut) { msg(prefs.lang === "hi" ? "Aapka account block kar diya gaya hai. Help ke liye site admin se contact karo." : "Your account has been blocked. Please contact the site admin."); S.blockedOut = false; }
     $("#af").onsubmit = async (e) => {
       e.preventDefault();
       const email = $("#ae").value.trim(), password = $("#ap").value;
       if (!/^\S+@\S+\.\S+$/.test(email)) return msg(friendly("invalid email"));
       if (password.length < 6) return msg(friendly("password 6"));
+      if (isUp && signupsOff()) return msg(signupsOff());
       busy(true);
       try {
         if (isUp) {
@@ -184,8 +203,9 @@
   function wireEye() { $$(".pw-eye").forEach((b) => (b.onclick = () => { const i = b.previousElementSibling; i.type = i.type === "password" ? "text" : "password"; b.classList.toggle("on"); })); }
   function busy(on) { const b = $("#ab"); if (b) { b.disabled = on; b.classList.toggle("loading", on); } }
   function msg(text, kind, html) { const m = $("#am"); if (!m) return; m.className = "auth-msg " + (kind || "err"); if (html) m.innerHTML = text; else m.textContent = text; }
-  function enter(user) {
+  async function enter(user) {
     useUser(user);
+    if ((await checkMe()) === false) { location.hash = "#/login"; showAuth("login"); return; }
     document.body.classList.remove("auth-on");
     if (!location.hash || location.hash.startsWith("#/login")) location.hash = "#/workflows";
     app().start();
@@ -234,7 +254,9 @@
     if (/^#access_token=|^#type=/.test(location.hash)) history.replaceState(null, "", location.pathname + "#/workflows");
     if (S.recovery) { showAuth("reset"); return false; }
     if (!user) { showAuth(location.hash.startsWith("#/signup") ? "signup" : "login"); return false; }
-    useUser(user); splash(false); return true;
+    useUser(user);
+    if ((await checkMe()) === false) { showAuth("login"); return false; }
+    splash(false); return true;
   }
   async function logout() {
     if (S.mode === "local") { await fetch("api/logout", { method: "POST" }).catch(() => {}); location.reload(); return; }
@@ -256,7 +278,7 @@
     if (!m) { m = document.createElement("div"); m.id = "pmenu"; m.className = "pmenu hidden"; document.body.appendChild(m); m.onclick = (e) => e.stopPropagation(); }
     const who = S.mode === "local" ? (prefs.lang === "hi" ? "Local full version" : "Local full version") : (S.user ? S.user.email : "");
     m.innerHTML = `<div class="pm-head">${avatarHtml(42)}<div><b>${esc(displayName())}</b><small>${esc(who)}</small></div></div>
-      <a href="#/profile">${I("user", 17)} ${t("profile")}</a><a href="#/projects">${I("layout-grid", 17)} ${t("pubProjects")}</a><a href="#/settings">${I("settings", 17)} ${t("settings")}</a><a href="#/about">${I("info", 17)} ${t("about")}</a><a href="#/developer">${I("code-xml", 17)} ${t("developer")}</a>
+      <a href="#/profile">${I("user", 17)} ${t("profile")}</a><a href="#/projects">${I("layout-grid", 17)} ${t("pubProjects")}</a><a href="#/settings">${I("settings", 17)} ${t("settings")}</a><a href="#/about">${I("info", 17)} ${t("about")}</a><a href="#/developer">${I("code-xml", 17)} ${t("developer")}</a>${!window.YFSiteRT || window.YFSiteRT.settings.videos_enabled ? `<a href="#/videos">${I("square-play", 17)} Videos / Tutorials</a>` : ""}${window.YFAdmin && window.YFAdmin.isAdminQuick() ? `<a href="#/admin" class="pm-admin">${I("shield-check", 17)} Admin panel</a>` : ""}
       ${S.mode === "off" ? "" : `<button id="pmOut" class="danger">${I("log-out", 17)} ${t("logout")}</button>`}`;
     m.classList.toggle("hidden");
     $$("#pmenu a").forEach((a) => (a.onclick = () => m.classList.add("hidden")));
@@ -325,7 +347,8 @@
     app().setNav("projects");
     const A = app(); const list = window.YF_PROJECTS;
     const shown = list.filter((p) => (projCat === "All" || p.categories.includes(projCat)) && (!projQ || (p.title + p.summary + p.categories.join(" ")).toLowerCase().includes(projQ.toLowerCase())));
-    A.view().innerHTML = page(`<div class="hero-h"><div><h1 class="h">${prefs.lang === "hi" ? "Public" : "Public"} <span class="g">${prefs.lang === "hi" ? "projects" : "projects"}</span></h1><p class="sub">${t("pubSub")}</p></div>
+    const SH = window.YFSiteRT ? window.YFSiteRT.settings : null;
+    A.view().innerHTML = page(`${SH && (SH.hero_title || SH.hero_subtitle) ? `<div class="site-hero"><h2>${esc(SH.hero_title)}</h2>${SH.hero_subtitle ? `<p>${esc(SH.hero_subtitle)}</p>` : ""}</div>` : ""}<div class="hero-h"><div><h1 class="h">${prefs.lang === "hi" ? "Public" : "Public"} <span class="g">${prefs.lang === "hi" ? "projects" : "projects"}</span></h1><p class="sub">${t("pubSub")}</p></div>
       <span class="allfree">${I("gift", 15)} ${prefs.lang === "hi" ? `Abhi saare ${list.length} projects FREE` : `All ${list.length} projects are FREE right now`}</span></div>
       <div class="pj-tools"><input class="inp" id="pq" type="search" placeholder="${prefs.lang === "hi" ? "Project dhoondo…" : "Search projects…"}" value="${esc(projQ)}" aria-label="Search projects"></div>
       <div class="cats" role="tablist">${CATS.map((c) => `<button class="cat ${c === projCat ? "on" : ""}" data-cat="${esc(c)}">${I(CAT_IC[c] || "tag", 15)}${esc(c)}${c === "All" ? "" : ` <small>${list.filter((p) => p.categories.includes(c)).length}</small>`}</button>`).join("")}</div>
@@ -370,6 +393,7 @@
         <div class="prof-ava"><label class="ava-up" title="Change photo">${avatarHtml(96, "xl")}<input type="file" id="avf" accept="image/*" hidden><span class="ava-cam">${I("camera", 16)}</span></label></div>
         <h1 class="h" style="text-align:center;margin-top:10px">${esc(displayName())}</h1><p class="sub" style="text-align:center">${esc(email)}</p>
         <div class="prof-stats" id="pst"><div><b>–</b><small>${t("workflows")}</small></div><div><b>–</b><small>${t("runs")}</small></div><div><b>${window.YF_PROJECTS.length}</b><small>${t("projects")}</small></div></div></div>
+      ${window.YFAdmin && window.YFAdmin.isAdminQuick() ? `<a class="card adm-entry" href="#/admin">${I("shield-check", 22)}<span><b>Admin panel</b><small>Users · Traffic · Videos · Site customise</small></span>${I("chevron-right", 18)}</a>` : ""}
       <section class="card" style="margin-top:14px"><h3>${I("user-round-pen", 18)} ${prefs.lang === "hi" ? "Profile edit" : "Edit profile"}</h3>
         <label class="lb" for="pn">${prefs.lang === "hi" ? "Naam" : "Display name"}</label><input class="inp" id="pn" maxlength="40" value="${esc(p.name || (S.user && S.user.user_metadata && S.user.user_metadata.display_name) || "")}" placeholder="Nishu">
         <label class="lb" for="pb">Bio</label><textarea class="inp" id="pb" maxlength="160" placeholder="${prefs.lang === "hi" ? "Main kya automate karta hoon…" : "What I automate…"}">${esc(p.bio || "")}</textarea>
@@ -451,5 +475,6 @@
   }
 
   window.YFPlatform = { gate, hookCloud, showAuth, showLocalLock, logout, splash, applyChrome, t, prefs, state: S, cloudSync, cloudDelete, cloudCheck,
-    views: { projects: viewProjects, project: viewProject, profile: viewProfile, settings: viewSettings, about: viewAbout, developer: viewDeveloper } };
+    views: { projects: viewProjects, project: viewProject, profile: viewProfile, settings: viewSettings, about: viewAbout, developer: viewDeveloper,
+      admin: (tab) => window.YFAdmin.view(tab), videos: () => window.YFSiteRT.viewVideos() }, checkMe };
 })();

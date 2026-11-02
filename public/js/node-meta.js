@@ -469,6 +469,17 @@ window.YF_NODE_META = [
     "help": "on = har run pe AI naya, alag message banayega. off = neeche wala fixed message hi bhejega."
    },
    {
+    "key": "timeGreeting",
+    "label": "Time greeting",
+    "type": "select",
+    "options": [
+     "on",
+     "off"
+    ],
+    "default": "on",
+    "help": "on = post time ke hisaab se shuru hoga: Good Morning (5-12), Good Afternoon (12-17), Good Evening (17-21), Good Night (21-5), India time. Har baar alag wording, repeat nahi."
+   },
+   {
     "key": "seed",
     "label": "SEED document (brand info, topics, style)",
     "type": "textarea",

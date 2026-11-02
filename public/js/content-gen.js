@@ -41,10 +41,11 @@
       `Language: ${o.language || "Hinglish (Hindi in English letters)"}. Tone: ${o.tone || "friendly and useful"}.`,
       seed ? "Use ONLY the facts, products, links and style in the SEED document. Never invent prices, numbers, offers or links that are not in the seed." : "No seed document was given: write a useful general post on the topic.",
       "Every post must be NEW: a different angle, hook, example and wording from the earlier posts listed. Never repeat an earlier post.",
+      o.greeting && o.platform !== "youtube" ? `It is ${o.greeting.slot} now (${o.greeting.hour}:00 India time). Start the post with a ${o.greeting.slot} greeting, for example "${o.greeting.line}" — you may vary the wording and emoji, but do NOT reuse the opening line of an earlier post. Make the content fit the time of day (${o.greeting.mood}).` : "",
       o.platform === "youtube"
         ? 'Reply ONLY with JSON: {"title":"max 90 characters","description":"2-4 short paragraphs + 3-6 hashtags","tags":"comma, separated, tags"}'
         : "Reply with ONLY the post text — no quotes, no preface like 'Here is your post'.",
-    ].join("\n");
+    ].filter(Boolean).join("\n");
     const user = [
       seed ? `SEED DOCUMENT (brand info, topics, style):\n"""\n${seed}\n"""` : "",
       o.topic ? `Today's topic / instruction: ${o.topic}` : "Pick a fresh topic from the seed that is NOT covered by the earlier posts.",
@@ -53,6 +54,50 @@
       `Today is ${o.today || new Date().toISOString().slice(0, 10)}. Variation code: ${o.nonce || Math.random().toString(36).slice(2, 7)}.`,
     ].filter(Boolean).join("\n\n");
     return [{ role: "system", content: sys }, { role: "user", content: user }];
+  }
+
+  /* ---- Time greeting (Asia/Kolkata by default): Good Morning 5-12, Afternoon 12-17, Evening 17-21, Night 21-5 */
+  const GREET = {
+    morning: { label: "Good Morning", mood: "morning: fresh start, motivation, a tip to begin the day", words: ["good morning", "suprabhat", "rise and shine", "subah", "morning", "शुभ प्रभात", "सुप्रभात"],
+      variants: ["Good Morning", "Suprabhat", "Good morning doston", "Rise and shine", "Subah ki shuruaat", "Morning vibes", "Namaste, good morning", "Good morning family"], emoji: ["\u2600\uFE0F", "\u{1F305}", "\u{1F31E}", "\u2615", "\u{1F304}"] },
+    afternoon: { label: "Good Afternoon", mood: "afternoon: quick useful update, energy boost for the second half of the day", words: ["good afternoon", "afternoon", "dopahar", "lunch", "दोपहर"],
+      variants: ["Good Afternoon", "Good afternoon doston", "Dopahar ki chai ke saath", "Afternoon update", "Lunch break vibes", "Namaste, good afternoon"], emoji: ["\u{1F324}\uFE0F", "\u2615", "\u{1F31E}", "\u{1F371}"] },
+    evening: { label: "Good Evening", mood: "evening: relaxed, reflective, recap of the day or something to try tonight", words: ["good evening", "evening", "shaam", "sandhya", "शुभ संध्या", "शाम"],
+      variants: ["Good Evening", "Shubh sandhya", "Good evening doston", "Shaam ki chai ke saath", "Evening vibes", "Namaste, good evening"], emoji: ["\u{1F307}", "\u{1F306}", "\u2615", "\u2728"] },
+    night: { label: "Good Night", mood: "night: calm wrap-up of the day, a thought to sleep on, plan for tomorrow", words: ["good night", "night", "shubh ratri", "raat", "शुभ रात्रि", "रात"],
+      variants: ["Good Night", "Shubh ratri", "Good night doston", "Raat ka wrap-up", "Sone se pehle ek baat", "Good night family"], emoji: ["\u{1F319}", "\u2728", "\u{1F30C}", "\u{1F31F}"] },
+  };
+  function hourIn(date, tz) {
+    try { return Number(new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hourCycle: "h23", timeZone: tz || "Asia/Kolkata" }).format(date || new Date())) % 24; }
+    catch (_) { const d = new Date((date || new Date()).getTime() + 330 * 60000); return d.getUTCHours(); }
+  }
+  function timeOfDay(date, tz) {
+    const h = hourIn(date, tz);
+    const slot = h >= 5 && h < 12 ? "morning" : h >= 12 && h < 17 ? "afternoon" : h >= 17 && h < 21 ? "evening" : "night";
+    return { slot, hour: h, label: GREET[slot].label, mood: GREET[slot].mood };
+  }
+  const opening = (t) => String(t && t.text !== undefined ? t.text : t || "").toLowerCase().slice(0, 60);
+  /* a greeting (+ emoji) for this slot whose wording was not used to open the last posts */
+  function pickGreeting(slot, history, seed) {
+    const g = GREET[slot] || GREET.morning;
+    const recent = (history || []).slice(-Math.max(2, g.variants.length - 1)).map(opening);
+    const fresh = g.variants.filter((v) => !recent.some((o) => o.startsWith(v.toLowerCase())));
+    const pool = fresh.length ? fresh : g.variants;
+    const n = Math.abs(Number(seed) || Date.now()) ;
+    const text = pool[n % pool.length];
+    const emoji = g.emoji[(n + (history || []).length) % g.emoji.length];
+    return { slot, text, emoji, line: `${text} ${emoji}` };
+  }
+  function hasGreeting(text, slot) {
+    const head = String(text || "").toLowerCase().slice(0, 80);
+    return (GREET[slot] || GREET.morning).words.some((w) => head.includes(w));
+  }
+  /* make sure the post opens with the right greeting (AI sometimes forgets) */
+  function ensureGreeting(text, slot, greet) {
+    const t = String(text || "").trim();
+    if (!t || hasGreeting(t, slot)) return t;
+    const g = greet || pickGreeting(slot, [], 0);
+    return `${g.line}\n\n${t}`;
   }
   function stripFence(t) { return String(t || "").replace(/^\s*```(json|text)?\s*/i, "").replace(/```\s*$/, "").trim(); }
   /* AI answer -> { text, title?, description?, tags? } */
@@ -80,5 +125,5 @@
     const i = ((Number(index) || 0) % items.length + items.length) % items.length;
     return { media: items[i], index: i, total: items.length };
   }
-  return { PLATFORMS, similarity, maxSimilarity, pushHistory, buildMessages, parseOutput, pickMedia, cleanSeed, SEED_MAX, REPEAT_LIMIT: 0.6 };
+  return { PLATFORMS, similarity, maxSimilarity, pushHistory, buildMessages, parseOutput, pickMedia, cleanSeed, SEED_MAX, REPEAT_LIMIT: 0.6, GREET, timeOfDay, pickGreeting, hasGreeting, ensureGreeting };
 });

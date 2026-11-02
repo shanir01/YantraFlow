@@ -239,13 +239,15 @@
         const platform = ctx.raw.platform || "telegram";
         const lang = { Hinglish: "Hinglish (Hindi in English letters, simple words)", Hindi: "Hindi (Devanagari)", English: "simple English" }[ctx.raw.language] || ctx.raw.language;
         let res; let similarity = 0; let tries = 0;
+        const greeting = (ctx.raw.timeGreeting || "on") !== "off" ? Object.assign(YC.timeOfDay(new Date(), "Asia/Kolkata"), YC.pickGreeting(YC.timeOfDay(new Date(), "Asia/Kolkata").slot, rec.posts, Date.now())) : null;
         if ((ctx.raw.autoGenerate || "on") === "off") res = { text: need(ctx.p("fixedText", i), "Fixed message") };
         else {
           let avoid = "";
           for (tries = 1; tries <= 2; tries++) {
-            const msgs = YC.buildMessages({ platform, seed: ctx.p("seed", i), topic: s(ctx.p("topic", i)), language: lang, tone: s(ctx.p("tone", i)), history: rec.posts, avoid });
+            const msgs = YC.buildMessages({ platform, seed: ctx.p("seed", i), topic: s(ctx.p("topic", i)), language: lang, tone: s(ctx.p("tone", i)), history: rec.posts, avoid, greeting });
             const ai = await aiComplete(ctx, i, msgs, { temperature: tries === 1 ? 0.9 : 1.1, maxTokens: platform === "x" ? 300 : 1200 });
             res = YC.parseOutput(platform, ai.text); res.model = ai.model;
+            if (greeting && platform !== "youtube" && res.text) res.text = YC.ensureGreeting(res.text, greeting.slot, greeting);
             if (!res.text) throw new Error("AI ne khaali jawab diya — Keys page pe AI model check karo");
             similarity = YC.maxSimilarity(res.text, rec.posts);
             if (similarity < YC.REPEAT_LIMIT) break;
@@ -254,7 +256,7 @@
         }
         const pmd = YC.pickMedia(ctx.p("mediaList", i), rec.mediaIndex); if (pmd.total) rec.mediaIndex = pmd.index + 1;
         rec.posts = YC.pushHistory(rec.posts, { text: res.text, at: new Date().toISOString() }, Number(ctx.raw.history) || 20);
-        out.push({ ...ctx.items[i], ...res, platform, media: pmd.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
+        out.push({ ...ctx.items[i], ...res, platform, timeOfDay: greeting ? greeting.slot : "", media: pmd.media || ctx.items[i].media || "", seedUsed: !!s(ctx.p("seed", i)).trim(), repeatCheck: { similarity, tries, remembered: rec.posts.length } });
       }
       all[key] = rec; try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (_) { /* storage full */ }
       return one(out);
