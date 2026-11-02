@@ -1,0 +1,36 @@
+{
+  "name": "yantraflow",
+  "version": "1.0.0",
+  "description": "Free, local, n8n-style workflow automation for your PC and Android phone (Termux). Visual drag-and-drop editor, schedules, webhooks, AI, Telegram, Instagram, YouTube auto-post. Zero dependencies.",
+  "main": "src/server.js",
+  "bin": {
+    "yantraflow": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js",
+    "build:meta": "node scripts/build-meta.js",
+    "mock": "node scripts/mock-services.js 9911"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "automation",
+    "workflow",
+    "n8n-alternative",
+    "termux",
+    "no-code",
+    "telegram-bot",
+    "instagram",
+    "youtube",
+    "ai",
+    "self-hosted"
+  ],
+  "author": "Nirbhay Sharma (NISHU) — https://github.com/shanir01",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shanir01/YantraFlow.git"
+  }
+}

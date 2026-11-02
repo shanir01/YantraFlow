@@ -1,0 +1,108 @@
+{
+  "name": "Folder → AI → YouTube upload",
+  "description": "Drop a video into the folder. AI writes title, description and tags, uploads to YouTube (private first), and pings you on Telegram.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "folderTrigger",
+      "name": "New video in folder",
+      "params": {
+        "folder": "videos",
+        "extensions": ".mp4,.mov,.mkv",
+        "seconds": 30,
+        "testFile": "my-video.mp4"
+      },
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "aiChat",
+      "name": "AI title + description",
+      "params": {
+        "system": "You are a YouTube SEO expert. Reply with JSON only, no extra text.",
+        "prompt": "Video file name: {{ $json.name }}\nWrite a catchy title (max 70 chars), a 3-line description ending with 5 hashtags, and 8 tags.\nReply ONLY as JSON: {\"title\":\"...\",\"description\":\"...\",\"tags\":[\"...\"]}",
+        "model": "",
+        "temperature": 0.7,
+        "maxTokens": 400,
+        "baseUrl": "",
+        "apiKey": ""
+      },
+      "position": [
+        300,
+        140
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "code",
+      "name": "Read AI JSON",
+      "params": {
+        "code": "return items.map(item => {\n  let meta = {};\n  try { meta = JSON.parse(item.text.slice(item.text.indexOf('{'), item.text.lastIndexOf('}') + 1)); } catch (e) {}\n  return {\n    ...item,\n    title: meta.title || item.name.replace(/\\.[^.]+$/, ''),\n    description: meta.description || '',\n    tags: (meta.tags || []).join(','),\n  };\n});"
+      },
+      "position": [
+        560,
+        140
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "youtube",
+      "name": "Upload to YouTube",
+      "params": {
+        "file": "{{ $json.path }}",
+        "title": "{{ $json.title }}",
+        "description": "{{ $json.description }}",
+        "tags": "{{ $json.tags }}",
+        "privacy": "private",
+        "categoryId": "22"
+      },
+      "position": [
+        820,
+        140
+      ]
+    },
+    {
+      "id": "n5",
+      "type": "telegram",
+      "name": "Tell me on Telegram",
+      "params": {
+        "operation": "text",
+        "text": "✅ Uploaded: {{ $json.title }}\n{{ $json.youtube.url }} ({{ $json.youtube.privacy }})",
+        "media": "",
+        "chatId": "",
+        "parseMode": "none",
+        "botToken": ""
+      },
+      "position": [
+        1080,
+        140
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    },
+    {
+      "from": "n3",
+      "fromOutput": 0,
+      "to": "n4"
+    },
+    {
+      "from": "n4",
+      "fromOutput": 0,
+      "to": "n5"
+    }
+  ]
+}

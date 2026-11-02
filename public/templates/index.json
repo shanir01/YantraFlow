@@ -1,0 +1,44 @@
+[
+  {
+    "key": "rss-ai-telegram",
+    "title": "News → AI summary → Telegram",
+    "description": "Every morning: read the latest news, AI writes a 2-line Hinglish summary of each, sends to your Telegram.",
+    "icon": "📰",
+    "file": "rss-ai-telegram.json"
+  },
+  {
+    "key": "daily-quote",
+    "title": "Daily AI quote → Telegram",
+    "description": "Every day at 7 AM the AI writes a fresh motivational quote and posts it to your Telegram chat or channel.",
+    "icon": "💡",
+    "file": "daily-quote.json"
+  },
+  {
+    "key": "webhook-ai-reply",
+    "title": "Webhook → AI reply (your own AI API)",
+    "description": "Call http://localhost:5679/webhook/ask with {\"message\":\"...\"} and get an AI answer back. Use it from any app, website or bot.",
+    "icon": "🪝",
+    "file": "webhook-ai-reply.json"
+  },
+  {
+    "key": "reel-autopost",
+    "title": "AI caption + hashtags → Reel to Instagram + Telegram",
+    "description": "At 6 PM daily: AI writes a caption with hashtags, then posts your Reel to Instagram and the same video to your Telegram channel.",
+    "icon": "🎬",
+    "file": "reel-autopost.json"
+  },
+  {
+    "key": "folder-youtube",
+    "title": "New video in folder → YouTube (AI title + description)",
+    "description": "Drop a video into the folder. AI writes title, description and tags, uploads to YouTube (private first), and pings you on Telegram.",
+    "icon": "📤",
+    "file": "folder-youtube.json"
+  },
+  {
+    "key": "uptime-monitor",
+    "title": "Website down alert → Telegram",
+    "description": "Checks your website every 5 minutes. If it is not OK (status ≠ 200), you get a Telegram alert.",
+    "icon": "🚨",
+    "file": "uptime-monitor.json"
+  }
+]

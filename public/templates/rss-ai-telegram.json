@@ -1,0 +1,86 @@
+{
+  "name": "News → AI summary → Telegram",
+  "description": "Every morning: read the latest news, AI writes a 2-line Hinglish summary of each, sends to your Telegram.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "scheduleTrigger",
+      "name": "Every morning 8 AM",
+      "params": {
+        "mode": "cron",
+        "cron": "0 8 * * *",
+        "minutes": 60
+      },
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "rss",
+      "name": "RSS Read",
+      "params": {
+        "url": "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en",
+        "max": 3
+      },
+      "position": [
+        300,
+        140
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "aiChat",
+      "name": "AI Summary",
+      "params": {
+        "system": "You summarize news for Indian readers in simple Hinglish. Max 2 lines.",
+        "prompt": "Summarize: {{ $json.title }}\n{{ $json.contentSnippet }}",
+        "model": "",
+        "temperature": 0.5,
+        "maxTokens": 150,
+        "baseUrl": "",
+        "apiKey": ""
+      },
+      "position": [
+        560,
+        140
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "telegram",
+      "name": "Send to Telegram",
+      "params": {
+        "operation": "text",
+        "text": "📰 {{ $json.title }}\n\n{{ $json.text }}\n\n🔗 {{ $json.link }}",
+        "media": "",
+        "chatId": "",
+        "parseMode": "none",
+        "botToken": ""
+      },
+      "position": [
+        820,
+        140
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    },
+    {
+      "from": "n3",
+      "fromOutput": 0,
+      "to": "n4"
+    }
+  ]
+}

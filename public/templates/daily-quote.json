@@ -1,0 +1,68 @@
+{
+  "name": "Daily AI quote → Telegram",
+  "description": "Every day at 7 AM the AI writes a fresh motivational quote and posts it to your Telegram chat or channel.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "scheduleTrigger",
+      "name": "Daily 7 AM",
+      "params": {
+        "mode": "cron",
+        "cron": "0 7 * * *",
+        "minutes": 60
+      },
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "aiChat",
+      "name": "AI Quote",
+      "params": {
+        "system": "You write short, original motivational quotes in Hinglish with one emoji.",
+        "prompt": "Aaj ({{ $today }}) ke liye ek naya motivational quote likho. Sirf quote, 1-2 line.",
+        "model": "",
+        "temperature": 0.9,
+        "maxTokens": 100,
+        "baseUrl": "",
+        "apiKey": ""
+      },
+      "position": [
+        300,
+        140
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "telegram",
+      "name": "Post to Telegram",
+      "params": {
+        "operation": "text",
+        "text": "🌅 Good morning!\n\n{{ $json.text }}",
+        "media": "",
+        "chatId": "",
+        "parseMode": "none",
+        "botToken": ""
+      },
+      "position": [
+        560,
+        140
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    }
+  ]
+}

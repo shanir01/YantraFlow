@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YantraFlow — free local automation (n8n-style) for PC &amp; phone</title>
+<meta name="description" content="Build automations with drag-and-drop: schedules, webhooks, AI, Telegram, Instagram Reels, YouTube upload. Free, local, runs on your PC or Android (Termux).">
+<meta name="theme-color" content="#07080d">
+<meta property="og:title" content="YantraFlow — free n8n-style automation for PC &amp; phone">
+<meta property="og:description" content="Drag-and-drop workflows: AI, Telegram, Instagram, YouTube auto-post. Free &amp; local.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="vendor/drawflow.min.css">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="#/workflows"><span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="12" r="2.6"/><path d="M7.2 6.6c4 .6 5 4.2 9.2 5"/><path d="M7.2 17.4c4-.6 5-4.2 9.2-5"/></svg></span><span>YantraFlow<small>by Nishu</small></span></a>
+  <nav class="nav" aria-label="Main">
+    <a href="#/workflows" data-v="workflows">Workflows</a><a href="#/templates" data-v="templates">Templates</a><a href="#/runs" data-v="runs">Runs</a><a href="#/keys" data-v="keys">Keys</a>
+  </nav>
+  <span class="spacer"></span>
+  <span class="pill" id="edition">…</span>
+  <a class="btn sm top-dl" href="https://github.com/shanir01/YantraFlow" target="_blank" rel="noopener">⭐ GitHub</a>
+</header>
+<main id="view"><div class="page"><p class="sub">Loading…</p></div></main>
+<nav class="bottomnav" aria-label="Main">
+  <a href="#/workflows" data-v="workflows"><span>⚡</span>Workflows</a><a href="#/templates" data-v="templates"><span>✨</span>Templates</a><a href="#/runs" data-v="runs"><span>🧾</span>Runs</a><a href="#/keys" data-v="keys"><span>🔑</span>Keys</a>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="vendor/drawflow.min.js"></script>
+<script src="js/node-meta.js"></script>
+<script src="js/cred-schema.js"></script>
+<script src="js/engine-core.js"></script>
+<script src="js/web-nodes.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

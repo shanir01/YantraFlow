@@ -1,0 +1,84 @@
+{
+  "name": "Website down alert",
+  "description": "Checks your website every 5 minutes. If it is not OK (status ≠ 200), you get a Telegram alert.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "scheduleTrigger",
+      "name": "Every 5 min",
+      "params": {
+        "mode": "interval",
+        "minutes": 5,
+        "cron": "*/5 * * * *"
+      },
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "httpRequest",
+      "name": "Check website",
+      "params": {
+        "method": "GET",
+        "url": "https://github.com",
+        "headers": "",
+        "body": ""
+      },
+      "position": [
+        300,
+        140
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "if",
+      "name": "Is it down?",
+      "params": {
+        "left": "{{ $json.status }}",
+        "op": "not equals",
+        "right": "200"
+      },
+      "position": [
+        560,
+        140
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "telegram",
+      "name": "Alert me",
+      "params": {
+        "operation": "text",
+        "text": "🚨 Website down! Status: {{ $json.status }} at {{ $time }}",
+        "media": "",
+        "chatId": "",
+        "parseMode": "none",
+        "botToken": ""
+      },
+      "position": [
+        820,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    },
+    {
+      "from": "n3",
+      "fromOutput": 0,
+      "to": "n4"
+    }
+  ]
+}

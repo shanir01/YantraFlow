@@ -1,0 +1,108 @@
+{
+  "name": "Reel auto-post (Instagram + Telegram)",
+  "description": "At 6 PM daily: AI writes a caption with hashtags, then posts your Reel to Instagram and the same video to your Telegram channel.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "scheduleTrigger",
+      "name": "Daily 6 PM",
+      "params": {
+        "mode": "cron",
+        "cron": "0 18 * * *",
+        "minutes": 60
+      },
+      "position": [
+        40,
+        160
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "set",
+      "name": "Reel details",
+      "params": {
+        "fields": "videoUrl = https://example.com/my-reel.mp4\ntopic = Morning motivation for students",
+        "keepOld": true
+      },
+      "position": [
+        300,
+        160
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "aiChat",
+      "name": "AI Caption + #tags",
+      "params": {
+        "system": "You write viral Instagram Reel captions in Hinglish: 1 hook line, 2 short lines, a call to action, then 12 relevant hashtags.",
+        "prompt": "Reel topic: {{ $json.topic }}",
+        "model": "",
+        "temperature": 0.8,
+        "maxTokens": 300,
+        "baseUrl": "",
+        "apiKey": ""
+      },
+      "position": [
+        560,
+        160
+      ]
+    },
+    {
+      "id": "n4",
+      "type": "instagram",
+      "name": "Post Reel",
+      "params": {
+        "kind": "REELS",
+        "mediaUrl": "{{ $json.videoUrl }}",
+        "caption": "{{ $json.text }}",
+        "shareToFeed": true,
+        "userId": "",
+        "accessToken": ""
+      },
+      "position": [
+        820,
+        60
+      ]
+    },
+    {
+      "id": "n5",
+      "type": "telegram",
+      "name": "Post to Telegram channel",
+      "params": {
+        "operation": "video",
+        "text": "{{ $json.text }}",
+        "media": "{{ $json.videoUrl }}",
+        "chatId": "",
+        "parseMode": "none",
+        "botToken": ""
+      },
+      "position": [
+        820,
+        260
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    },
+    {
+      "from": "n3",
+      "fromOutput": 0,
+      "to": "n4"
+    },
+    {
+      "from": "n3",
+      "fromOutput": 0,
+      "to": "n5"
+    }
+  ]
+}

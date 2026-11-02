@@ -1,0 +1,65 @@
+{
+  "name": "Webhook → AI reply",
+  "description": "Call http://localhost:5679/webhook/ask with {\"message\":\"...\"} and get an AI answer back. Use it from any app, website or bot.",
+  "active": false,
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "webhookTrigger",
+      "name": "Webhook /ask",
+      "params": {
+        "path": "ask",
+        "method": "ANY",
+        "respond": "lastNode",
+        "testData": "{\"message\": \"Termux kya hai? 2 line me batao\"}"
+      },
+      "position": [
+        40,
+        140
+      ]
+    },
+    {
+      "id": "n2",
+      "type": "aiChat",
+      "name": "AI Answer",
+      "params": {
+        "system": "You are a friendly helper. Answer in the user's language, short.",
+        "prompt": "{{ $json.body.message || $json.query.message || 'Hello' }}",
+        "model": "",
+        "temperature": 0.7,
+        "maxTokens": 400,
+        "baseUrl": "",
+        "apiKey": ""
+      },
+      "position": [
+        300,
+        140
+      ]
+    },
+    {
+      "id": "n3",
+      "type": "respondWebhook",
+      "name": "Send reply",
+      "params": {
+        "body": "{{ ({ reply: $json.text, model: $json.model }) }}",
+        "status": 200
+      },
+      "position": [
+        560,
+        140
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "n1",
+      "fromOutput": 0,
+      "to": "n2"
+    },
+    {
+      "from": "n2",
+      "fromOutput": 0,
+      "to": "n3"
+    }
+  ]
+}
