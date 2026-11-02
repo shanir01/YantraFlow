@@ -12,6 +12,7 @@ const CRED_SCHEMA = require("../public/js/cred-schema.js");
 const engine = require("../public/js/engine-core.js");
 const SCH = require("../public/js/schedule-core.js");
 const pkg = require("../package.json");
+const { createTerminal } = require("./terminal");
 
 const PUBLIC = path.join(__dirname, "..", "public");
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json" };
@@ -83,6 +84,7 @@ function createServer(opts = {}) {
   // opts.password "" = no lock (tests). Otherwise YANTRAFLOW_PASSWORD, else a NEW random password on every start.
   const password = opts.password !== undefined ? opts.password : process.env.YANTRAFLOW_PASSWORD || makePassword();
   const sessions = new Set(); const fails = new Map();
+  const terminal = createTerminal({ root: opts.terminalRoot || path.join(__dirname, ".."), env: opts.env || process.env });
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
@@ -106,6 +108,26 @@ function createServer(opts = {}) {
         if (ex.status === "error") return send(res, 500, { error: ex.error, executionId: ex.id });
         return send(res, 200, ex.lastOutput !== undefined ? ex.lastOutput : { ok: true, executionId: ex.id });
       }
+      // ---- v4.5 Form Submit trigger: public form page (like webhooks, no password so you can share the link)
+      if (p.startsWith("/form/")) {
+        const fp = decodeURIComponent(p.slice("/form/".length));
+        const found = runner.findForm(fp);
+        const page = (inner) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Form</title><style>body{margin:0;font-family:system-ui,sans-serif;background:#07080d;color:#eef0f8;display:grid;place-items:center;min-height:100vh}form,.box{width:min(440px,92vw);background:#12141f;border:1px solid #2e3350;border-radius:18px;padding:22px}h1{font-size:20px;margin:0 0 14px}label{display:block;font-size:13px;color:#9aa1bd;margin:12px 0 6px}input,textarea{width:100%;box-sizing:border-box;padding:11px;border-radius:11px;border:1px solid #2e3350;background:#0b0d15;color:#eef0f8;font-size:15px}button{margin-top:18px;width:100%;padding:12px;border:0;border-radius:12px;background:linear-gradient(135deg,#7c5cff,#00d4ff);color:#fff;font-weight:700;font-size:15px}small{color:#6b7190}</style></head><body>${inner}</body></html>`;
+        const escH = (x) => String(x == null ? "" : x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        if (!found) return send(res, 404, page(`<div class="box"><h1>Form nahi mila</h1><small>Workflow Active hai? Path: ${escH(fp)}</small></div>`), { "content-type": "text/html; charset=utf-8" });
+        const XN = require("../public/js/extra-nodes.js");
+        const fields = XN.helpers.formFields((found.node.params || {}).fields);
+        if (req.method === "POST") {
+          const data = parseBody(await readBody(req, 200000), req.headers["content-type"]);
+          const body = {}; for (const f of fields) body[f.name] = data[f.name] !== undefined ? String(data[f.name]).slice(0, 5000) : "";
+          const miss = fields.filter((f) => f.required && !String(body[f.name]).trim()).map((f) => f.label);
+          if (miss.length) return send(res, 400, page(`<div class="box"><h1>Ye bharna zaroori hai</h1><small>${escH(miss.join(", "))}</small></div>`), { "content-type": "text/html; charset=utf-8" });
+          runner.run(found.wf, { triggerNodeId: found.node.id, triggerData: { webhook: { body, path: fp, method: "POST" } }, mode: "form" }).catch(() => {});
+          return send(res, 200, page(`<div class="box"><h1>Shukriya! Form mil gaya.</h1><small>Powered by YantraFlow</small></div>`), { "content-type": "text/html; charset=utf-8" });
+        }
+        const inputs = fields.map((f) => `<label for="${escH(f.name)}">${escH(f.label)}${f.required ? " *" : ""}</label>${f.type === "textarea" ? `<textarea id="${escH(f.name)}" name="${escH(f.name)}" rows="4" ${f.required ? "required" : ""}></textarea>` : `<input id="${escH(f.name)}" name="${escH(f.name)}" type="${escH(f.type)}" ${f.required ? "required" : ""}>`}`).join("");
+        return send(res, 200, page(`<form method="post"><h1>${escH((found.node.params || {}).title || "Form")}</h1>${inputs}<button type="submit">Submit</button></form>`), { "content-type": "text/html; charset=utf-8" });
+      }
       // ---- password lock: UI + API need the password printed in the terminal (webhooks above stay open)
       if (password) {
         const sid = parseCookies(req.headers.cookie).yf_session;
@@ -126,6 +148,14 @@ function createServer(opts = {}) {
         if (p.startsWith("/api/") && !authed) return send(res, 401, { error: "locked" });
         // static files (the app shell + lock screen) are served without the password; your data is only behind /api
       }
+      // ---- v4.5 Terminal (owner only: behind the password, localhost only by default)
+      if (p.startsWith("/api/terminal")) {
+        const tsid = parseCookies(req.headers.cookie).yf_session || "local";
+        if (p === "/api/terminal/info") return send(res, 200, terminal.info(tsid));
+        if (p === "/api/terminal/run" && req.method === "POST") { let cmd = ""; try { cmd = String(JSON.parse((await readBody(req, 20000)) || "{}").cmd || ""); } catch (_) { /* */ } return terminal.run(req, res, tsid, cmd); }
+        if (p === "/api/terminal/kill" && req.method === "POST") return send(res, 200, terminal.kill(req, tsid));
+        return send(res, 404, { error: "unknown terminal route" });
+      }
       if (p.startsWith("/api/")) return await api(req, res, url, store, runner);
       // ---- static files
       let file = path.normalize(path.join(PUBLIC, p === "/" ? "index.html" : decodeURIComponent(p)));
@@ -140,6 +170,7 @@ function createServer(opts = {}) {
   server.store = store;
   server.runner = runner;
   server.password = password;
+  server.terminal = terminal;
   return server;
 }
 

@@ -64,6 +64,7 @@
   async function run(wf, triggerNodeId, mode, triggerData, signal) {
     const ex = await YFEngine.runWorkflow(JSON.parse(JSON.stringify(wf)), { types: YFWeb.types, evaluate: YFWeb.evaluate, triggerNodeId, triggerData, mode, signal, settings: LS.get("creds", {}) });
     saveRun(ex);
+    try { dispatchEvent(new CustomEvent("yf:run", { detail: ex })); } catch (_) { /* */ }
     return ex;
   }
 
@@ -188,6 +189,16 @@
                 const prev = st[key]; st[key] = rows.length; LS.set("poll", st);
                 if (prev !== undefined && rows.length > prev) onRun(await run(wf, n.id, "trigger", { pollItems: rows.slice(prev) }));
               } catch (_) { /* ignore */ }
+            } else if (YFWeb.polls && YFWeb.polls[n.type]) {
+              // v4.5: RSS New Item / Telegram Message triggers poll while this tab is open
+              const P = YFWeb.polls[n.type]; const every = P.every(p) * 1000;
+              if (last[key] && Date.now() - last[key] < every) continue; last[key] = Date.now();
+              try {
+                const all = LS.get("pollstate", {}); const st = all[key] || {};
+                const items = await P.poll({ raw: Object.assign({}, p), settings: LS.get("creds", {}) }, st);
+                all[key] = st; LS.set("pollstate", all);
+                if (items && items.length) onRun(await run(wf, n.id, "trigger", { pollItems: items }));
+              } catch (e) { if (window.YFErrors) window.YFErrors.add({ source: "trigger", workflowId: wf.id, workflowName: wf.name, nodeId: n.id, nodeName: n.name, nodeType: n.type, error: e.message }); }
             }
           }
         }

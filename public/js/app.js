@@ -2,12 +2,13 @@
 (function () {
   "use strict";
   const REPO = "https://github.com/shanir01/YantraFlow";
-  const VERSION = "4.4.0";
+  const VERSION = "4.5.0";
   const $ = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const META = Object.fromEntries(window.YF_NODE_META.map((m) => [m.type, m]));
-  const GROUPS = ["Triggers", "Core", "Logic", "AI", "Social & Messaging", "Data"];
+  const CATS = (window.YFExtraNodes && window.YFExtraNodes.CATEGORIES) || [{ id: "Trigger", label: "Trigger", icon: "zap" }, { id: "Core", label: "Core", icon: "box" }, { id: "Flow", label: "Flow", icon: "route" }, { id: "AI", label: "AI", icon: "sparkles" }, { id: "Social", label: "Social", icon: "message-circle" }, { id: "Data", label: "Data", icon: "database" }, { id: "Media", label: "Media & Files", icon: "clapperboard" }];
+  let palCat = "all";
   const isMobile = () => window.matchMedia("(max-width:820px)").matches;
   let B = null; // backend
   const view = () => $("#view");
@@ -141,7 +142,7 @@
   // items: [{ ic, label, act, danger }] or "hr"; at: {x,y} | element
   function openPop(items, at, title) {
     closePop();
-    const sheet = isMobile();
+    const sheet = false; // v4.5: always a dropdown right under the button (never a side popup / bottom sheet)
     const bd = document.createElement("div"); bd.id = "ctxb"; bd.className = "ctx-back" + (sheet ? " on" : "");
     bd.addEventListener("click", closePop); bd.addEventListener("contextmenu", (e) => { e.preventDefault(); closePop(); });
     const p = document.createElement("div"); p.id = "ctxm"; p.className = "ctx " + (sheet ? "sheet" : "pop"); p.setAttribute("role", "menu");
@@ -150,12 +151,7 @@
     p.addEventListener("contextmenu", (e) => e.preventDefault());
     $$("[data-i]", p).forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const it = items[+b.dataset.i]; closePop(); it.act(); }));
     const c = $("[data-cancel]", p); if (c) c.onclick = closePop;
-    if (!sheet) {
-      let x, y; if (at instanceof Element) { const r = at.getBoundingClientRect(); x = r.right; y = r.bottom + 4; } else { x = at.x; y = at.y; }
-      const w = p.offsetWidth, h = p.offsetHeight;
-      if (at instanceof Element) x -= w;
-      p.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + "px"; p.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + "px";
-    }
+    if (!sheet) window.YFUI.anchor(p, at);
     document.addEventListener("keydown", popKey);
     const first = $("[data-i]", p); if (first && !sheet) first.focus({ preventScroll: true });
   }
@@ -447,7 +443,8 @@
         <button class="btn sm" id="save">${I("save", 16)}<span class="lbl-txt">Save</span></button>
         <span id="ed-sched" class="hide-m"></span>
         <button class="btn sm run" id="run">${I("play", 16)}<span class="lbl-txt">Run</span></button>
-        <button class="btn sm icon" id="more" aria-label="More">${I("ellipsis-vertical", 18)}</button>
+        <button class="btn sm icon ed-term" id="edTerm" aria-label="Terminal" title="Terminal">${I("square-terminal", 17)}</button>${window.YFUI.errButton("edErr")}
+        <button class="btn sm icon" id="more" aria-label="More" aria-haspopup="menu">${I("ellipsis-vertical", 18)}</button>
       </div>
       <div class="ed-body">
         <aside class="palette" id="palette"><input class="inp search" id="psearch" placeholder="Search nodes…" aria-label="Search nodes"><div id="plist"></div></aside>
@@ -458,9 +455,10 @@
         <div class="zoomctl"><button class="btn" id="zin" aria-label="Zoom in">${I("plus", 18)}</button><button class="btn" id="zout" aria-label="Zoom out">${I("minus", 18)}</button><button class="btn" id="zfit" aria-label="Fit">${I("maximize-2", 16)}</button></div>
         <div class="runbar" id="runbar"></div>
         <div class="drawer hidden" id="drawer"></div>
+        <div class="termdrawer hidden" id="termdrawer"></div>
       </div>
-      <div class="menu hidden" id="menu">
-        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><button data-m="guide">${I("book-open", 16)} Setup guide</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
+      <div class="menu hidden" id="menu" role="menu">
+        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><button data-m="guide">${I("book-open", 16)} Setup guide</button><button data-m="check">${I("scan-search", 16)} Check workflow (errors)</button><button data-m="term">${I("square-terminal", 16)} Terminal</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
       </div></div>`;
     const el = $("#drawflow");
     const ed = new Drawflow(el);
@@ -501,7 +499,12 @@
     $("#zfit").onclick = fit;
     $("#fab").onclick = () => { $("#palette").classList.add("open"); $("#backdrop").classList.add("on"); };
     $("#backdrop").onclick = () => { $("#palette").classList.remove("open"); closePanel(); };
-    $("#more").onclick = (e) => { e.stopPropagation(); $("#menu").classList.toggle("hidden"); };
+    $("#more").onclick = (e) => { e.stopPropagation(); const m = $("#menu"); m.classList.toggle("hidden"); if (!m.classList.contains("hidden")) window.YFUI.anchor(m, $("#more")); };
+    $("#edErr").onclick = (e) => { e.stopPropagation(); window.YFUI.openCenter(); };
+    $("#edTerm").onclick = (e) => { e.stopPropagation(); toggleTermDrawer(); };
+    window.YFUI.paintBadges();
+    ED.creds = {}; B.getCreds().then((c) => { if (ED) ED.creds = c || {}; }).catch(() => {});
+    const focusId = sessionStorage.getItem("yf_focus_node"); if (focusId) { sessionStorage.removeItem("yf_focus_node"); setTimeout(() => focusNode(focusId, true), 350); }
     document.addEventListener("click", hideMenu);
     $$("#menu [data-m]").forEach((b) => (b.onclick = () => menuAction(b.dataset.m)));
     setTimeout(fit, 30);
@@ -551,12 +554,15 @@
   }
   function toCanvas(cx, cy) { const r = ED.ed.precanvas.getBoundingClientRect(); return { x: (cx - r.x) / ED.ed.zoom, y: (cy - r.y) / ED.ed.zoom }; }
   function renderPalette(q) {
-    q = q.toLowerCase();
-    const list = Object.values(META).filter((m) => !q || (m.label + m.description + m.group).toLowerCase().includes(q));
-    $("#plist").innerHTML = GROUPS.map((g) => {
-      const items = list.filter((m) => m.group === g); if (!items.length) return "";
-      return `<div class="pg">${g}</div>` + items.map((m) => `<div class="pnode" draggable="true" data-type="${m.type}" title="${esc(m.description)}"><span class="pi" style="background:${m.color}26;color:${m.color}">${I(m.icon, 18)}</span><div><div class="pt">${esc(m.label)}${m.fullOnly && B.edition === "web" ? '<span class="lock">PC</span>' : ""}</div><div class="pd">${esc(m.description)}</div></div></div>`).join("");
+    q = String(q || "").toLowerCase().trim();
+    const all = Object.values(META);
+    const list = all.filter((m) => (!q || (m.label + " " + m.description + " " + m.group + " " + m.type).toLowerCase().includes(q)) && (q || palCat === "all" || m.group === palCat));
+    const tabs = `<div class="pcats" role="tablist">${[{ id: "all", label: "All", icon: "layout-grid" }].concat(CATS).map((c) => `<button role="tab" data-cat="${c.id}" class="${palCat === c.id && !q ? "on" : ""}" aria-selected="${palCat === c.id}">${I(c.icon, 14)}<span>${esc(c.label)}</span><i>${c.id === "all" ? all.length : all.filter((m) => m.group === c.id).length}</i></button>`).join("")}</div>`;
+    $("#plist").innerHTML = tabs + (list.length ? "" : `<div class="pempty">${I("search", 22)}<span>"${esc(q)}" jaisa koi node nahi. Dusra shabd try karo (jaise: telegram, ai, json, loop).</span></div>`) + CATS.map((g) => {
+      const items = list.filter((m) => m.group === g.id); if (!items.length) return "";
+      return `<div class="pg">${I(g.icon, 13)}<span>${esc(g.label)}</span><em>${esc(g.hint || "")}</em></div>` + items.map((m) => `<div class="pnode" draggable="true" data-type="${m.type}" title="${esc(m.description)}"><span class="pi" style="background:${m.color}26;color:${m.color}">${I(m.icon, 18)}</span><div><div class="pt">${esc(m.label)}${m.fullOnly ? `<span class="lock" title="${esc(m.fullOnly)}">PC only</span>` : ""}</div><div class="pd">${esc(m.description)}</div></div></div>`).join("");
     }).join("");
+    $$("[data-cat]").forEach((b) => (b.onclick = () => { palCat = b.dataset.cat; if ($("#psearch")) $("#psearch").value = ""; renderPalette(""); }));
     $$(".pnode").forEach((p) => {
       p.ondragstart = (e) => e.dataTransfer.setData("text/yf-type", p.dataset.type);
       p.onclick = () => { const r = $("#drawflow").getBoundingClientRect(); const c = toCanvas(r.x + r.width / 2, r.y + r.height / 2.6); createNode(p.dataset.type, c.x - 100, c.y - 30, true); };
@@ -637,7 +643,9 @@
       ne.classList.add(`run-${r.status}`);
       $(".nf-badge", ne).textContent = r.status === "success" ? `✓ ${r.outputCount} item${r.outputCount === 1 ? "" : "s"}` : r.status === "error" ? "✗ error" : r.status === "stopped" ? "stopped" : r.status;
     }
-    toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : ex.status === "stopped" ? "Run stopped" : `Failed: ${ex.error}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err");
+    if (B.edition === "full") dispatchEvent(new CustomEvent("yf:run", { detail: ex })); else window.YFErrors.fromExec(ex);
+    if (ex.status === "error") window.YFUI.runToast(ex);
+    if (ex.status !== "error") toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : ex.status === "stopped" ? "Run stopped" : `Failed: ${ex.error}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err");
     const d = $("#drawer");
     d.innerHTML = `<h4>${statusPill(ex.status)} Run log <span class="meta">${ex.durationMs} ms</span><span class="spacer"></span><button class="btn sm ghost" id="dclose" aria-label="Close">${I("close", 16)}</button></h4>
       ${ex.error ? `<div class="note warn" style="margin:0 0 10px">${esc(ex.error)}</div>` : ""}
@@ -647,6 +655,29 @@
     $$("[data-open]", d).forEach((r) => (r.onclick = () => { d.classList.add("hidden"); openPanel(ED.byNodeId[r.dataset.open]); }));
     if (ED.selected && !$("#panel").classList.contains("hidden")) openPanel(ED.selected);
   }
+  // ---------- v4.5: jump to a node (Error Center / run toast), terminal drawer, workflow check
+  function focusNode(nodeId, open) {
+    if (!ED) return; const df = ED.byNodeId[nodeId]; const ne = df && $(`#node-${df}`); if (!ne) { toast("Ye node ab workflow me nahi hai", "err"); return; }
+    $$(".drawflow-node.selected").forEach((e) => e.classList.remove("selected"));
+    ne.classList.add("selected", "yf-flash"); setTimeout(() => ne.classList.remove("yf-flash"), 2600); ED.selected = df;
+    const d = ED.ed.getNodeFromId(df); const box = $("#drawflow").getBoundingClientRect(); const z = ED.ed.zoom;
+    ED.ed.canvas_x = box.width / 2 - (d.pos_x + ne.offsetWidth / 2) * z; ED.ed.canvas_y = box.height / 2.6 - (d.pos_y + ne.offsetHeight / 2) * z;
+    ED.ed.precanvas.style.transform = `translate(${ED.ed.canvas_x}px, ${ED.ed.canvas_y}px) scale(${z})`;
+    if (open) openPanel(df);
+  }
+  function toggleTermDrawer(force) {
+    const d = $("#termdrawer"); if (!d) return;
+    const show = force === true || (force !== false && d.classList.contains("hidden"));
+    d.classList.toggle("hidden", !show); $("#edTerm") && $("#edTerm").classList.toggle("on", show);
+    if (show && !d.dataset.on) { d.dataset.on = "1"; ED.term = window.YFUI.terminal(d, { compact: true, onClose: () => toggleTermDrawer(false) }); }
+    if (show && ED.term) ED.term.focus();
+  }
+  function lintNow() {
+    if (!ED) return [];
+    const wf = collect(); const G = window.YFGuides;
+    return window.YF45.lintWorkflow(wf, { meta: window.YF_NODE_META, edition: B.edition, missing: G ? G.missing(wf, ED.creds || {}) : [], sectionsOf: (t) => ((G && G.NODE_SECTIONS[t]) || []).map((r) => r.replace("?", "").split("|")[0]) });
+  }
+  window.YFEditor = { current: () => (ED ? { id: ED.wf.id || null, name: ED.wf.name } : null), focusNode, lint: lintNow, toggleTerm: toggleTermDrawer };
   function closePanel() { $("#panel").classList.add("hidden"); $("#backdrop").classList.remove("on"); }
   function parentFields(n) {
     if (!ED.lastExec) return null;
@@ -753,6 +784,8 @@
     if (a === "dup") { const wf = collect(); delete wf.id; wf.name += " (copy)"; wf.active = false; const s = await B.saveWorkflow(wf); location.hash = `#/editor/${s.id}`; }
     if (a === "runs") location.hash = "#/runs";
     if (a === "guide") workflowGuide(collect());
+    if (a === "check") window.YFUI.openCenter("__check__");
+    if (a === "term") toggleTermDrawer(true);
     if (a === "del") { if (!ED.wf.id) { location.hash = "#/workflows"; return; } if (confirm(`Delete "${ED.wf.name}"?`)) { await B.deleteWorkflow(ED.wf.id); ED.dirty = false; location.hash = "#/workflows"; } }
   }
 
@@ -881,6 +914,7 @@
       else if (v === "videos") await PV.videos();
       else if (v === "video-maker") await viewVideoMaker();
       else if (v === "generator") await viewGenerator();
+      else if (v === "terminal") await window.YFUI.viewTerminal();
       else await viewWorkflows();
     } catch (e) {
       if (e && e.locked) return;

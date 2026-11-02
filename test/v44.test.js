@@ -188,8 +188,8 @@ test("top bar: logo, nav, version badge, GitHub and profile in one header; no em
   const head = html.slice(html.indexOf('<header class="topbar">'), html.indexOf("</header>"));
   for (const s of ['class="logo"', 'class="nav"', 'id="edition"', 'class="gh-btn"', 'id="avatarBtn"', 'href="#/runs"', 'href="#/keys"']) assert.ok(head.includes(s), s);
   assert.ok(html.includes('class="bottomnav"'));
-  for (const f of ["guides.js", "guides-ui.js", "projgen.js", "image-core.js", "photovideo.js"]) { assert.ok(html.includes(`js/${f}?v=440`), f); assert.ok(fs.existsSync(path.join(PUB, "js", f)), f); }
-  const pkg = require("../package.json"); assert.equal(pkg.version, "4.4.0");
+  for (const f of ["guides.js", "guides-ui.js", "projgen.js", "image-core.js", "photovideo.js"]) { assert.ok(new RegExp(`js/${f.replace(".", "\\.")}\\?v=\\d+`).test(html), f); assert.ok(fs.existsSync(path.join(PUB, "js", f)), f); }
+  const pkg = require("../package.json"); assert.match(pkg.version, /^4\.\d+\.\d+$/); // bumped each release (v4.5: 4.5.0)
   assert.ok(fs.readFileSync(path.join(PUB, "js", "app.js"), "utf8").includes(`const VERSION = "${pkg.version}"`));
   const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u;
   for (const f of ["guides.js", "guides-ui.js", "projgen.js", "photovideo.js"]) assert.ok(!EMOJI.test(fs.readFileSync(path.join(PUB, "js", f), "utf8")), f);

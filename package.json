@@ -1,7 +1,7 @@
 {
   "name": "yantraflow",
-  "version": "4.4.0",
-  "description": "Free n8n-style automation platform: AI Project Generator (Hinglish -> workflow), Photo + Video Maker (post photo + video, fill once), step-by-step key guides, Auto Video Maker (Shorts/Reels), Daily Funny Video (Pexels/Pixabay free-licence) to YouTube + Instagram + Telegram, admin panel, link preview to Telegram, SEED-based AI auto-posting, schedules (every N / daily at HH:MM), 25 ready-made projects and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
+  "version": "4.5.0",
+  "description": "Free n8n-style automation platform: 50+ nodes in Trigger / Core / Flow / AI / Social / Data / Media categories, Error Center (what failed, where, why, how to fix), Terminal (PC shell + website console), AI Agent with tools, AI Project Generator, Photo + Video Maker, Auto Video Maker (Shorts/Reels), Daily Funny Video to YouTube + Instagram + Telegram, admin panel, schedules and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
   "main": "src/server.js",
   "bin": {
     "yantraflow": "src/server.js"
@@ -17,7 +17,9 @@
   },
   "keywords": [
     "ai",
+    "ai-agent",
     "automation",
+    "error-center",
     "instagram",
     "link-preview",
     "linkedin",
@@ -29,12 +31,13 @@
     "self-hosted",
     "shorts",
     "telegram-bot",
+    "terminal",
     "termux",
     "video-maker",
     "workflow",
     "youtube"
   ],
-  "author": "Nirbhay Sharma (NISHU) \u2014 https://github.com/shanir01",
+  "author": "Nirbhay Sharma (NISHU) — https://github.com/shanir01",
   "license": "MIT",
   "repository": {
     "type": "git",

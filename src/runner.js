@@ -45,6 +45,14 @@ class Runner {
     return null;
   }
 
+  findForm(pathName) {
+    const clean = String(pathName).replace(/^\/+|\/+$/g, "");
+    for (const { wf, node } of this.activeTriggers("form")) {
+      if (String((node.params || {}).path || "").replace(/^\/+|\/+$/g, "") === clean) return { wf, node };
+    }
+    return null;
+  }
+
   // ---------- v4.1: Run <-> Stop. A manual run can be cancelled; Stop also ends a scheduled run in progress.
   async runManual(wf, opts = {}) {
     const key = `manual:${wf.id}`;

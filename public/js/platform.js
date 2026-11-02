@@ -105,7 +105,7 @@
   function authShell(inner) {
     document.body.classList.add("auth-on");
     const v = $("#view");
-    v.innerHTML = `<div class="auth"><div class="auth-glow"></div><div class="auth-card">
+    v.innerHTML = `<div class="auth"><div class="auth-glow"></div><div class="hero3d" aria-hidden="true"><div class="h3-stage"><div class="h3-card c1">${I("clock", 18)}<b>Roz 9 baje</b></div><div class="h3-card c2">${I("sparkles", 18)}<b>AI post</b></div><div class="h3-card c3">${I("telegram", 18)}<b>Telegram</b></div><svg class="h3-wire" viewBox="0 0 300 220"><path d="M60 40 C150 40 150 110 150 110 S150 180 240 180"/></svg></div></div><div class="auth-card">
       <div class="auth-brand"><img src="${LOGO}" alt="" class="auth-logo"><div><div class="auth-name">Yantra<span>Flow</span></div><div class="auth-tag">${prefs.lang === "hi" ? "Free automation — phone + PC" : "Free automation for phone & PC"}</div></div></div>
       ${inner}
       <div class="auth-foot"><button class="linkbtn" id="langT">${prefs.lang === "hi" ? "English" : "Hinglish"}</button> · <a href="#" id="aboutL">${t("about")}</a> · Created by Nirbhay Sharma &amp; Tab</div>
@@ -281,6 +281,7 @@
       <a href="#/profile">${I("user", 17)} ${t("profile")}</a><a href="#/projects">${I("layout-grid", 17)} ${t("pubProjects")}</a><a href="#/settings">${I("settings", 17)} ${t("settings")}</a><a href="#/about">${I("info", 17)} ${t("about")}</a><a href="#/developer">${I("code-xml", 17)} ${t("developer")}</a>${!window.YFSiteRT || window.YFSiteRT.settings.videos_enabled ? `<a href="#/videos">${I("square-play", 17)} Videos / Tutorials</a>` : ""}${window.YFAdmin && window.YFAdmin.isAdminQuick() ? `<a href="#/admin" class="pm-admin">${I("shield-check", 17)} Admin panel</a>` : ""}
       ${S.mode === "off" ? "" : `<button id="pmOut" class="danger">${I("log-out", 17)} ${t("logout")}</button>`}`;
     m.classList.toggle("hidden");
+    if (!m.classList.contains("hidden") && window.YFUI) window.YFUI.anchor(m, $("#avatarBtn"));
     $$("#pmenu a").forEach((a) => (a.onclick = () => m.classList.add("hidden")));
     $("#pmOut") && ($("#pmOut").onclick = logout);
   }

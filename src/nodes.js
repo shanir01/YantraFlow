@@ -192,7 +192,7 @@ const CRED = "(blank = use Keys page)";
 
 // ===== Triggers
 def({
-  type: "manualTrigger", label: "Manual Trigger", group: "Triggers", icon: "play", color: "#22c55e", inputs: 0, trigger: "manual",
+  type: "manualTrigger", label: "Manual Trigger", group: "Trigger", icon: "play", color: "#22c55e", inputs: 0, trigger: "manual",
   description: "Starts when you press Run.",
   params: [{ key: "testData", label: "Test data (JSON, optional)", type: "json", default: "{}" }],
   async run(ctx) {
@@ -202,7 +202,7 @@ def({
   },
 });
 def({
-  type: "scheduleTrigger", label: "Schedule", group: "Triggers", icon: "clock", color: "#22c55e", inputs: 0, trigger: "schedule",
+  type: "scheduleTrigger", label: "Schedule", group: "Trigger", icon: "clock", color: "#22c55e", inputs: 0, trigger: "schedule",
   description: "Runs on a timer or cron while the workflow is Active.",
   params: [
     { key: "mode", label: "Mode", type: "select", options: ["interval", "cron"], default: "interval" },
@@ -212,7 +212,7 @@ def({
   async run(ctx) { return one([{ firedAt: new Date().toISOString() }]); },
 });
 def({
-  type: "webhookTrigger", fullOnly: "Webhooks need a server — use the full version on PC/Termux.", label: "Webhook", group: "Triggers", icon: "webhook", color: "#22c55e", inputs: 0, trigger: "webhook",
+  type: "webhookTrigger", fullOnly: "Webhooks need a server — use the full version on PC/Termux.", label: "Webhook", group: "Trigger", icon: "webhook", color: "#22c55e", inputs: 0, trigger: "webhook",
   description: "Starts when a URL is called: http://localhost:PORT/webhook/<path>",
   params: [
     { key: "path", label: "Path", type: "text", default: "my-hook" },
@@ -228,7 +228,7 @@ def({
   },
 });
 def({
-  type: "folderTrigger", fullOnly: "Browsers cannot watch folders — use the full version.", label: "Folder Watch", group: "Triggers", icon: "folder-search", color: "#22c55e", inputs: 0, trigger: "poll",
+  type: "folderTrigger", fullOnly: "Browsers cannot watch folders — use the full version.", label: "Folder Watch", group: "Trigger", icon: "folder-search", color: "#22c55e", inputs: 0, trigger: "poll",
   description: "Fires once for every NEW file that appears in a folder (checked every few seconds while Active).",
   params: [
     { key: "folder", label: "Folder", type: "text", default: "inbox", help: "Relative = inside YantraFlow's data/files. Termux phone storage: /sdcard/Movies (run termux-setup-storage once)." },
@@ -268,7 +268,7 @@ def({
   },
 });
 def({
-  type: "sheetTrigger", label: "Sheet / CSV New Row", group: "Triggers", icon: "googlesheets", color: "#22c55e", inputs: 0, trigger: "poll",
+  type: "sheetTrigger", label: "Sheet / CSV New Row", group: "Trigger", icon: "googlesheets", color: "#22c55e", inputs: 0, trigger: "poll",
   description: "Fires for every new row in a Google Sheet (File → Share → Publish to web → CSV link) or a local .csv file.",
   params: [
     { key: "source", label: "CSV link or file path", type: "text", default: "", placeholder: "https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" },
@@ -366,7 +366,7 @@ def({
   },
 });
 def({
-  type: "if", label: "IF", group: "Logic", icon: "split", color: "#a855f7", outputs: 2, outputLabels: ["true", "false"],
+  type: "if", label: "IF", group: "Flow", icon: "split", color: "#a855f7", outputs: 2, outputLabels: ["true", "false"],
   description: "Sends each item to TRUE (top) or FALSE (bottom).",
   params: [
     { key: "left", label: "Value", type: "text", default: "{{ $json.status }}" },
@@ -399,7 +399,7 @@ function testCondition(a, op, b) {
   }
 }
 def({
-  type: "switch", label: "Switch", group: "Logic", icon: "route", color: "#a855f7", outputs: 4, outputLabels: ["1", "2", "3", "else"],
+  type: "switch", label: "Switch", group: "Flow", icon: "route", color: "#a855f7", outputs: 4, outputLabels: ["1", "2", "3", "else"],
   description: "Route by value: output 1/2/3 when the value matches, else the last output.",
   params: [
     { key: "value", label: "Value", type: "text", default: "{{ $json.type }}" },
@@ -418,13 +418,13 @@ def({
   },
 });
 def({
-  type: "delay", label: "Delay", group: "Logic", icon: "timer", color: "#a855f7",
-  description: "Wait before continuing.",
+  type: "delay", label: "Wait / Delay", group: "Core", icon: "timer", color: "#a855f7",
+  description: "Thoda ruko, phir aage badho (rate limit se bachne ke liye bhi).",
   params: [{ key: "seconds", label: "Seconds", type: "number", default: 5 }],
   async run(ctx) { await sleep(Math.min(Number(ctx.p("seconds")) || 0, 3600) * 1000); return one(ctx.items); },
 });
 def({
-  type: "filter", label: "Limit / Filter", group: "Logic", icon: "funnel", color: "#a855f7",
+  type: "filter", label: "Limit / Filter", group: "Flow", icon: "funnel", color: "#a855f7",
   description: "Keep only the first N items, and/or items matching a JS condition.",
   params: [
     { key: "max", label: "Keep first N (0 = all)", type: "number", default: 3 },
@@ -570,7 +570,7 @@ async function saveDownload(ctx, url, prefix) {
   return file;
 }
 def({
-  type: "stockVideo", label: "Free Video Finder (Pexels / Pixabay)", group: "Video", icon: "film", color: "#14b8a6",
+  type: "stockVideo", label: "Free Video Finder (Pexels / Pixabay)", group: "Media", icon: "film", color: "#14b8a6",
   description: "Topic do (funny, cats, memes...) -> har run ek NAYA free-licence short video dhundhta hai (Pexels / Pixabay — repost allowed) ya tumhare apne clips. Credit line apne aap. Copyright strike se bachne ke liye dusron ke Pinterest/Insta/YouTube videos nahi uthata.",
   params: [
     { key: "topic", label: "Topic", type: "text", default: "funny animals", placeholder: "funny, cats, memes, baarish, gym..." },
@@ -624,7 +624,7 @@ const VIDEO_PARAMS = [
   { key: "watermark", label: "Watermark / handle", type: "text", default: "", placeholder: "@mychannel" },
 ];
 def({
-  type: "imageMaker", label: "Post Photo Maker (quote / post card)", group: "Video", icon: "image-plus", color: "#ec4899",
+  type: "imageMaker", label: "Post Photo Maker (quote / post card)", group: "Media", icon: "image-plus", color: "#ec4899",
   description: "Har run khud post photo banata hai: tumhara text + brand colours, 1080x1350 (Insta feed) / 1080x1920 (Story) / 1080x1080. Background: gradient ya free stock photo (Pexels/Pixabay key ho to). Website = browser me PNG, PC/Termux = ffmpeg PNG.",
   params: [
     { key: "text", label: "Photo text", type: "textarea", default: "{{ $json.quote || $json.caption || $json.text }}", help: "Hashtags / links / emoji apne aap hat jaate hain. Chhota text = bada font." },
@@ -672,7 +672,7 @@ def({
   },
 });
 def({
-  type: "videoMaker", label: "Auto Video Maker (Shorts / Reels)", group: "Video", icon: "clapperboard", color: "#f43f5e",
+  type: "videoMaker", label: "Auto Video Maker (Shorts / Reels)", group: "Media", icon: "clapperboard", color: "#f43f5e",
   description: "Har run khud vertical video banata hai (1080x1920, 15-60 s): AI ke text se kinetic captions + photo / free stock clip / gradient background + music (+ voice on PC). Template / slide-style video hai — camera footage nahi. PC/Termux = MP4 (ffmpeg). Website = browser me banti hai.",
   params: [
     { key: "mode", label: "Video source", type: "select", options: ["auto", "make", "own", "off"], default: "auto", help: "auto = pichhle step me video (apni file/link) ho to wahi, warna nayi video banao. make = hamesha nayi. own = sirf apni file/link. off = video nahi (text post)." },
@@ -730,7 +730,7 @@ def({
   },
 });
 def({
-  type: "videoEdit", label: "Video Editor (9:16, trim, Hindi captions)", group: "Video", icon: "scissors", color: "#f97316",
+  type: "videoEdit", label: "Video Editor (9:16, trim, Hindi captions)", group: "Media", icon: "scissors", color: "#f97316",
   description: "Clip ko Shorts/Reels ready banata hai: 9:16 crop, max 60 s trim, speed, hook text upar, end CTA, watermark, music. English bol-chaal ho to Hindi/Hinglish captions + optional Hindi voice dub (PC/Termux).",
   params: [
     { key: "input", label: "Video file / link", type: "text", default: "{{ $json.videoFile || $json.path || $json.media }}" },
@@ -787,7 +787,7 @@ def({
 
 // ===== Social / messaging
 def({
-  type: "telegram", label: "Telegram", group: "Social & Messaging", icon: "telegram", color: "#0ea5e9",
+  type: "telegram", label: "Telegram", group: "Social", icon: "telegram", color: "#0ea5e9",
   description: "Send text, photo, video, file or a LINK PREVIEW (any link -> photo + title + description + link) to a chat, group or channel (@channelname — add your bot as admin).",
   params: [
     { key: "operation", label: "Send", type: "select", options: ["text", "photo", "video", "document", "linkPreview"], default: "text", help: "linkPreview = koi bhi link do (article, YouTube, Insta, website) -> uski photo + title + description + link bot pe jayega." },
@@ -869,7 +869,7 @@ def({
   },
 });
 def({
-  type: "instagram", label: "Instagram Post", group: "Social & Messaging", icon: "instagram", color: "#e1306c",
+  type: "instagram", label: "Instagram Post", group: "Social", icon: "instagram", color: "#e1306c",
   description: "Post a photo or Reel with the official Instagram Graph API. Needs a Business/Creator account + a PUBLIC media URL.",
   params: [
     { key: "kind", label: "Post type", type: "select", options: ["REELS", "IMAGE"], default: "REELS" },
@@ -930,7 +930,7 @@ def({
   },
 });
 def({
-  type: "facebook", label: "Facebook Page Post", group: "Social & Messaging", icon: "facebook", color: "#1877f2",
+  type: "facebook", label: "Facebook Page Post", group: "Social", icon: "facebook", color: "#1877f2",
   description: "Post text/link, a photo URL or a video URL to your Facebook Page (Graph API).",
   params: [
     { key: "kind", label: "Post type", type: "select", options: ["text", "photo", "video"], default: "text" },
@@ -961,7 +961,7 @@ def({
   },
 });
 def({
-  type: "youtube", label: "YouTube Upload", group: "Social & Messaging", icon: "youtube", color: "#ff0033",
+  type: "youtube", label: "YouTube Upload", group: "Social", icon: "youtube", color: "#ff0033",
   description: "Upload a video (Shorts too: vertical + under 60 s) to your channel (YouTube Data API v3). PC/Termux: file or link. Website: Auto Video Maker wali video ya direct video link.",
   params: [
     { key: "file", label: "Video file path or direct video link", type: "text", default: "{{ $json.videoFile || $json.path || $json.media }}" },
@@ -1019,7 +1019,7 @@ def({
   },
 });
 def({
-  type: "xPost", fullOnly: "X blocks browser calls (CORS) — use the full version.", label: "X (Twitter) Post", group: "Social & Messaging", icon: "x", color: "#64748b",
+  type: "xPost", fullOnly: "X blocks browser calls (CORS) — use the full version.", label: "X (Twitter) Post", group: "Social", icon: "x", color: "#64748b",
   description: "Post a text tweet with the X API v2 (your own developer app keys).",
   params: [{ key: "text", label: "Tweet text (max 280)", type: "textarea", default: "{{ $json.text }}" }],
   async run(ctx) {
@@ -1036,7 +1036,7 @@ def({
   },
 });
 def({
-  type: "linkedinPost", fullOnly: "LinkedIn blocks browser calls (CORS) — use the full version (PC/Termux).", label: "LinkedIn Post", group: "Social & Messaging", icon: "linkedin", color: "#0a66c2",
+  type: "linkedinPost", fullOnly: "LinkedIn blocks browser calls (CORS) — use the full version (PC/Termux).", label: "LinkedIn Post", group: "Social", icon: "linkedin", color: "#0a66c2",
   description: "Post text (+ optional link) on your LinkedIn profile with the official Posts API (needs your LinkedIn developer app token with w_member_social).",
   params: [
     { key: "text", label: "Post text (max 3000)", type: "textarea", default: "{{ $json.text }}" },
@@ -1067,7 +1067,7 @@ def({
   },
 });
 def({
-  type: "discord", label: "Discord", group: "Social & Messaging", icon: "discord", color: "#5865f2",
+  type: "discord", label: "Discord", group: "Social", icon: "discord", color: "#5865f2",
   description: "Send a message to a Discord channel webhook.",
   params: [
     { key: "webhookUrl", label: "Webhook URL " + CRED, type: "secret", default: "" },
@@ -1086,7 +1086,7 @@ def({
   },
 });
 def({
-  type: "slack", fullOnly: "Slack blocks browser calls (CORS) — use the full version.", label: "Slack", group: "Social & Messaging", icon: "slack", color: "#4a154b",
+  type: "slack", fullOnly: "Slack blocks browser calls (CORS) — use the full version.", label: "Slack", group: "Social", icon: "slack", color: "#4a154b",
   description: "Send a message to Slack (Incoming Webhook).",
   params: [
     { key: "webhookUrl", label: "Webhook URL " + CRED, type: "secret", default: "" },
@@ -1104,7 +1104,7 @@ def({
   },
 });
 def({
-  type: "email", fullOnly: "Browsers cannot send SMTP email — use the full version.", label: "Email (SMTP)", group: "Social & Messaging", icon: "mail", color: "#14b8a6",
+  type: "email", fullOnly: "Browsers cannot send SMTP email — use the full version.", label: "Email (SMTP)", group: "Social", icon: "mail", color: "#14b8a6",
   description: "Send an email with your SMTP account (Gmail: use an App Password).",
   params: [
     { key: "to", label: "To (comma separated)", type: "text", default: "" },
@@ -1156,7 +1156,7 @@ def({
   },
 });
 def({
-  type: "writeFile", fullOnly: "Browsers cannot write files on disk — use the full version.", label: "Write File / Log", group: "Data", icon: "file-pen", color: "#ec4899",
+  type: "writeFile", fullOnly: "Browsers cannot write files on disk — use the full version.", label: "Write File / Log", group: "Media", icon: "file-pen", color: "#ec4899",
   description: "Save text or JSON to a file (relative paths go to data/files).",
   params: [
     { key: "path", label: "File path", type: "text", default: "log.txt" },
@@ -1200,6 +1200,36 @@ def({
     return one(ctx.items);
   },
 });
+
+
+// ===== v4.5: extra nodes (shared with the browser) — public/js/extra-nodes.js
+const XN = require("../public/js/extra-nodes.js");
+const { execFile: _execFile, spawn: _spawn } = require("node:child_process");
+function hostFor(ctx) {
+  const memFile = () => jsonFile(ctx, "memory.json");
+  return {
+    edition: "full", http, apiError, parseFeed, telegramApi: API.telegram,
+    ai: (c, i, messages, opt) => aiComplete(c, i, messages, opt),
+    mem: { get: async (k) => { const v = memFile().read()[k]; return v === undefined ? null : v; }, set: async (k, v) => { const f = memFile(); const o = f.read(); if (v === null) delete o[k]; else o[k] = v; f.write(o); } },
+    exec: (cmd, opt = {}) => new Promise((resolve) => {
+      const sh = process.platform === "win32" ? "cmd.exe" : (process.env.SHELL && fs.existsSync(process.env.SHELL) ? process.env.SHELL : "/bin/sh");
+      const args = process.platform === "win32" ? ["/d", "/s", "/c", cmd] : ["-c", cmd];
+      const child = _spawn(sh, args, { cwd: ctx.workDir || path.join(__dirname, ".."), env: process.env });
+      let out = "", err = ""; const cap = (a, b) => (a + b).slice(-200000);
+      child.stdout.on("data", (d) => (out = cap(out, d.toString())));
+      child.stderr.on("data", (d) => (err = cap(err, d.toString())));
+      const t = setTimeout(() => { err += "\n[timeout — process killed]"; try { child.kill("SIGKILL"); } catch (_) { /* */ } }, opt.timeoutMs || 120000);
+      child.on("error", (e) => { clearTimeout(t); resolve({ code: 127, stdout: out, stderr: err + e.message }); });
+      child.on("close", (code) => { clearTimeout(t); resolve({ code: code === null ? 137 : code, stdout: out.trim(), stderr: err.trim() }); });
+    }),
+  };
+}
+for (const d of XN.DEFS) {
+  const { run, poll, ...meta } = d;
+  const node = Object.assign({}, meta, { run: (ctx) => run(ctx, hostFor(ctx)) });
+  if (poll) node.poll = (ctx, state) => poll(ctx, state, hostFor(ctx));
+  def(node);
+}
 
 const BY_TYPE = Object.fromEntries(NODES.map((n) => [n.type, n]));
 function publicNodeList() {

@@ -228,6 +228,24 @@
       errors: [["invalid_token / no_service", "Webhook hata diya gaya — naya banao."]],
       fields: { webhookUrl: { what: "Slack incoming webhook URL.", eg: "https://hooks.slack.com/services/T000/B000/XXXX" } },
     },
+    supabase: {
+      short: "Supabase",
+      title: "Supabase table (Supabase Table node)",
+      what: "Apni Supabase table me rows padhna / jodna / badalna.",
+      steps: ["supabase.com/dashboard → apna project kholo → Project Settings → API Keys.", "\"Project URL\" (https://xxxx.supabase.co) aur publishable (anon) key copy karo — secret/service_role key kabhi mat daalna.", "Table Editor me table banao (jaise posts) → RLS policy me insert/select allow karo.", "Node me URL + key + table naam daalo → Run."],
+      links: [L("Supabase dashboard", "https://supabase.com/dashboard")],
+      errors: [["401 / Invalid API key", "Key galat hai — publishable/anon key dobara copy karo."], ["42501 / row-level security", "Table ki RLS policy insert/select allow nahi karti — policy jodo."], ["404 / relation does not exist", "Table ka naam galat hai (chhote-bade letters bhi dekho)."]],
+      fields: { url: { what: "Project ka address.", eg: "https://abcd1234.supabase.co" }, key: { what: "Publishable / anon key (secret key nahi).", eg: "sb_publishable_xxxxxxxx" } },
+    },
+    gsheet: {
+      short: "Google Sheet",
+      title: "Google Sheet Add Row (Apps Script URL)",
+      what: "Bina Google API key ke Sheet me nayi row jodna.",
+      steps: ["Google Sheet kholo → Extensions → Apps Script.", "Purana code hata ke ye paste karo: function doPost(e){var d=JSON.parse(e.postData.contents);var s=SpreadsheetApp.getActiveSheet();if(s.getLastRow()==0)s.appendRow(Object.keys(d));var h=s.getRange(1,1,1,s.getLastColumn()).getValues()[0];s.appendRow(h.map(function(k){return d[k]||''}));return ContentService.createTextOutput(JSON.stringify({ok:true}));}", "Deploy → New deployment → Web app → Who has access: Anyone → Deploy → URL copy (…/exec).", "Node me URL paste karo → Run → Sheet me row aa jayegi."],
+      links: [L("Apps Script", "https://script.google.com/home")],
+      errors: [["401 / 403 / HTML login page", "Deploy me \"Who has access: Anyone\" chuno aur NEW deployment banao."], ["Failed to fetch (website)", "Browser ne block kiya — PC/Termux version se chalao."]],
+      fields: { url: { what: "Apps Script web app URL.", eg: "https://script.google.com/macros/s/AKfy…/exec" } },
+    },
   };
 
   // ---------- node field -> connector field (so the editor shows the same help + guide)
@@ -242,11 +260,14 @@
     "videoMaker.pexelsKey": "pexels.apiKey", "videoMaker.pixabayKey": "pixabay.apiKey",
     "imageMaker.pexelsKey": "pexels.apiKey", "imageMaker.pixabayKey": "pixabay.apiKey",
     "discord.webhookUrl": "discord.webhookUrl", "slack.webhookUrl": "slack.webhookUrl",
+    "aiSummarize.baseUrl": "ai.baseUrl", "aiSummarize.apiKey": "ai.apiKey", "aiSummarize.model": "ai.model", "aiClassify.baseUrl": "ai.baseUrl", "aiClassify.apiKey": "ai.apiKey", "aiClassify.model": "ai.model", "aiTranslate.baseUrl": "ai.baseUrl", "aiTranslate.apiKey": "ai.apiKey", "aiTranslate.model": "ai.model", "aiImagePrompt.baseUrl": "ai.baseUrl", "aiImagePrompt.apiKey": "ai.apiKey", "aiImagePrompt.model": "ai.model", "aiAgent.baseUrl": "ai.baseUrl", "aiAgent.apiKey": "ai.apiKey", "aiAgent.model": "ai.model", 
+    "telegramTrigger.botToken": "telegram.botToken", "supabase.supabaseUrl": "supabase.url", "supabase.supabaseKey": "supabase.key", "sheetAppend.url": "gsheet.url",
   };
   const NODE_SECTIONS = {
     aiChat: ["ai"], aiPost: ["ai"], videoEdit: ["ai?"], videoMaker: ["ai?", "pexels?"], imageMaker: ["pexels?"], stockVideo: ["pexels|pixabay"],
     telegram: ["telegram"], instagram: ["instagram"], facebook: ["facebook"], youtube: ["youtube"], xPost: ["x"], linkedinPost: ["linkedin"],
     email: ["smtp"], discord: ["discord"], slack: ["slack"], linkPreview: ["linkpreview?"],
+    aiSummarize: ["ai"], aiClassify: ["ai"], aiTranslate: ["ai"], aiImagePrompt: ["ai"], aiAgent: ["ai"], telegramTrigger: ["telegram"], supabase: ["supabase"], sheetAppend: ["gsheet"],
   };
   function fieldInfo(nodeType, key) {
     const ref = NODE_FIELDS[nodeType + "." + key]; if (!ref) return null;

@@ -481,6 +481,18 @@
       default: throw new Error(`Unknown condition "${op}"`);
     }
   }
+  // v4.5: extra nodes shared with PC (public/js/extra-nodes.js)
+  const XN = window.YFExtraNodes; const polls = {};
+  const memKey = () => "yf_" + (window.YF_NS || "") + "memory";
+  const webMem = {
+    get: async (k) => { let o = {}; try { o = JSON.parse(localStorage.getItem(memKey()) || "{}"); } catch (_) { o = {}; } return o[k] === undefined ? null : o[k]; },
+    set: async (k, v) => { let o = {}; try { o = JSON.parse(localStorage.getItem(memKey()) || "{}"); } catch (_) { o = {}; } if (v === null) delete o[k]; else o[k] = v; localStorage.setItem(memKey(), JSON.stringify(o)); },
+  };
+  const host = () => ({ edition: "web", http, apiError, parseFeed, ai: aiComplete, mem: webMem, askForm: window.YFAskForm || null });
+  if (XN) for (const d of XN.DEFS) {
+    impl[d.type] = (ctx) => d.run(ctx, host());
+    if (d.poll) polls[d.type] = { poll: (ctx, state) => d.poll(ctx, state, host()), every: d.pollEverySeconds };
+  }
   const types = {};
   for (const m of META) {
     types[m.type] = Object.assign({}, m, {
@@ -500,5 +512,5 @@
     if (one && one[1].indexOf("{{") < 0 && one[1].indexOf("}}") < 0) return run(one[1]);
     return value.replace(/\{\{([\s\S]+?)\}\}/g, (_, c) => { const v = run(c); return v === undefined || v === null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v); });
   }
-  window.YFWeb = { types, evaluate, parseCsv, getPreview, downloadImage, aiComplete };
+  window.YFWeb = { types, evaluate, parseCsv, getPreview, downloadImage, aiComplete, polls, memory: webMem };
 })();

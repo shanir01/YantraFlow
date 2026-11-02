@@ -13,7 +13,7 @@ window.YF_NODE_META = [
   ],
   "type": "manualTrigger",
   "label": "Manual Trigger",
-  "group": "Triggers",
+  "group": "Trigger",
   "icon": "play",
   "color": "#22c55e",
   "trigger": "manual",
@@ -49,7 +49,7 @@ window.YF_NODE_META = [
   ],
   "type": "scheduleTrigger",
   "label": "Schedule",
-  "group": "Triggers",
+  "group": "Trigger",
   "icon": "clock",
   "color": "#22c55e",
   "trigger": "schedule",
@@ -97,7 +97,7 @@ window.YF_NODE_META = [
   "type": "webhookTrigger",
   "fullOnly": "Webhooks need a server — use the full version on PC/Termux.",
   "label": "Webhook",
-  "group": "Triggers",
+  "group": "Trigger",
   "icon": "webhook",
   "color": "#22c55e",
   "trigger": "webhook",
@@ -136,7 +136,7 @@ window.YF_NODE_META = [
   "type": "folderTrigger",
   "fullOnly": "Browsers cannot watch folders — use the full version.",
   "label": "Folder Watch",
-  "group": "Triggers",
+  "group": "Trigger",
   "icon": "folder-search",
   "color": "#22c55e",
   "trigger": "poll",
@@ -162,7 +162,7 @@ window.YF_NODE_META = [
   ],
   "type": "sheetTrigger",
   "label": "Sheet / CSV New Row",
-  "group": "Triggers",
+  "group": "Trigger",
   "icon": "googlesheets",
   "color": "#22c55e",
   "trigger": "poll",
@@ -292,7 +292,7 @@ window.YF_NODE_META = [
   ],
   "type": "if",
   "label": "IF",
-  "group": "Logic",
+  "group": "Flow",
   "icon": "split",
   "color": "#a855f7",
   "outputLabels": [
@@ -332,7 +332,7 @@ window.YF_NODE_META = [
   ],
   "type": "switch",
   "label": "Switch",
-  "group": "Logic",
+  "group": "Flow",
   "icon": "route",
   "color": "#a855f7",
   "outputLabels": [
@@ -355,11 +355,11 @@ window.YF_NODE_META = [
    }
   ],
   "type": "delay",
-  "label": "Delay",
-  "group": "Logic",
+  "label": "Wait / Delay",
+  "group": "Core",
   "icon": "timer",
   "color": "#a855f7",
-  "description": "Wait before continuing."
+  "description": "Thoda ruko, phir aage badho (rate limit se bachne ke liye bhi)."
  },
  {
   "inputs": 1,
@@ -381,7 +381,7 @@ window.YF_NODE_META = [
   ],
   "type": "filter",
   "label": "Limit / Filter",
-  "group": "Logic",
+  "group": "Flow",
   "icon": "funnel",
   "color": "#a855f7",
   "description": "Keep only the first N items, and/or items matching a JS condition."
@@ -659,7 +659,7 @@ window.YF_NODE_META = [
   ],
   "type": "stockVideo",
   "label": "Free Video Finder (Pexels / Pixabay)",
-  "group": "Video",
+  "group": "Media",
   "icon": "film",
   "color": "#14b8a6",
   "description": "Topic do (funny, cats, memes...) -> har run ek NAYA free-licence short video dhundhta hai (Pexels / Pixabay — repost allowed) ya tumhare apne clips. Credit line apne aap. Copyright strike se bachne ke liye dusron ke Pinterest/Insta/YouTube videos nahi uthata."
@@ -748,7 +748,7 @@ window.YF_NODE_META = [
   ],
   "type": "imageMaker",
   "label": "Post Photo Maker (quote / post card)",
-  "group": "Video",
+  "group": "Media",
   "icon": "image-plus",
   "color": "#ec4899",
   "description": "Har run khud post photo banata hai: tumhara text + brand colours, 1080x1350 (Insta feed) / 1080x1920 (Story) / 1080x1080. Background: gradient ya free stock photo (Pexels/Pixabay key ho to). Website = browser me PNG, PC/Termux = ffmpeg PNG."
@@ -907,7 +907,7 @@ window.YF_NODE_META = [
   ],
   "type": "videoMaker",
   "label": "Auto Video Maker (Shorts / Reels)",
-  "group": "Video",
+  "group": "Media",
   "icon": "clapperboard",
   "color": "#f43f5e",
   "description": "Har run khud vertical video banata hai (1080x1920, 15-60 s): AI ke text se kinetic captions + photo / free stock clip / gradient background + music (+ voice on PC). Template / slide-style video hai — camera footage nahi. PC/Termux = MP4 (ffmpeg). Website = browser me banti hai."
@@ -1036,7 +1036,7 @@ window.YF_NODE_META = [
   ],
   "type": "videoEdit",
   "label": "Video Editor (9:16, trim, Hindi captions)",
-  "group": "Video",
+  "group": "Media",
   "icon": "scissors",
   "color": "#f97316",
   "description": "Clip ko Shorts/Reels ready banata hai: 9:16 crop, max 60 s trim, speed, hook text upar, end CTA, watermark, music. English bol-chaal ho to Hindi/Hinglish captions + optional Hindi voice dub (PC/Termux)."
@@ -1117,7 +1117,7 @@ window.YF_NODE_META = [
   ],
   "type": "telegram",
   "label": "Telegram",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "telegram",
   "color": "#0ea5e9",
   "description": "Send text, photo, video, file or a LINK PREVIEW (any link -> photo + title + description + link) to a chat, group or channel (@channelname — add your bot as admin)."
@@ -1196,7 +1196,7 @@ window.YF_NODE_META = [
   ],
   "type": "instagram",
   "label": "Instagram Post",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "instagram",
   "color": "#e1306c",
   "description": "Post a photo or Reel with the official Instagram Graph API. Needs a Business/Creator account + a PUBLIC media URL."
@@ -1249,7 +1249,7 @@ window.YF_NODE_META = [
   ],
   "type": "facebook",
   "label": "Facebook Page Post",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "facebook",
   "color": "#1877f2",
   "description": "Post text/link, a photo URL or a video URL to your Facebook Page (Graph API)."
@@ -1309,7 +1309,7 @@ window.YF_NODE_META = [
   ],
   "type": "youtube",
   "label": "YouTube Upload",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "youtube",
   "color": "#ff0033",
   "description": "Upload a video (Shorts too: vertical + under 60 s) to your channel (YouTube Data API v3). PC/Termux: file or link. Website: Auto Video Maker wali video ya direct video link."
@@ -1328,7 +1328,7 @@ window.YF_NODE_META = [
   "type": "xPost",
   "fullOnly": "X blocks browser calls (CORS) — use the full version.",
   "label": "X (Twitter) Post",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "x",
   "color": "#64748b",
   "description": "Post a text tweet with the X API v2 (your own developer app keys)."
@@ -1363,7 +1363,7 @@ window.YF_NODE_META = [
   "type": "linkedinPost",
   "fullOnly": "LinkedIn blocks browser calls (CORS) — use the full version (PC/Termux).",
   "label": "LinkedIn Post",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "linkedin",
   "color": "#0a66c2",
   "description": "Post text (+ optional link) on your LinkedIn profile with the official Posts API (needs your LinkedIn developer app token with w_member_social)."
@@ -1393,7 +1393,7 @@ window.YF_NODE_META = [
   ],
   "type": "discord",
   "label": "Discord",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "discord",
   "color": "#5865f2",
   "description": "Send a message to a Discord channel webhook."
@@ -1418,7 +1418,7 @@ window.YF_NODE_META = [
   "type": "slack",
   "fullOnly": "Slack blocks browser calls (CORS) — use the full version.",
   "label": "Slack",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "slack",
   "color": "#4a154b",
   "description": "Send a message to Slack (Incoming Webhook)."
@@ -1455,7 +1455,7 @@ window.YF_NODE_META = [
   "type": "email",
   "fullOnly": "Browsers cannot send SMTP email — use the full version.",
   "label": "Email (SMTP)",
-  "group": "Social & Messaging",
+  "group": "Social",
   "icon": "mail",
   "color": "#14b8a6",
   "description": "Send an email with your SMTP account (Gmail: use an App Password)."
@@ -1538,7 +1538,7 @@ window.YF_NODE_META = [
   "type": "writeFile",
   "fullOnly": "Browsers cannot write files on disk — use the full version.",
   "label": "Write File / Log",
-  "group": "Data",
+  "group": "Media",
   "icon": "file-pen",
   "color": "#ec4899",
   "description": "Save text or JSON to a file (relative paths go to data/files)."
@@ -1585,5 +1585,844 @@ window.YF_NODE_META = [
   "icon": "reply",
   "color": "#ec4899",
   "description": "Choose what the Webhook caller gets back."
+ },
+ {
+  "inputs": 0,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "url",
+    "label": "Feed URL",
+    "type": "text",
+    "default": "https://hnrss.org/frontpage",
+    "placeholder": "https://www.youtube.com/feeds/videos.xml?channel_id=…"
+   },
+   {
+    "key": "minutes",
+    "label": "Check every N minutes",
+    "type": "number",
+    "default": 10
+   }
+  ],
+  "type": "rssTrigger",
+  "label": "RSS New Item",
+  "group": "Trigger",
+  "icon": "rss",
+  "color": "#22c55e",
+  "trigger": "poll",
+  "description": "Feed me naya post aate hi chalta hai (blog, YouTube channel, news)."
+ },
+ {
+  "inputs": 0,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "botToken",
+    "label": "Bot token (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   },
+   {
+    "key": "minutes",
+    "label": "Check every N minutes (website: tab khula rahe)",
+    "type": "number",
+    "default": 1
+   },
+   {
+    "key": "onlyText",
+    "label": "Sirf text messages",
+    "type": "boolean",
+    "default": true
+   }
+  ],
+  "type": "telegramTrigger",
+  "label": "Telegram Message",
+  "group": "Trigger",
+  "icon": "telegram",
+  "color": "#22c55e",
+  "trigger": "poll",
+  "description": "Tumhare bot ko koi message bheje to chalta hai (auto-reply bots ke liye)."
+ },
+ {
+  "inputs": 0,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "title",
+    "label": "Form title",
+    "type": "text",
+    "default": "Contact form"
+   },
+   {
+    "key": "fields",
+    "label": "Fields (one per line: name | Label | type | required)",
+    "type": "textarea",
+    "default": "name | Aapka naam | text | required\nphone | Mobile number | text\nmessage | Message | textarea",
+    "help": "type: text, number, email, textarea, date, url"
+   },
+   {
+    "key": "path",
+    "label": "Path (PC form link)",
+    "type": "text",
+    "default": "contact"
+   }
+  ],
+  "type": "formTrigger",
+  "label": "Form Submit",
+  "group": "Trigger",
+  "icon": "clipboard-list",
+  "color": "#22c55e",
+  "trigger": "form",
+  "description": "Form bharte hi chalta hai. Website: Run dabao to form khulta hai. PC: http://localhost:5679/form/<path> link share karo."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "command",
+    "label": "Command",
+    "type": "text",
+    "default": "echo Hello from YantraFlow",
+    "placeholder": "python3 myscript.py {{ $json.name }}"
+   },
+   {
+    "key": "timeout",
+    "label": "Timeout (seconds)",
+    "type": "number",
+    "default": 120
+   },
+   {
+    "key": "failOnError",
+    "label": "Exit code 0 na ho to fail",
+    "type": "boolean",
+    "default": true
+   }
+  ],
+  "type": "execCommand",
+  "label": "Run Command (terminal)",
+  "group": "Core",
+  "icon": "square-terminal",
+  "color": "#3b82f6",
+  "fullOnly": "Command sirf PC/Termux pe chal sakta hai (browser shell nahi chala sakta).",
+  "description": "PC/Termux pe shell command chalao (git pull, ffmpeg, python script…). Output agle node ko milta hai."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "mode",
+    "label": "Mode",
+    "type": "select",
+    "options": [
+     "append",
+     "combine into one item",
+     "list in one item"
+    ],
+    "default": "append",
+    "help": "append = sab items ek ke baad ek · combine = sab fields ek object me · list = { items: [...] }"
+   }
+  ],
+  "type": "merge",
+  "label": "Merge",
+  "group": "Flow",
+  "icon": "git-merge",
+  "color": "#a855f7",
+  "description": "Kai raste (arrows) ko jodo: sab items ek list me, ya sab fields ek item me."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "mode",
+    "label": "Mode",
+    "type": "select",
+    "options": [
+     "split out a list field",
+     "batches of N"
+    ],
+    "default": "split out a list field"
+   },
+   {
+    "key": "field",
+    "label": "List field (split mode)",
+    "type": "text",
+    "default": "items",
+    "placeholder": "data.results"
+   },
+   {
+    "key": "size",
+    "label": "Batch size (batch mode)",
+    "type": "number",
+    "default": 5
+   }
+  ],
+  "type": "splitItems",
+  "label": "Loop / Split Items",
+  "group": "Flow",
+  "icon": "repeat-2",
+  "color": "#a855f7",
+  "description": "List ko alag-alag items me todo (har item pe agle nodes chalenge), ya N-N ke batches banao."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "field",
+    "label": "Compare field (blank = poora item)",
+    "type": "text",
+    "default": "link"
+   },
+   {
+    "key": "remember",
+    "label": "Har run me yaad rakho (no repeat)",
+    "type": "boolean",
+    "default": false
+   }
+  ],
+  "type": "removeDuplicates",
+  "label": "Remove Duplicates",
+  "group": "Flow",
+  "icon": "copy-x",
+  "color": "#a855f7",
+  "description": "Same field wale double items hatao. 'Har run me yaad rakho' ON = pehle bheja hua dobara nahi jayega."
+ },
+ {
+  "inputs": 1,
+  "outputs": 2,
+  "params": [
+   {
+    "key": "note",
+    "label": "Note",
+    "type": "text",
+    "default": "error raste pe Telegram alert ya Log lagao"
+   }
+  ],
+  "type": "errorHandler",
+  "label": "Error Handler",
+  "group": "Flow",
+  "icon": "shield-check",
+  "color": "#a855f7",
+  "outputLabels": [
+   "ok",
+   "error"
+  ],
+  "description": "Pichhle node me 'Continue if it fails' ON karo — error wale items neeche (error) jaate hain, baaki upar (ok)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 0,
+  "params": [
+   {
+    "key": "message",
+    "label": "Error message",
+    "type": "text",
+    "default": "Data galat hai — {{ $json.reason || 'check input' }}"
+   }
+  ],
+  "type": "stopError",
+  "label": "Stop & Error",
+  "group": "Flow",
+  "icon": "octagon-x",
+  "color": "#ef4444",
+  "description": "Run yahin rok do aur apna error message dikhao (Error Center me aayega)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "text",
+    "label": "Text",
+    "type": "textarea",
+    "default": "{{ $json.content || $json.description || $json.text }}"
+   },
+   {
+    "key": "style",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "3 bullet points",
+     "1 line",
+     "short paragraph",
+     "tweet (under 260 chars)"
+    ],
+    "default": "3 bullet points"
+   },
+   {
+    "key": "language",
+    "label": "Language",
+    "type": "select",
+    "options": [
+     "Hinglish (Roman)",
+     "English",
+     "Hindi"
+    ],
+    "default": "Hinglish (Roman)"
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiSummarize",
+  "label": "AI Summarise",
+  "group": "AI",
+  "icon": "scroll-text",
+  "color": "#f59e0b",
+  "description": "Lambe text (article, RSS, email) ka chhota summary — Hinglish ya English."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "text",
+    "label": "Text",
+    "type": "textarea",
+    "default": "{{ $json.text || $json.message }}"
+   },
+   {
+    "key": "categories",
+    "label": "Categories (comma)",
+    "type": "text",
+    "default": "question, complaint, order, spam, other"
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiClassify",
+  "label": "AI Classify",
+  "group": "AI",
+  "icon": "tags",
+  "color": "#f59e0b",
+  "description": "Text ko categories me baanto (jaise: sawal / shikayat / spam). Phir Switch se alag raste."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "text",
+    "label": "Text",
+    "type": "textarea",
+    "default": "{{ $json.text }}"
+   },
+   {
+    "key": "to",
+    "label": "Translate to",
+    "type": "text",
+    "default": "Hinglish (Roman script)"
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiTranslate",
+  "label": "AI Translate",
+  "group": "AI",
+  "icon": "languages",
+  "color": "#f59e0b",
+  "description": "Kisi bhi bhasha me translate: English ↔ Hindi / Hinglish / Marathi…"
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "topic",
+    "label": "Topic",
+    "type": "text",
+    "default": "{{ $json.title || 'subah ki chai aur motivation' }}"
+   },
+   {
+    "key": "style",
+    "label": "Style",
+    "type": "select",
+    "options": [
+     "photo realistic",
+     "3D cartoon",
+     "flat illustration",
+     "cinematic",
+     "minimal poster"
+    ],
+    "default": "cinematic"
+   },
+   {
+    "key": "ratio",
+    "label": "Aspect ratio",
+    "type": "select",
+    "options": [
+     "9:16",
+     "1:1",
+     "4:5",
+     "16:9"
+    ],
+    "default": "9:16"
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiImagePrompt",
+  "label": "AI Image Prompt",
+  "group": "AI",
+  "icon": "wand-sparkles",
+  "color": "#f59e0b",
+  "description": "Topic se ek detailed image prompt banao (thumbnail / post photo ke liye)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "task",
+    "label": "Task",
+    "type": "textarea",
+    "default": "{{ $json.text || 'Aaj ki date kya hai aur 18% GST 2499 pe kitna hoga?' }}"
+   },
+   {
+    "key": "tools",
+    "label": "Tools",
+    "type": "text",
+    "default": "calculator, datetime, fetch_url, memory",
+    "help": "calculator, datetime, fetch_url (web page ka text), memory (yaad rakho / padho)"
+   },
+   {
+    "key": "maxSteps",
+    "label": "Max steps",
+    "type": "number",
+    "default": 5
+   },
+   {
+    "key": "model",
+    "label": "Model (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "baseUrl",
+    "label": "Base URL (blank = use Keys page)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "apiKey",
+    "label": "API key (blank = use Keys page)",
+    "type": "secret",
+    "default": ""
+   }
+  ],
+  "type": "aiAgent",
+  "label": "AI Agent (tools)",
+  "group": "AI",
+  "icon": "bot",
+  "color": "#f59e0b",
+  "description": "AI khud tools use karke kaam karta hai: calculator, date/time, web page padhna, memory. Max steps tak sochta hai."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "phone",
+    "label": "Phone with country code",
+    "type": "text",
+    "default": "{{ $json.phone || '919876543210' }}"
+   },
+   {
+    "key": "text",
+    "label": "Message",
+    "type": "textarea",
+    "default": "Namaste {{ $json.name || '' }}! YantraFlow se message."
+   }
+  ],
+  "type": "whatsappLink",
+  "label": "WhatsApp Link",
+  "group": "Social",
+  "icon": "whatsapp",
+  "color": "#25d366",
+  "description": "Click-to-chat link banao (wa.me) message ke saath — Telegram/email/form me bhejo. (Auto WhatsApp bhejne ke liye Meta Business API chahiye.)"
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "mode",
+    "label": "Mode",
+    "type": "select",
+    "options": [
+     "parse",
+     "stringify"
+    ],
+    "default": "parse"
+   },
+   {
+    "key": "field",
+    "label": "Field",
+    "type": "text",
+    "default": "text"
+   },
+   {
+    "key": "into",
+    "label": "Save into field (blank = merge into item)",
+    "type": "text",
+    "default": ""
+   }
+  ],
+  "type": "jsonTools",
+  "label": "JSON Parse / Stringify",
+  "group": "Data",
+  "icon": "braces",
+  "color": "#06b6d4",
+  "description": "Text ko JSON object banao (AI ke jawab ke liye best) ya object ko text."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "mode",
+    "label": "Mode",
+    "type": "select",
+    "options": [
+     "text to items",
+     "items to text"
+    ],
+    "default": "items to text"
+   },
+   {
+    "key": "field",
+    "label": "CSV text field (parse mode)",
+    "type": "text",
+    "default": "csv"
+   },
+   {
+    "key": "columns",
+    "label": "Columns (create mode, comma; blank = all)",
+    "type": "text",
+    "default": ""
+   }
+  ],
+  "type": "csvTools",
+  "label": "CSV Parse / Create",
+  "group": "Data",
+  "icon": "table",
+  "color": "#06b6d4",
+  "description": "CSV text ko items me badlo, ya saare items ko ek CSV text me (Sheet/Excel ke liye)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "op",
+    "label": "Operation",
+    "type": "select",
+    "options": [
+     "now",
+     "format",
+     "add",
+     "subtract",
+     "difference"
+    ],
+    "default": "now"
+   },
+   {
+    "key": "value",
+    "label": "Date (blank = now)",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "amount",
+    "label": "Amount (add/subtract)",
+    "type": "number",
+    "default": 1
+   },
+   {
+    "key": "unit",
+    "label": "Unit",
+    "type": "select",
+    "options": [
+     "minutes",
+     "hours",
+     "days",
+     "weeks"
+    ],
+    "default": "days"
+   },
+   {
+    "key": "format",
+    "label": "Format",
+    "type": "text",
+    "default": "DD-MM-YYYY HH:mm",
+    "help": "YYYY MM DD HH mm ss dddd (weekday)"
+   },
+   {
+    "key": "timezone",
+    "label": "Timezone",
+    "type": "text",
+    "default": "Asia/Kolkata"
+   },
+   {
+    "key": "into",
+    "label": "Save into field",
+    "type": "text",
+    "default": "date"
+   }
+  ],
+  "type": "dateTime",
+  "label": "Date & Time",
+  "group": "Data",
+  "icon": "calendar",
+  "color": "#06b6d4",
+  "description": "Abhi ka time (IST), format, din jodo/ghatao, do dates ka farak."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "op",
+    "label": "Operation",
+    "type": "select",
+    "options": [
+     "upper",
+     "lower",
+     "trim",
+     "title case",
+     "replace",
+     "regex extract",
+     "split",
+     "length",
+     "word count",
+     "truncate",
+     "slug",
+     "remove emoji",
+     "hashtags",
+     "urls"
+    ],
+    "default": "trim"
+   },
+   {
+    "key": "text",
+    "label": "Text",
+    "type": "textarea",
+    "default": "{{ $json.text }}"
+   },
+   {
+    "key": "a",
+    "label": "Find / regex / separator / max length",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "b",
+    "label": "Replace with",
+    "type": "text",
+    "default": ""
+   },
+   {
+    "key": "into",
+    "label": "Save into field",
+    "type": "text",
+    "default": "result"
+   }
+  ],
+  "type": "textTools",
+  "label": "Text Tools",
+  "group": "Data",
+  "icon": "type",
+  "color": "#06b6d4",
+  "description": "Upper/lower, replace, regex nikaalo, split, word count, slug, emoji hatao, hashtags/links nikaalo."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "op",
+    "label": "Operation",
+    "type": "select",
+    "options": [
+     "get",
+     "set",
+     "increment",
+     "push to list",
+     "delete"
+    ],
+    "default": "increment"
+   },
+   {
+    "key": "key",
+    "label": "Key",
+    "type": "text",
+    "default": "post_count"
+   },
+   {
+    "key": "value",
+    "label": "Value (set / push)",
+    "type": "text",
+    "default": "{{ $json.title }}"
+   },
+   {
+    "key": "into",
+    "label": "Save into field",
+    "type": "text",
+    "default": "memory"
+   }
+  ],
+  "type": "memory",
+  "label": "Memory / Store",
+  "group": "Data",
+  "icon": "hard-drive",
+  "color": "#06b6d4",
+  "description": "Runs ke beech value yaad rakho: counter, last post, list. Website: browser me, PC: data/memory.json."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "op",
+    "label": "Operation",
+    "type": "select",
+    "options": [
+     "select",
+     "insert",
+     "update",
+     "delete"
+    ],
+    "default": "select"
+   },
+   {
+    "key": "supabaseUrl",
+    "label": "Project URL",
+    "type": "text",
+    "default": "",
+    "placeholder": "https://xxxx.supabase.co"
+   },
+   {
+    "key": "supabaseKey",
+    "label": "API key (publishable / anon)",
+    "type": "secret",
+    "default": ""
+   },
+   {
+    "key": "table",
+    "label": "Table",
+    "type": "text",
+    "default": "posts"
+   },
+   {
+    "key": "filter",
+    "label": "Filter (select/update/delete)",
+    "type": "text",
+    "default": "",
+    "placeholder": "id=eq.5  ·  status=eq.new&limit=10"
+   },
+   {
+    "key": "row",
+    "label": "Row JSON (insert/update)",
+    "type": "json",
+    "default": "{\"title\": \"{{ $json.title }}\"}"
+   }
+  ],
+  "type": "supabase",
+  "label": "Supabase Table",
+  "group": "Data",
+  "icon": "supabase",
+  "color": "#3ecf8e",
+  "description": "Supabase table me rows padho / jodo / badlo / hatao (REST API)."
+ },
+ {
+  "inputs": 1,
+  "outputs": 1,
+  "params": [
+   {
+    "key": "url",
+    "label": "Apps Script Web app URL",
+    "type": "text",
+    "default": "",
+    "placeholder": "https://script.google.com/macros/s/…/exec"
+   },
+   {
+    "key": "row",
+    "label": "Row JSON",
+    "type": "json",
+    "default": "{\"date\": \"{{ $today }}\", \"title\": \"{{ $json.title }}\"}"
+   }
+  ],
+  "type": "sheetAppend",
+  "label": "Google Sheet Add Row",
+  "group": "Data",
+  "icon": "googlesheets",
+  "color": "#0f9d58",
+  "description": "Google Sheet me row jodo — Sheet ke Apps Script 'Web app' URL se (koi Google key nahi chahiye). Guide me 5 line ka script hai."
  }
 ];
