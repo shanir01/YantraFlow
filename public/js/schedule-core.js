@@ -102,5 +102,17 @@
     const u = { minutes: "minute", hours: "ghante", days: "din" }[s.unit] || s.unit;
     return `Har ${s.every} ${u} me`;
   }
-  return { MIN_MINUTES, DEFAULT_TZ, normalize, intervalMs, nextRun, nextDaily, isDue, fmt, describe, validTz };
+  /* v4.1: the Run button toggles. While a schedule is ON, or a run is executing
+     (busy = started from this tab, info.manualRunning = started on the PC/Termux server,
+     info.running = a scheduled run in progress), it is a red "Stop" button.
+     Same answer in the editor and in the workflow list, and after a reload
+     (it is read from the saved schedule state). */
+  function runButton(info, busy) {
+    const sched = !!(info && info.schedule && info.schedule.enabled);
+    const once = !!busy || !!(info && (info.manualRunning || info.running));
+    if (sched) return { state: "stop", label: "Stop", icon: "square", cls: "stop", reason: "schedule", title: `Schedule ON — ${describe(info.schedule)}. Stop dabao to band ho jayega.` };
+    if (once) return { state: "stop", label: "Stop", icon: "square", cls: "stop", reason: "run", title: "Run chal raha hai — Stop dabao to cancel." };
+    return { state: "run", label: "Run", icon: "play", cls: "run", reason: null, title: "Run — once, repeat ya daily" };
+  }
+  return { MIN_MINUTES, DEFAULT_TZ, normalize, intervalMs, nextRun, nextDaily, isDue, fmt, describe, validTz, runButton };
 });

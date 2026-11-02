@@ -162,17 +162,17 @@ async function api(req, res, url, store, runner) {
     const scheds = runner.listSchedules();
     return send(res, 200, store.listWorkflows().map((wf) => {
       const last = runs.find((r) => r.workflowId === wf.id);
-      return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null, schedule: scheds[wf.id] || null };
+      return { id: wf.id, name: wf.name, active: wf.active, updatedAt: wf.updatedAt, nodeCount: wf.nodes.length, nodeTypes: wf.nodes.map((n) => n.type), lastRun: last ? { status: last.status, startedAt: last.startedAt } : null, schedule: scheds[wf.id] || (runner.isManualRunning(wf.id) ? runner.scheduleState(wf.id) : null) };
     }));
   }
   if (p === "/api/schedules" && m === "GET") return send(res, 200, runner.listSchedules());
   if ((mm = p.match(/^\/api\/workflows\/([\w-]+)\/schedule$/))) {
-    if (m === "GET") return send(res, 200, runner.getSchedule(mm[1]) || { schedule: null });
+    if (m === "GET") return send(res, 200, runner.scheduleState(mm[1]));
     if (m === "PUT" || m === "POST") {
       try { return send(res, 200, await runner.setSchedule(mm[1], await body())); }
       catch (e) { return send(res, e.status || 400, { error: e.message }); }
     }
-    if (m === "DELETE") return send(res, 200, runner.stopSchedule(mm[1]) || { schedule: null });
+    if (m === "DELETE") return send(res, 200, runner.stopSchedule(mm[1]) || runner.scheduleState(mm[1]));
   }
   if ((p === "/api/workflows" || p === "/api/import") && m === "POST") {
     const wf = await body();
@@ -192,8 +192,9 @@ async function api(req, res, url, store, runner) {
     const b = await body();
     const wf = b.workflow ? Object.assign(b.workflow, { id: mm[1] }) : store.getWorkflow(mm[1]);
     if (!wf) return send(res, 404, { error: "Workflow not found" });
-    return send(res, 200, await runner.run(wf, { triggerNodeId: b.triggerNodeId, mode: "manual" }));
+    return send(res, 200, await runner.runManual(wf, { triggerNodeId: b.triggerNodeId, mode: "manual" }));
   }
+  if ((mm = p.match(/^\/api\/workflows\/([\w-]+)\/run$/)) && m === "DELETE") return send(res, 200, runner.cancelRun(mm[1])); // Stop button
   if ((mm = p.match(/^\/api\/workflows\/([\w-]+)\/active$/)) && m === "POST") {
     const wf = store.getWorkflow(mm[1]);
     if (!wf) return send(res, 404, { error: "Workflow not found" });

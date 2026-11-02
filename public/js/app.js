@@ -29,7 +29,7 @@
     return `<span class="chip" style="width:${size}px;height:${size}px;background:${m.color}26;border-color:${m.color}55;color:${m.color}" title="${esc(m.label)}">${I(m.icon, Math.round(size * 0.56))}</span>`;
   }
   function chain(types) { return `<div class="chain">${types.slice(0, 7).map((t, i) => (i ? `<span class="arrow">${I("chevron-right", 14)}</span>` : "") + icon(t)).join("")}</div>`; }
-  function statusPill(st) { const m = { success: [I("circle-check", 13), "Success"], error: [I("circle-x", 13), "Failed"], running: [I("loader-circle", 13, "spin"), "Running"], skipped: ["", "Skipped"], disabled: ["", "Disabled"] }; const v = m[st] || ["", st]; return `<span class="status ${st}">${v[0]}${esc(v[1])}</span>`; }
+  function statusPill(st) { const m = { success: [I("circle-check", 13), "Success"], error: [I("circle-x", 13), "Failed"], running: [I("loader-circle", 13, "spin"), "Running"], skipped: ["", "Skipped"], disabled: ["", "Disabled"], stopped: [I("square", 13), "Stopped"] }; const v = m[st] || ["", st]; return `<span class="status ${st}">${v[0]}${esc(v[1])}</span>`; }
   function download(name, obj) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }));
@@ -65,8 +65,8 @@
             <label class="switch" title="Active = runs by itself"><input type="checkbox" data-act="${w.id}" ${w.active ? "checked" : ""}><span class="tr"></span></label>
             <button class="kebab" data-kebab="${w.id}" aria-label="More actions for ${esc(w.name)}" title="More (or right-click / long-press)">${I("ellipsis-vertical", 18)}</button></div>
           ${chain(w.nodeTypes)}${schedPill(w.schedule)}
-          <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? `<span class="ok-c">${I("circle-check", 13)}</span>` : `<span class="err-c">${I("circle-x", 13)}</span>`}` : "never run"}</span>
-          <div class="row"><button class="btn sm" data-run="${w.id}">${I("play", 14)} Run</button><a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
+          <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? `<span class="ok-c">${I("circle-check", 13)}</span>` : w.lastRun.status === "stopped" ? `<span class="meta">${I("square", 12)}</span>` : `<span class="err-c">${I("circle-x", 13)}</span>`}` : "never run"}</span>
+          <div class="row">${runBtnHtml(w.id, w.schedule)}<a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
         </div>`).join("")}</div>`
         : `<div class="empty"><div class="big">${I("workflow", 44)}</div><h3>No workflows yet</h3><p>Start from a ready-made project — viral script generator, Reel auto-post, YouTube upload, Gmail summary…</p><p class="row" style="justify-content:center;margin-top:14px"><a class="btn primary" href="#/projects">${I("layout-grid", 16)} Browse public projects</a><button class="btn" id="new2">${I("plus", 16)} Blank workflow</button></p></div>`}
     </div>`;
@@ -78,17 +78,20 @@
       try { await B.setActive(el.dataset.act, el.checked); toast(el.checked ? "Active — it will run by itself" : "Paused", "ok"); }
       catch (e) { el.checked = !el.checked; toast(e.message, "err"); }
     }));
-    $$("[data-run]").forEach((el) => (el.onclick = () => openRunSheet(el.dataset.run, {
+    $$("[data-run]").forEach((el) => (el.onclick = () => el.dataset.state === "stop" ? stopWorkflow(el.dataset.run, el, () => viewWorkflows()) : openRunSheet(el.dataset.run, {
       runOnce: async () => {
-        el.disabled = true; el.textContent = "Running…";
-        try { const ex = await B.runWorkflow(el.dataset.run); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✓` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"); }
+        const id = el.dataset.run;
+        BUSY.add(id); paintRunBtn(el, YFSchedule.runButton(null, true), 14);
+        try { const ex = await B.runWorkflow(id); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✓` : ex.status === "stopped" ? "Run stopped" : `Failed: ${ex.error}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err"); }
         catch (e) { toast(e.message, "err"); }
-        viewWorkflows();
+        finally { BUSY.delete(id); }
+        if (location.hash.startsWith("#/workflows") || location.hash === "" || location.hash === "#/") viewWorkflows();
       },
       onExec: (ex) => toast(ex.status === "success" ? `First run done ✓` : `First run failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"),
       after: () => viewWorkflows(),
     })));
     if (list.some((w) => w.schedule && w.schedule.schedule && w.schedule.schedule.enabled) && !B.alwaysOn) $(".page").insertAdjacentHTML("afterbegin", alwaysOnNote());
+    watchRunBtns();
   }
 
 
@@ -202,6 +205,43 @@
   function schedPill(info) {
     if (!info || !info.schedule || !info.schedule.enabled) return "";
     return `<span class="sched-pill" title="Schedule ON">${I("calendar-clock", 13)} ${esc(info.describe)} · next ${esc(YFSchedule.fmt(Date.parse(info.nextRunAt), info.schedule.tz))}</span>`;
+  }
+  // ---------- v4.1: Run <-> Stop toggle (editor + workflow list, survives reload: read from saved schedule state)
+  let edStateTimer = null;
+  const BUSY = new Set(); // workflow ids with a one-time run going on in this tab
+  function paintRunBtn(btn, st, size) {
+    if (!btn) return;
+    btn.dataset.state = st.state; btn.title = st.title; btn.disabled = false;
+    btn.classList.toggle("stop", st.state === "stop");
+    if (btn.id === "run") btn.classList.toggle("run", st.state === "run");
+    btn.setAttribute("aria-label", st.state === "stop" ? "Stop" : "Run");
+    btn.innerHTML = `${I(st.icon, size || 16)}<span class="lbl-txt">${st.label}</span>`;
+  }
+  function runBtnHtml(id, info) {
+    const st = YFSchedule.runButton(info, BUSY.has(id));
+    return `<button class="btn sm${st.state === "stop" ? " stop" : ""}" data-run="${id}" data-state="${st.state}" title="${esc(st.title)}" aria-label="${st.label}">${I(st.icon, 14)}<span class="lbl-txt">${st.label}</span></button>`;
+  }
+  async function stopWorkflow(id, btn, after) {
+    if (btn) { btn.disabled = true; btn.innerHTML = `${I("loader-circle", 14, "spin")}<span class="lbl-txt">Stopping…</span>`; }
+    try {
+      let inf = null; try { inf = await B.getSchedule(id); } catch (_) { /* */ }
+      await B.cancelRun(id); // one-time run (or a scheduled run in progress) stops
+      if (inf && inf.schedule && inf.schedule.enabled) await B.stopSchedule(id);
+      BUSY.delete(id);
+      toast(inf && inf.schedule && inf.schedule.enabled ? "Schedule stopped" : "Run stopped", "ok");
+    } catch (e) { toast(e.message, "err"); }
+    if (after) after();
+  }
+  // keep list buttons in sync while the page is open (a scheduled run ends, another tab stops it…)
+  let runWatch = null;
+  function watchRunBtns() {
+    clearInterval(runWatch);
+    runWatch = setInterval(async () => {
+      const btns = $$("[data-run]"); if (!btns.length) return clearInterval(runWatch);
+      let list; try { list = await B.listWorkflows(); } catch (_) { return; }
+      const by = Object.fromEntries(list.map((w) => [w.id, w]));
+      btns.forEach((b) => { if (b.disabled) return; const w = by[b.dataset.run]; if (!w) return; const st = YFSchedule.runButton(w.schedule, BUSY.has(w.id)); if (b.dataset.state !== st.state) paintRunBtn(b, st, 14); });
+    }, 5000);
   }
   async function openRunSheet(wfId, opts = {}) {
     closePop();
@@ -419,8 +459,12 @@
     $("#psearch").oninput = (e) => renderPalette(e.target.value);
     $("#wfname").oninput = () => setDirty(true);
     $("#save").onclick = () => save(true);
-    $("#run").onclick = () => openRunSheet(ED.wf.id, { beforeSave: async () => (await save(false)).id, runOnce: runNow, onExec: (ex) => showExec(ex), after: () => refreshSchedPill() });
+    $("#run").onclick = () => ($("#run").dataset.state === "stop" && ED.wf.id
+      ? stopWorkflow(ED.wf.id, $("#run"), () => refreshSchedPill())
+      : openRunSheet(ED.wf.id, { beforeSave: async () => (await save(false)).id, runOnce: runNow, onExec: (ex) => showExec(ex), after: () => refreshSchedPill() }));
     refreshSchedPill();
+    clearInterval(edStateTimer);
+    edStateTimer = setInterval(() => { if (!$("#run") || !ED) return clearInterval(edStateTimer); if (!$("#run").disabled) refreshSchedPill(); }, 5000);
     $("#active").onchange = toggleActive;
     $("#zin").onclick = () => ed.zoom_in();
     $("#zout").onclick = () => ed.zoom_out();
@@ -539,27 +583,31 @@
   }
   async function refreshSchedPill() {
     const el = $("#ed-sched"); if (!el || !ED.wf || !ED.wf.id) return;
-    try { const inf = await B.getSchedule(ED.wf.id); el.innerHTML = schedPill(inf); } catch (_) { /* */ }
+    try { const inf = await B.getSchedule(ED.wf.id); el.innerHTML = schedPill(inf); paintRunBtn($("#run"), YFSchedule.runButton(inf, BUSY.has(ED.wf.id))); } catch (_) { /* */ }
   }
   async function runNow() {
-    const btn = $("#run"); btn.disabled = true; btn.innerHTML = `${I("loader-circle", 16, "spin")}<span class='lbl-txt'>Running…</span>`;
-    $$(".drawflow-node").forEach((n) => n.classList.remove("run-success", "run-error", "run-skipped", "run-disabled"));
+    const btn = $("#run");
+    if (ED.wf.id && BUSY.has(ED.wf.id)) return;
+    $$(".drawflow-node").forEach((n) => n.classList.remove("run-success", "run-error", "run-skipped", "run-disabled", "run-stopped"));
+    let id = ED.wf.id;
     try {
-      const wf = await save(false);
+      const wf = await save(false); id = wf.id;
+      BUSY.add(id); paintRunBtn(btn, YFSchedule.runButton(null, true)); // Run -> red Stop while it runs
       const trig = ED.selected && ED.map[ED.selected] && META[ED.map[ED.selected].type].trigger ? ED.map[ED.selected].id : undefined;
       const ex = await B.runWorkflow(wf.id, collect(), trig);
-      showExec(ex);
+      if ($("#run") === btn) showExec(ex);
     } catch (e) { toast(e.message, "err"); }
-    btn.disabled = false; btn.innerHTML = `${I("play", 16)}<span class='lbl-txt'>Run</span>`;
+    if (id) BUSY.delete(id);
+    if ($("#run") === btn) await refreshSchedPill(); // back to Run (or stays Stop if a schedule is ON)
   }
   function showExec(ex) {
     ED.lastExec = ex;
     for (const r of ex.nodes) {
       const df = ED.byNodeId[r.id]; const ne = df && $(`#node-${df}`); if (!ne) continue;
       ne.classList.add(`run-${r.status}`);
-      $(".nf-badge", ne).textContent = r.status === "success" ? `✓ ${r.outputCount} item${r.outputCount === 1 ? "" : "s"}` : r.status === "error" ? "✗ error" : r.status;
+      $(".nf-badge", ne).textContent = r.status === "success" ? `✓ ${r.outputCount} item${r.outputCount === 1 ? "" : "s"}` : r.status === "error" ? "✗ error" : r.status === "stopped" ? "stopped" : r.status;
     }
-    toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err");
+    toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : ex.status === "stopped" ? "Run stopped" : `Failed: ${ex.error}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err");
     const d = $("#drawer");
     d.innerHTML = `<h4>${statusPill(ex.status)} Run log <span class="meta">${ex.durationMs} ms</span><span class="spacer"></span><button class="btn sm ghost" id="dclose" aria-label="Close">${I("close", 16)}</button></h4>
       ${ex.error ? `<div class="note warn" style="margin:0 0 10px">${esc(ex.error)}</div>` : ""}
@@ -703,7 +751,7 @@
     const pendingShare = sessionStorage.getItem("yf_share");
     if (pendingShare) { sessionStorage.removeItem("yf_share"); history.replaceState(null, "", location.pathname + pendingShare); }
     if (B.edition === "web") {
-      if (!schedulerOn) { schedulerOn = true; B.startScheduler((ex) => toast(`${ex.workflowName}: ${ex.status === "success" ? "ran ✓" : "failed"}`, ex.status === "success" ? "ok" : "err")); }
+      if (!schedulerOn) { schedulerOn = true; B.startScheduler((ex) => { toast(`${ex.workflowName}: ${ex.status === "success" ? "ran ✓" : ex.status === "stopped" ? "stopped" : "failed"}`, ex.status === "success" || ex.status === "stopped" ? "ok" : "err"); if ($("#run")) refreshSchedPill(); }); }
       const seedKey = "yf_" + (window.YF_NS || "") + "seeded";
       if (!localStorage.getItem(seedKey)) {
         localStorage.setItem(seedKey, "1");

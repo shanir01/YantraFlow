@@ -1,6 +1,6 @@
 {
   "name": "yantraflow",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Free n8n-style automation platform: link preview to Telegram, SEED-based AI auto-posting (Telegram, Instagram, YouTube, X, LinkedIn), schedules (every N / daily at HH:MM), 23 ready-made projects and a drag-and-drop editor. Runs in the browser or 24x7 on your PC / Android (Termux).",
   "main": "src/server.js",
   "bin": {

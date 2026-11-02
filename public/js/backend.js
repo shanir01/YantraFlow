@@ -34,6 +34,7 @@
     getSchedule: (id) => req("GET", `api/workflows/${id}/schedule`),
     setSchedule: (id, sch) => req("PUT", `api/workflows/${id}/schedule`, sch),
     stopSchedule: (id) => req("DELETE", `api/workflows/${id}/schedule`),
+    cancelRun: (id) => req("DELETE", `api/workflows/${id}/run`),
     alwaysOn: true,
   };
 
@@ -58,8 +59,9 @@
     let keep = runs.slice(0, 60);
     for (;;) { try { LS.set("runs", keep); break; } catch (e) { if (keep.length <= 1) break; keep = keep.slice(0, Math.floor(keep.length / 2)); } }
   }
-  async function run(wf, triggerNodeId, mode, triggerData) {
-    const ex = await YFEngine.runWorkflow(JSON.parse(JSON.stringify(wf)), { types: YFWeb.types, evaluate: YFWeb.evaluate, triggerNodeId, triggerData, mode, settings: LS.get("creds", {}) });
+  const aborts = new Map(); // v4.1 Stop button: "manual:<id>" | "sched:<id>" -> AbortController
+  async function run(wf, triggerNodeId, mode, triggerData, signal) {
+    const ex = await YFEngine.runWorkflow(JSON.parse(JSON.stringify(wf)), { types: YFWeb.types, evaluate: YFWeb.evaluate, triggerNodeId, triggerData, mode, signal, settings: LS.get("creds", {}) });
     saveRun(ex);
     return ex;
   }
@@ -68,7 +70,7 @@
   function schedInfo(wid) {
     const e = LS.get("schedules", {})[wid]; if (!e) return null;
     const now = Date.now(); const next = YFSchedule.nextRun(e.schedule, e, now);
-    return { workflowId: wid, schedule: e.schedule, startedAt: e.startedAt, lastRunAt: e.lastRunAt, nextRunAt: next == null ? null : new Date(Math.max(next, now)).toISOString(), running: schedRunning.has(wid), runs: e.runs || 0, log: (e.log || []).slice(-20).reverse(), describe: YFSchedule.describe(e.schedule) };
+    return { workflowId: wid, schedule: e.schedule, startedAt: e.startedAt, lastRunAt: e.lastRunAt, nextRunAt: next == null ? null : new Date(Math.max(next, now)).toISOString(), running: schedRunning.has(wid), manualRunning: aborts.has("manual:" + wid), runs: e.runs || 0, log: (e.log || []).slice(-20).reverse(), describe: YFSchedule.describe(e.schedule) };
   }
   const schedRunning = new Set();
   async function runScheduled(wid) {
@@ -78,7 +80,8 @@
     const now = new Date().toISOString();
     all[wid].lastRunAt = now; LS.set("schedules", all); // claim the slot first (no double runs, even with 2 tabs)
     schedRunning.add(wid);
-    let ex; try { ex = await run(wf, startNode(wf), "schedule"); } catch (e) { ex = { status: "error", error: e.message }; } finally { schedRunning.delete(wid); }
+    const ac = new AbortController(); aborts.set("sched:" + wid, ac);
+    let ex; try { ex = await run(wf, startNode(wf), "schedule", undefined, ac.signal); } catch (e) { ex = { status: "error", error: e.message }; } finally { schedRunning.delete(wid); aborts.delete("sched:" + wid); }
     all = LS.get("schedules", {});
     if (all[wid]) { all[wid].runs = (all[wid].runs || 0) + 1; all[wid].log = (all[wid].log || []).concat([{ at: now, status: ex.status, error: ex.error || null, executionId: ex.id || null }]).slice(-50); LS.set("schedules", all); }
     return ex;
@@ -106,25 +109,30 @@
     // v4 schedules — website: runs only while this tab is open (saved in this browser, resumes when you reopen)
     alwaysOn: false,
     async listSchedules() { const out = {}; for (const id of Object.keys(LS.get("schedules", {}))) out[id] = schedInfo(id); return out; },
-    async getSchedule(wid) { return schedInfo(wid) || { schedule: null }; },
+    async getSchedule(wid) { return schedInfo(wid) || { schedule: null, manualRunning: aborts.has("manual:" + wid) }; },
     async setSchedule(wid, input) {
       const wf = wfs()[wid]; if (!wf) throw new Error("Save the workflow first");
       const { schedule, warnings } = YFSchedule.normalize(input || {});
-      if (schedule.mode === "once") { const execution = await run(wf, startNode(wf), "manual"); return { info: schedInfo(wid), warnings, execution }; }
+      if (schedule.mode === "once") { const execution = await LocalBackend.runWorkflow(wid, wf, startNode(wf)); return { info: schedInfo(wid), warnings, execution }; }
       const all = LS.get("schedules", {}); const prev = all[wid] || {};
       all[wid] = { schedule, startedAt: new Date().toISOString(), lastRunAt: null, runs: prev.runs || 0, log: prev.log || [] };
       LS.set("schedules", all);
       let execution; if (input && input.runNow) execution = await runScheduled(wid);
       return { info: schedInfo(wid), warnings, execution };
     },
-    async stopSchedule(wid) { const all = LS.get("schedules", {}); if (all[wid]) { all[wid].schedule.enabled = false; LS.set("schedules", all); } return schedInfo(wid) || { schedule: null }; },
+    async stopSchedule(wid) { const all = LS.get("schedules", {}); if (all[wid]) { all[wid].schedule.enabled = false; LS.set("schedules", all); } const ac = aborts.get("sched:" + wid); if (ac) ac.abort(); return schedInfo(wid) || { schedule: null }; },
+    async cancelRun(wid) { let stopped = false; for (const k of ["manual:" + wid, "sched:" + wid]) { const ac = aborts.get(k); if (ac) { ac.abort(); stopped = true; } } return { stopped }; },
     async importWorkflow(wf) {
       YFEngine.validate(wf);
       const bad = wf.nodes.filter((n) => !YFWeb.types[n.type]).map((n) => n.type);
       if (bad.length) throw new Error("Unknown node types: " + [...new Set(bad)].join(", "));
       delete wf.id; wf.active = false; return LocalBackend.saveWorkflow(wf);
     },
-    async runWorkflow(wid, wf, triggerNodeId) { return run(wf || wfs()[wid], triggerNodeId, "manual"); },
+    async runWorkflow(wid, wf, triggerNodeId) {
+      const key = "manual:" + wid; const ac = new AbortController(); aborts.set(key, ac);
+      try { return await run(wf || wfs()[wid], triggerNodeId, "manual", undefined, ac.signal); }
+      finally { if (aborts.get(key) === ac) aborts.delete(key); }
+    },
     async setActive(wid, active) {
       const all = wfs(); const wf = all[wid]; if (!wf) throw new Error("Save the workflow first");
       if (active && !YFEngine.findTriggers(wf, YFWeb.types).some((n) => ["scheduleTrigger", "sheetTrigger"].includes(n.type))) throw new Error("In the web version, Active works with Schedule and Sheet triggers (while this tab stays open). Webhook & Folder Watch need the full version.");

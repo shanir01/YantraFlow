@@ -14,10 +14,11 @@ class Runner {
     this.timers = [];
     this.lastFire = {}; // key -> ms
     this.running = new Set();
+    this.aborts = new Map(); // "manual:<id>" | "sched:<id>" -> AbortController (Stop button)
   }
-  async run(wf, { triggerNodeId, triggerData, mode } = {}) {
+  async run(wf, { triggerNodeId, triggerData, mode, signal } = {}) {
     const exec = await engine.runWorkflow(JSON.parse(JSON.stringify(wf)), {
-      types: BY_TYPE, evaluate, triggerNodeId, triggerData, mode,
+      types: BY_TYPE, evaluate, triggerNodeId, triggerData, mode, signal,
       settings: this.store.getSettings(),
       extraCtx: { filesDir: this.store.filesDir, dataDir: this.store.dir },
     });
@@ -44,11 +45,26 @@ class Runner {
     return null;
   }
 
+  // ---------- v4.1: Run <-> Stop. A manual run can be cancelled; Stop also ends a scheduled run in progress.
+  async runManual(wf, opts = {}) {
+    const key = `manual:${wf.id}`;
+    const ac = new AbortController();
+    this.aborts.set(key, ac); this.running.add(key);
+    try { return await this.run(wf, Object.assign({}, opts, { mode: opts.mode || "manual", signal: ac.signal })); }
+    finally { if (this.aborts.get(key) === ac) { this.aborts.delete(key); this.running.delete(key); } }
+  }
+  isManualRunning(id) { return this.running.has(`manual:${id}`); }
+  cancelRun(id) {
+    let stopped = false;
+    for (const key of [`manual:${id}`, `sched:${id}`]) { const ac = this.aborts.get(key); if (ac) { ac.abort(); stopped = true; } }
+    return { stopped };
+  }
+
   // ---------- v4 schedules (Run once / Repeat every N / Daily at HH:MM), saved in data/schedules.json
   scheduleInfo(id, e, now = Date.now()) {
     if (!e) return null;
     const next = SCH.nextRun(e.schedule, e, now);
-    return { workflowId: id, schedule: e.schedule, startedAt: e.startedAt || null, lastRunAt: e.lastRunAt || null, nextRunAt: next == null ? null : new Date(Math.max(next, now)).toISOString(), running: this.running.has(`sched:${id}`), runs: e.runs || 0, log: (e.log || []).slice(-20).reverse(), describe: SCH.describe(e.schedule) };
+    return { workflowId: id, schedule: e.schedule, startedAt: e.startedAt || null, lastRunAt: e.lastRunAt || null, nextRunAt: next == null ? null : new Date(Math.max(next, now)).toISOString(), running: this.running.has(`sched:${id}`), manualRunning: this.running.has(`manual:${id}`), runs: e.runs || 0, log: (e.log || []).slice(-20).reverse(), describe: SCH.describe(e.schedule) };
   }
   listSchedules() {
     const all = this.store.getSchedules(); const out = {};
@@ -56,13 +72,14 @@ class Runner {
     return out;
   }
   getSchedule(id) { return this.scheduleInfo(id, this.store.getSchedules()[id]); }
+  scheduleState(id) { return this.getSchedule(id) || { schedule: null, manualRunning: this.isManualRunning(id) }; }
   /* input: { mode, every, unit, at, tz, runNow } -> { info, warnings, execution? } */
   async setSchedule(id, input = {}, now = Date.now()) {
     const wf = this.store.getWorkflow(id);
     if (!wf) throw Object.assign(new Error("Workflow not found"), { status: 404 });
     const { schedule, warnings } = SCH.normalize(input);
     if (schedule.mode === "once") {
-      const ex = await this.run(wf, { triggerNodeId: this.startNode(wf), mode: "manual" });
+      const ex = await this.runManual(wf, { triggerNodeId: this.startNode(wf), mode: "manual" });
       return { info: this.getSchedule(id), warnings, execution: ex };
     }
     const all = this.store.getSchedules();
@@ -77,6 +94,7 @@ class Runner {
     const all = this.store.getSchedules();
     if (!all[id]) return null;
     all[id].schedule.enabled = false; this.store.saveSchedules(all);
+    const ac = this.aborts.get(`sched:${id}`); if (ac) ac.abort(); // a scheduled run in progress stops too
     return this.getSchedule(id);
   }
   removeSchedule(id) { const all = this.store.getSchedules(); if (all[id]) { delete all[id]; this.store.saveSchedules(all); } }
@@ -95,10 +113,11 @@ class Runner {
     all[id].lastRunAt = new Date(now).toISOString(); // claim this slot first (no double runs)
     this.store.saveSchedules(all);
     this.running.add(key);
+    const ac = new AbortController(); this.aborts.set(key, ac);
     let ex;
-    try { ex = await this.run(wf, { triggerNodeId: this.startNode(wf), mode }); }
+    try { ex = await this.run(wf, { triggerNodeId: this.startNode(wf), mode, signal: ac.signal }); }
     catch (e) { ex = { id: null, status: "error", error: e.message }; }
-    finally { this.running.delete(key); }
+    finally { this.running.delete(key); this.aborts.delete(key); }
     all = this.store.getSchedules();
     if (all[id]) {
       all[id].runs = (all[id].runs || 0) + 1;

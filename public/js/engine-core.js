@@ -99,6 +99,7 @@
       const results = {}; // id -> outputs [[items],[items]]
       const nodeData = {}; // name -> { json, items }
       for (const id of order) {
+        if (opts.signal && opts.signal.aborted) throw stoppedError();
         const node = byId[id];
         const def = types[node.type];
         const rec = { id, name: node.name, type: node.type, status: "running", startedAt: new Date().toISOString(), ms: 0, inputCount: 0, outputCount: 0, output: null, error: null };
@@ -139,7 +140,7 @@
         exec.nodes.push(rec);
         if (opts.onUpdate) opts.onUpdate(exec);
         try {
-          let outs = await def.run(ctx);
+          let outs = await untilStopped(def.run(ctx), opts.signal);
           if (!Array.isArray(outs)) outs = [[]];
           outs = outs.map((o) => (Array.isArray(o) ? o : []).map((it) => (it && typeof it === "object" && !Array.isArray(it) ? it : { value: it })));
           results[id] = outs;
@@ -149,6 +150,7 @@
           const firstNonEmpty = outs.find((o) => o.length) || [];
           nodeData[node.name] = { json: firstNonEmpty[0] || {}, items: firstNonEmpty, outputs: outs };
         } catch (e) {
+          if (e && e.stopped) { rec.status = "stopped"; rec.error = e.message; rec.ms = Date.now() - n0; throw e; }
           rec.error = e && e.message ? e.message : String(e);
           rec.status = "error";
           if (node.continueOnFail) {
@@ -173,13 +175,26 @@
         }
       }
     } catch (e) {
-      exec.status = "error";
+      exec.status = e && e.stopped ? "stopped" : "error";
       exec.error = e && e.message ? e.message : String(e);
     }
     exec.finishedAt = new Date().toISOString();
     exec.durationMs = Date.now() - t0;
     if (opts.onUpdate) opts.onUpdate(exec);
     return exec;
+  }
+
+  // v4.1: Stop button — a run can be cancelled (AbortSignal). Checked before every node,
+  // and a node that is still waiting (HTTP, Wait, AI…) is left behind at once.
+  function stoppedError() { return Object.assign(new Error("Stopped — tumne Stop dabaya"), { stopped: true }); }
+  function untilStopped(promise, signal) {
+    if (!signal) return promise;
+    if (signal.aborted) return Promise.reject(stoppedError());
+    return new Promise((resolve, reject) => {
+      const onAbort = () => reject(stoppedError());
+      signal.addEventListener("abort", onAbort, { once: true });
+      Promise.resolve(promise).then((v) => { signal.removeEventListener("abort", onAbort); resolve(v); }, (e) => { signal.removeEventListener("abort", onAbort); reject(e); });
+    });
   }
 
   function defaultOf(def, key) {

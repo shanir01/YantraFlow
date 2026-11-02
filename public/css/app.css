@@ -38,6 +38,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.run{background:linear-gradient(135deg,#16a34a,#22c55e);border:0;color:#fff;box-shadow:0 6px 22px rgba(34,197,94,.3)}
 .btn.ghost{background:transparent}
 .btn.danger{color:#ff9aac;border-color:rgba(255,77,109,.35)}
+.btn.stop{background:linear-gradient(135deg,#dc2626,#ef4444);border:0;color:#fff;box-shadow:0 6px 22px rgba(239,68,68,.32)}
+.btn.stop:hover{filter:brightness(1.08)}
 .btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
 .btn.icon{padding:8px 10px}
 .btn[disabled]{opacity:.55;pointer-events:none}
@@ -152,6 +154,7 @@ pre.json{margin:8px 0 0;padding:12px;border-radius:12px;background:#080a11;borde
 .run-skipped .nf-badge,.run-disabled .nf-badge{display:block;background:#1d2030;color:var(--mut);border:1px solid var(--line2)}
 .drawflow-node.run-success{border-color:rgba(34,197,94,.6)}
 .drawflow-node.run-error{border-color:rgba(255,77,109,.8)}
+.drawflow-node.run-stopped{border-color:rgba(250,204,21,.7)}
 .drawflow-node.run-running{border-color:var(--warn);box-shadow:0 0 0 3px rgba(245,158,11,.25)}
 .drawflow-node.is-disabled{opacity:.5}
 .drawflow-node.t-trigger{border-radius:28px 16px 16px 28px}
@@ -203,6 +206,7 @@ pre.json{margin:8px 0 0;padding:12px;border-radius:12px;background:#080a11;borde
   .ed-top{gap:6px;padding:8px}
   .ed-top .name{font-size:15px;padding:7px 6px}
   .ed-top .lbl-txt{display:none}
+  .ed-top #run .lbl-txt{display:inline}
   .hide-m{display:none!important}
   .drawflow .drawflow-node{width:190px}
   .toast{bottom:auto;top:64px;transform:translateX(-50%) translateY(-20px)}
