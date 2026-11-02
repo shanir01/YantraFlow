@@ -3,6 +3,7 @@
 (function () {
   "use strict";
   const META = window.YF_NODE_META;
+  const AIM = window.YFAiModel || { pickModel: (b, m) => ({ model: (m == null ? "" : String(m)).trim() || "auto", extra: {} }), modelError: () => null };
   const s = (v) => (v === undefined || v === null ? "" : String(v));
   const one = (items) => [items];
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -95,13 +96,15 @@
         const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
         const messages = []; const sys = s(ctx.p("system", i)); if (sys) messages.push({ role: "system", content: sys });
         messages.push({ role: "user", content: need(ctx.p("prompt", i), "Prompt") });
+        const pick = AIM.pickModel(base, s(ctx.p("model", i) || st.model));
+        const badM = AIM.badModel && AIM.badModel(base, pick.model); if (badM) throw new Error(badM);
         let r;
         try {
-          r = await http(`${base}/chat/completions`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s(ctx.p("apiKey", i) || st.apiKey || "local")}` }, body: JSON.stringify({ model: s(ctx.p("model", i) || st.model || "auto"), messages, temperature: Number(ctx.raw.temperature ?? 0.7), max_tokens: Number(ctx.raw.maxTokens) || 500 }) });
+          r = await http(`${base}/chat/completions`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${s(ctx.p("apiKey", i) || st.apiKey || "local")}` }, body: JSON.stringify({ ...pick.extra, model: pick.model, messages, temperature: Number(ctx.raw.temperature ?? 0.7), max_tokens: Number(ctx.raw.maxTokens) || 500 }) });
         } catch (e) { throw new Error(`Could not reach the AI at ${base}. Start FreeLLM-Router on this device, or set an online OpenAI-compatible Base URL + key on the Keys page (e.g. https://api.groq.com/openai/v1).`); }
-        if (!r.ok) throw apiError("AI", r);
+        if (!r.ok) { const e = apiError("AI", r); const f = AIM.modelError(base, pick.model, r.status, e.message.replace(/^AI answered \d+: /, "")); throw f ? new Error(f) : e; }
         const c = r.data && r.data.choices && r.data.choices[0];
-        out.push({ ...ctx.items[i], text: s(c && c.message && c.message.content).trim(), model: (r.data && r.data.model) || "", usage: (r.data && r.data.usage) || null });
+        out.push({ ...ctx.items[i], text: s(c && c.message && c.message.content).trim(), model: (r.data && r.data.model) || pick.model, usage: (r.data && r.data.usage) || null });
       }
       return one(out);
     },

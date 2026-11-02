@@ -201,7 +201,7 @@ async function api(req, res, url, store, runner) {
   if (p === "/api/credentials/test" && m === "POST") {
     const b = await body();
     const tests = {
-      ai: [{ id: "a", type: "aiChat", name: "AI test", params: { prompt: "Reply with exactly: YantraFlow connected ✅", maxTokens: 30 } }],
+      ai: [{ id: "a", type: "aiChat", name: "AI test", params: { prompt: "Reply with exactly: YantraFlow connected ✅", maxTokens: 300 } }],
       telegram: [{ id: "a", type: "telegram", name: "Telegram test", params: { text: "✅ YantraFlow is connected to this chat!" } }],
     }[b.service];
     if (!tests) return send(res, 400, { error: "Test is available for ai and telegram" });

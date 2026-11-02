@@ -438,7 +438,7 @@ window.YF_NODE_META = [
   "group": "AI",
   "icon": "sparkles",
   "color": "#f59e0b",
-  "description": "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1"
+  "description": "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1. Model blank = auto-pick (Groq: openai/gpt-oss-120b, Gemini: gemini-3.8-flash)."
  },
  {
   "inputs": 1,

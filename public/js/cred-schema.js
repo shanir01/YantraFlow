@@ -5,11 +5,11 @@
   else root.YF_CRED_SCHEMA = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   return [
-    { id: "ai", title: "AI (OpenAI-compatible)", icon: "sparkles", help: "Default works with your FreeLLM-Router on http://localhost:8787/v1. Or use Groq / OpenRouter / Gemini OpenAI-endpoints with your own key.",
+    { id: "ai", title: "AI (OpenAI-compatible)", icon: "sparkles", help: "Default works with your FreeLLM-Router on http://localhost:8787/v1. Or use Groq / OpenRouter / Gemini OpenAI-endpoints with your own key. Model blank = auto-pick: Groq (https://api.groq.com/openai/v1) uses openai/gpt-oss-120b, Gemini (https://generativelanguage.googleapis.com/v1beta/openai) uses gemini-3.8-flash, OpenRouter uses openrouter/auto, OpenAI uses gpt-4o-mini, FreeLLM-Router uses auto.",
       test: true, fields: [
         { key: "baseUrl", label: "Base URL", placeholder: "http://localhost:8787/v1" },
         { key: "apiKey", label: "API key", secret: true, placeholder: "local (FreeLLM-Router) or your key" },
-        { key: "model", label: "Model", placeholder: "auto" },
+        { key: "model", label: "Model", placeholder: "blank = auto-pick · Groq: openai/gpt-oss-120b · Gemini: gemini-3.8-flash" },
       ] },
     { id: "telegram", title: "Telegram bot", icon: "telegram", help: "Telegram → @BotFather → /newbot → copy token. Chat ID: message your bot, then open https://api.telegram.org/bot<TOKEN>/getUpdates. For a channel use @channelname and add the bot as admin.",
       test: true, fields: [

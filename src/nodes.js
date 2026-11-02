@@ -9,6 +9,7 @@ const { sendMail } = require("./smtp");
 const { parseFeed } = require("./rss");
 const { parseCsv } = require("./csv");
 const { oauth1Header } = require("./oauth1");
+const AIM = require("../public/js/ai-model.js");
 
 // API base URLs (overridable with env vars — handy for tests or proxies).
 const API = {
@@ -324,7 +325,7 @@ def({
 // ===== AI
 def({
   type: "aiChat", label: "AI Chat", group: "AI", icon: "sparkles", color: "#f59e0b",
-  description: "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1",
+  description: "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1. Model blank = auto-pick (Groq: openai/gpt-oss-120b, Gemini: gemini-3.8-flash).",
   params: [
     { key: "prompt", label: "Prompt", type: "textarea", default: "Write a short motivational quote in Hinglish." },
     { key: "system", label: "System message", type: "textarea", default: "You are a helpful assistant. Keep answers short." },
@@ -340,7 +341,10 @@ def({
     for (let i = 0; i < ctx.items.length; i++) {
       const base = s(ctx.p("baseUrl", i) || st.baseUrl || "http://localhost:8787/v1").replace(/\/+$/, "");
       const key = s(ctx.p("apiKey", i) || st.apiKey || "local");
-      const model = s(ctx.p("model", i) || st.model || "auto");
+      const pick = AIM.pickModel(base, s(ctx.p("model", i) || st.model));
+      const model = pick.model;
+      const badM = AIM.badModel(base, model);
+      if (badM) throw new Error(badM);
       const messages = [];
       const sys = s(ctx.p("system", i));
       if (sys) messages.push({ role: "system", content: sys });
@@ -348,10 +352,10 @@ def({
       const r = await http(`${base}/chat/completions`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model, messages, temperature: Number(ctx.raw.temperature ?? 0.7), max_tokens: Number(ctx.raw.maxTokens) || 500 }),
+        body: JSON.stringify({ ...pick.extra, model, messages, temperature: Number(ctx.raw.temperature ?? 0.7), max_tokens: Number(ctx.raw.maxTokens) || 500 }),
         timeoutMs: 120000,
       }).catch((e) => { throw new Error(`${e.message}. Is your AI server running? (FreeLLM-Router: start it first, or change Base URL on the Credentials page)`); });
-      if (!r.ok) throw apiError("AI", r);
+      if (!r.ok) { const e = apiError("AI", r); const f = AIM.modelError(base, model, r.status, e.message.replace(/^AI answered \d+: /, "")); throw f ? new Error(f) : e; }
       const text = r.data && r.data.choices && r.data.choices[0] && r.data.choices[0].message ? s(r.data.choices[0].message.content).trim() : "";
       out.push({ ...ctx.items[i], text, model: (r.data && r.data.model) || model, usage: (r.data && r.data.usage) || null });
     }

@@ -160,7 +160,7 @@ All keys go on the **Keys** page (🔑). They stay on your device.
 
 | Service | How to get it | Free? |
 |---|---|---|
-| 🤖 **AI** | Easiest: run [FreeLLM-Router](https://github.com/shanir01/FreeLLM-Router) → Base URL `http://localhost:8787/v1`, key `local`, model `auto`. Or any OpenAI-compatible API, e.g. Groq `https://api.groq.com/openai/v1` + key from console.groq.com/keys | Free tiers (daily limits) |
+| 🤖 **AI** | Easiest: run [FreeLLM-Router](https://github.com/shanir01/FreeLLM-Router) → Base URL `http://localhost:8787/v1`, key `local`, model `auto`. Or any OpenAI-compatible API, e.g. Groq `https://api.groq.com/openai/v1` + key from console.groq.com/keys (Model blank = auto: Groq `openai/gpt-oss-120b`, Gemini `https://generativelanguage.googleapis.com/v1beta/openai` → `gemini-3.8-flash`, OpenRouter `openrouter/auto`, OpenAI `gpt-4o-mini`) | Free tiers (daily limits) |
 | ✈️ **Telegram** | Telegram → **@BotFather** → `/newbot` → copy token. Chat ID: send your bot a message, open `https://api.telegram.org/bot<TOKEN>/getUpdates`, copy `chat.id`. Channel: use `@channelname` and add the bot as **admin** | Free |
 | 📸 **Instagram** | Needs an Instagram **Business or Creator** account linked to a **Facebook Page** + a Meta app at developers.facebook.com with `instagram_basic`, `instagram_content_publish`, `pages_show_list`. Use Graph API Explorer to get a token, exchange it for a long-lived token (~60 days). IG user ID: `GET /me/accounts?fields=instagram_business_account` | Free (Meta's posting limit applies — about 50 API posts / 24 h, check Meta docs) |
 | 📘 **Facebook Page** | Same Meta app → Page access token with `pages_manage_posts`. Page ID in Page → About | Free |

@@ -105,7 +105,7 @@
       LS.set("creds", v); return LocalBackend.getCreds();
     },
     async testCred(service) {
-      const node = service === "ai" ? { id: "a", type: "aiChat", name: "AI test", params: { prompt: "Reply with exactly: YantraFlow connected ✅", maxTokens: 30 } } : { id: "a", type: "telegram", name: "Telegram test", params: { text: "✅ YantraFlow is connected to this chat!" } };
+      const node = service === "ai" ? { id: "a", type: "aiChat", name: "AI test", params: { prompt: "Reply with exactly: YantraFlow connected ✅", maxTokens: 300 } } : { id: "a", type: "telegram", name: "Telegram test", params: { text: "✅ YantraFlow is connected to this chat!" } };
       const ex = await YFEngine.runWorkflow({ id: "test", name: "test", nodes: [{ id: "t", type: "manualTrigger", name: "Start", params: {} }, node], connections: [{ from: "t", fromOutput: 0, to: "a" }] }, { types: YFWeb.types, evaluate: YFWeb.evaluate, settings: LS.get("creds", {}) });
       return { ok: ex.status === "success", error: ex.error, output: (ex.nodes[1] || {}).output };
     },

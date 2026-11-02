@@ -12,7 +12,7 @@ test("web edition: daily quote template runs with in-browser engine", async () =
   try {
     const win = {};
     const ctx = vm.createContext({ window: win, self: win, fetch, URL, URLSearchParams, FormData, Blob, console, setTimeout });
-    for (const f of ["js/node-meta.js", "js/engine-core.js", "js/web-nodes.js"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "../public", f), "utf8"), ctx);
+    for (const f of ["js/node-meta.js", "js/ai-model.js", "js/engine-core.js", "js/web-nodes.js"]) vm.runInContext(fs.readFileSync(path.join(__dirname, "../public", f), "utf8"), ctx);
     win.YF_TELEGRAM_API = mock.base;
     const wf = JSON.parse(fs.readFileSync(path.join(__dirname, "../public/templates/daily-quote.json"), "utf8"));
     const ex = await win.YFEngine.runWorkflow(wf, { types: win.YFWeb.types, evaluate: win.YFWeb.evaluate, settings: { ai: { baseUrl: `${mock.base}/v1` }, telegram: { botToken: "9:tok", chatId: "77" } } });
