@@ -7,7 +7,7 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const LOGO = "img/logo.svg";
-  const DEV = { name: "Nirbhay Sharma", nick: "Nishu", github: "https://github.com/shanir01", youtube: "https://www.youtube.com/@JavaGoat9", telegram: "https://t.me/javagoat", repo: "https://github.com/shanir01/YantraFlow" };
+  const DEV = { name: "Nirbhay Sharma", nick: "Nishu", github: "https://github.com/shanir01", youtube: "https://www.youtube.com/@JavaGoat9", telegram: "https://t.me/javagoat", email: "shanir01.ai@gmail.com", repo: "https://github.com/shanir01/YantraFlow" };
   const CATS = ["All", "YouTube", "Instagram", "Telegram", "Gmail", "AI Content", "Video"];
 
   // ---------------------------------------------------------------- prefs + i18n
@@ -436,6 +436,7 @@
       <section class="card set"><h3>⚙️ ${hi ? "Naam ka matlab" : "The name"}</h3><p class="sub">${hi ? "<b>Yantra</b> = machine / yantra, <b>Flow</b> = kaam ka bahav. Logo me gear (yantra) ke andar 3 nodes ek flow me milte hain." : "<b>Yantra</b> means machine (and the sacred geometric 'yantra'); <b>Flow</b> is work moving by itself. The logo is a gear with three nodes merging into one flow."}</p></section>
       <section class="card set"><h3>✨ ${hi ? "Kya kar sakte ho" : "What you can do"}</h3><ul class="needs"><li>${hi ? "Drag-drop workflow editor (mobile pe tap)" : "Drag-and-drop workflow editor (tap-based on phones)"}</li><li>${hi ? "Schedule, webhook, AI, Telegram, Instagram, YouTube, Gmail, HTTP" : "Schedules, webhooks, AI, Telegram, Instagram, YouTube, Gmail, HTTP"}</li><li>${window.YF_PROJECTS.length} ${hi ? "ready Public projects (abhi sab FREE)" : "ready-made Public projects (all FREE right now)"}</li><li>${hi ? "Keys sirf tumhare device pe" : "Your keys stay on your device"}</li></ul></section>
       <section class="card set"><h3>🌐 ${hi ? "Do version" : "Two versions"}</h3><p class="sub">${hi ? "<b>Website</b>: browser me, login ke saath, install nahi. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email." : "<b>Website</b>: runs in your browser with a free account, no install. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email."}</p><a class="btn primary" style="margin-top:10px" href="${DEV.repo}" target="_blank" rel="noopener">⬇ ${hi ? "Full version (GitHub)" : "Get the full version (GitHub)"}</a></section>
+      <section class="card set"><h3>📬 ${hi ? "Support / Contact" : "Support & contact"}</h3><p class="sub">${hi ? "Koi sawaal, bug ya idea? Email karo:" : "Questions, bugs or ideas? Email us:"} <a href="mailto:${DEV.email}">${DEV.email}</a></p></section>
       <p class="meta" style="text-align:center">Open source · MIT License · Drawflow (MIT) · supabase-js (MIT)<br>Created by Nirbhay Sharma &amp; Tab</p>`);
   }
   function viewDeveloper() {
@@ -443,7 +444,7 @@
     const link = (href, ic, label, sub) => `<a class="dev-link" href="${href}" target="_blank" rel="noopener"><span class="dl-ic">${ic}</span><div><b>${label}</b><small>${sub}</small></div><span>↗</span></a>`;
     app().view().innerHTML = page(`<a class="backlink" href="#/profile">← ${t("profile")}</a>
       <div class="dev card"><div class="dev-ava">N</div><h1 class="h" style="margin-top:12px">Nirbhay Sharma</h1><p class="sub">“Nishu” · ${hi ? "YantraFlow ka creator" : "Creator of YantraFlow"}</p></div>
-      <div class="dev-links">${link(DEV.github, "🐙", "GitHub", "github.com/shanir01")}${link(DEV.youtube, "▶️", "YouTube", "@JavaGoat9")}${link(DEV.telegram, "✈️", "Telegram", "t.me/javagoat")}${link(DEV.repo, "⭐", hi ? "YantraFlow repo — star do!" : "YantraFlow repo — leave a star!", "github.com/shanir01/YantraFlow")}</div>
+      <div class="dev-links">${link(DEV.github, "🐙", "GitHub", "github.com/shanir01")}${link(DEV.youtube, "▶️", "YouTube", "@JavaGoat9")}${link(DEV.telegram, "✈️", "Telegram", "t.me/javagoat")}<a class="dev-link" href="mailto:${DEV.email}"><span class="dl-ic">📧</span><div><b>Email</b><small>${DEV.email}</small></div><span>↗</span></a>${link(DEV.repo, "⭐", hi ? "YantraFlow repo — star do!" : "YantraFlow repo — leave a star!", "github.com/shanir01/YantraFlow")}</div>
       <div class="credit card"><img src="${LOGO}" alt=""><div><b>Created by Nirbhay Sharma &amp; Tab</b><small>${hi ? "Idea + design: Nishu · Build: Tab" : "Idea & direction: Nishu · Built with Tab"}</small></div></div>`);
   }
 

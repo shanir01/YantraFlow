@@ -248,6 +248,12 @@ data/              your workflows, runs, keys (git-ignored)
 - The Code node runs JavaScript with full access to your computer — only import workflows you trust.
 - By default the server listens on `127.0.0.1` only, and the editor is locked with a new random password printed at every start.
 
+## 📬 Contact
+
+Questions, bugs, ideas or collaboration: **[shanir01.ai@gmail.com](mailto:shanir01.ai@gmail.com)**
+
+**Hinglish:** Koi sawaal, bug ya naya idea ho to email karo 👉 **[shanir01.ai@gmail.com](mailto:shanir01.ai@gmail.com)**
+
 ## 🙏 Credits
 
 Created by **Nirbhay Sharma (Nishu)** & **Tab** · login by [supabase-js](https://github.com/supabase/supabase-js) (MIT, vendored in `public/vendor/`).
