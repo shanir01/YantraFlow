@@ -228,6 +228,6 @@ if (require.main === module) {
   server.listen(port, host, () => {
     const shown = host === "0.0.0.0" ? "localhost" : host;
     const line = "═".repeat(44);
-    console.log(`\n  ⚡ YantraFlow ${pkg.version} is running\n  👉 Open: http://${shown === "127.0.0.1" ? "localhost" : shown}:${port}\n\n  ${line}\n  🔒 YantraFlow password:  ${server.password}\n  ${line}\n  (New password every time you start. Type it on the lock screen.)\n\n  Webhooks (no password needed): http://localhost:${port}/webhook/<path>\n  Data folder: ${server.store.dir}\n  Stop: Ctrl+C\n`);
+    console.log(`\n  YantraFlow ${pkg.version} is running\n  Open: http://${shown === "127.0.0.1" ? "localhost" : shown}:${port}\n\n  ${line}\n  YantraFlow password:  ${server.password}\n  ${line}\n  (New password every time you start. Type it on the lock screen.)\n\n  Webhooks (no password needed): http://localhost:${port}/webhook/<path>\n  Data folder: ${server.store.dir}\n  Stop: Ctrl+C\n`);
   });
 }

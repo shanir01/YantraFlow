@@ -14,7 +14,7 @@ window.YF_NODE_META = [
   "type": "manualTrigger",
   "label": "Manual Trigger",
   "group": "Triggers",
-  "icon": "▶️",
+  "icon": "play",
   "color": "#22c55e",
   "trigger": "manual",
   "description": "Starts when you press Run."
@@ -50,7 +50,7 @@ window.YF_NODE_META = [
   "type": "scheduleTrigger",
   "label": "Schedule",
   "group": "Triggers",
-  "icon": "⏰",
+  "icon": "clock",
   "color": "#22c55e",
   "trigger": "schedule",
   "description": "Runs on a timer or cron while the workflow is Active."
@@ -98,7 +98,7 @@ window.YF_NODE_META = [
   "fullOnly": "Webhooks need a server — use the full version on PC/Termux.",
   "label": "Webhook",
   "group": "Triggers",
-  "icon": "🪝",
+  "icon": "webhook",
   "color": "#22c55e",
   "trigger": "webhook",
   "description": "Starts when a URL is called: http://localhost:PORT/webhook/<path>"
@@ -137,7 +137,7 @@ window.YF_NODE_META = [
   "fullOnly": "Browsers cannot watch folders — use the full version.",
   "label": "Folder Watch",
   "group": "Triggers",
-  "icon": "📂",
+  "icon": "folder-search",
   "color": "#22c55e",
   "trigger": "poll",
   "description": "Fires once for every NEW file that appears in a folder (checked every few seconds while Active)."
@@ -163,7 +163,7 @@ window.YF_NODE_META = [
   "type": "sheetTrigger",
   "label": "Sheet / CSV New Row",
   "group": "Triggers",
-  "icon": "📊",
+  "icon": "googlesheets",
   "color": "#22c55e",
   "trigger": "poll",
   "description": "Fires for every new row in a Google Sheet (File → Share → Publish to web → CSV link) or a local .csv file."
@@ -207,7 +207,7 @@ window.YF_NODE_META = [
   "type": "httpRequest",
   "label": "HTTP Request",
   "group": "Core",
-  "icon": "🌐",
+  "icon": "globe",
   "color": "#3b82f6",
   "description": "Call any API or website."
  },
@@ -231,7 +231,7 @@ window.YF_NODE_META = [
   "type": "set",
   "label": "Set Fields",
   "group": "Core",
-  "icon": "✏️",
+  "icon": "square-pen",
   "color": "#3b82f6",
   "description": "Add or change fields. One per line: name = value  (values can use {{ }})"
  },
@@ -249,7 +249,7 @@ window.YF_NODE_META = [
   "type": "code",
   "label": "Code (JavaScript)",
   "group": "Core",
-  "icon": "🧩",
+  "icon": "code-xml",
   "color": "#3b82f6",
   "description": "Write JavaScript. `items` = list of inputs. Return a list (or one object)."
  },
@@ -293,7 +293,7 @@ window.YF_NODE_META = [
   "type": "if",
   "label": "IF",
   "group": "Logic",
-  "icon": "🔀",
+  "icon": "split",
   "color": "#a855f7",
   "outputLabels": [
    "true",
@@ -333,7 +333,7 @@ window.YF_NODE_META = [
   "type": "switch",
   "label": "Switch",
   "group": "Logic",
-  "icon": "🚦",
+  "icon": "route",
   "color": "#a855f7",
   "outputLabels": [
    "1",
@@ -357,7 +357,7 @@ window.YF_NODE_META = [
   "type": "delay",
   "label": "Delay",
   "group": "Logic",
-  "icon": "⏳",
+  "icon": "timer",
   "color": "#a855f7",
   "description": "Wait before continuing."
  },
@@ -382,7 +382,7 @@ window.YF_NODE_META = [
   "type": "filter",
   "label": "Limit / Filter",
   "group": "Logic",
-  "icon": "🧹",
+  "icon": "funnel",
   "color": "#a855f7",
   "description": "Keep only the first N items, and/or items matching a JS condition."
  },
@@ -436,7 +436,7 @@ window.YF_NODE_META = [
   "type": "aiChat",
   "label": "AI Chat",
   "group": "AI",
-  "icon": "🤖",
+  "icon": "sparkles",
   "color": "#f59e0b",
   "description": "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1"
  },
@@ -495,7 +495,7 @@ window.YF_NODE_META = [
   "type": "telegram",
   "label": "Telegram",
   "group": "Social & Messaging",
-  "icon": "✈️",
+  "icon": "telegram",
   "color": "#0ea5e9",
   "description": "Send text, photo, video or file to a chat, group or channel (@channelname — add your bot as admin)."
  },
@@ -547,7 +547,7 @@ window.YF_NODE_META = [
   "type": "instagram",
   "label": "Instagram Post",
   "group": "Social & Messaging",
-  "icon": "📸",
+  "icon": "instagram",
   "color": "#e1306c",
   "description": "Post a photo or Reel with the official Instagram Graph API. Needs a Business/Creator account + a PUBLIC media URL."
  },
@@ -600,7 +600,7 @@ window.YF_NODE_META = [
   "type": "facebook",
   "label": "Facebook Page Post",
   "group": "Social & Messaging",
-  "icon": "📘",
+  "icon": "facebook",
   "color": "#1877f2",
   "description": "Post text/link, a photo URL or a video URL to your Facebook Page (Graph API)."
  },
@@ -654,7 +654,7 @@ window.YF_NODE_META = [
   "fullOnly": "YouTube upload reads a video file from disk — use the full version.",
   "label": "YouTube Upload",
   "group": "Social & Messaging",
-  "icon": "▶️",
+  "icon": "youtube",
   "color": "#ff0033",
   "description": "Upload a video file from this phone/PC to your channel (YouTube Data API v3)."
  },
@@ -673,7 +673,7 @@ window.YF_NODE_META = [
   "fullOnly": "X blocks browser calls (CORS) — use the full version.",
   "label": "X (Twitter) Post",
   "group": "Social & Messaging",
-  "icon": "𝕏",
+  "icon": "x",
   "color": "#64748b",
   "description": "Post a text tweet with the X API v2 (your own developer app keys)."
  },
@@ -703,7 +703,7 @@ window.YF_NODE_META = [
   "type": "discord",
   "label": "Discord",
   "group": "Social & Messaging",
-  "icon": "🎮",
+  "icon": "discord",
   "color": "#5865f2",
   "description": "Send a message to a Discord channel webhook."
  },
@@ -728,7 +728,7 @@ window.YF_NODE_META = [
   "fullOnly": "Slack blocks browser calls (CORS) — use the full version.",
   "label": "Slack",
   "group": "Social & Messaging",
-  "icon": "💬",
+  "icon": "slack",
   "color": "#4a154b",
   "description": "Send a message to Slack (Incoming Webhook)."
  },
@@ -765,7 +765,7 @@ window.YF_NODE_META = [
   "fullOnly": "Browsers cannot send SMTP email — use the full version.",
   "label": "Email (SMTP)",
   "group": "Social & Messaging",
-  "icon": "📧",
+  "icon": "mail",
   "color": "#14b8a6",
   "description": "Send an email with your SMTP account (Gmail: use an App Password)."
  },
@@ -789,7 +789,7 @@ window.YF_NODE_META = [
   "type": "rss",
   "label": "RSS Read",
   "group": "Data",
-  "icon": "📰",
+  "icon": "rss",
   "color": "#ec4899",
   "description": "Read a news/blog/YouTube RSS feed. Each post becomes one item."
  },
@@ -813,7 +813,7 @@ window.YF_NODE_META = [
   "type": "readSheet",
   "label": "Read Sheet / CSV",
   "group": "Data",
-  "icon": "📑",
+  "icon": "file-spreadsheet",
   "color": "#ec4899",
   "description": "Read all rows from a Google Sheet CSV link or a .csv file. Each row = one item."
  },
@@ -848,7 +848,7 @@ window.YF_NODE_META = [
   "fullOnly": "Browsers cannot write files on disk — use the full version.",
   "label": "Write File / Log",
   "group": "Data",
-  "icon": "💾",
+  "icon": "file-pen",
   "color": "#ec4899",
   "description": "Save text or JSON to a file (relative paths go to data/files)."
  },
@@ -866,7 +866,7 @@ window.YF_NODE_META = [
   "type": "log",
   "label": "Log",
   "group": "Data",
-  "icon": "📝",
+  "icon": "scroll-text",
   "color": "#ec4899",
   "description": "Write a line into the run log (see Executions)."
  },
@@ -891,7 +891,7 @@ window.YF_NODE_META = [
   "fullOnly": "Only useful with Webhook — full version.",
   "label": "Respond to Webhook",
   "group": "Data",
-  "icon": "↩️",
+  "icon": "reply",
   "color": "#ec4899",
   "description": "Choose what the Webhook caller gets back."
  }

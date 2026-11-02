@@ -1,6 +1,6 @@
 {
   "name": "yantraflow",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Free n8n-style automation platform: web accounts, ready-made Public Projects (YouTube, Instagram, Telegram, Gmail, AI), drag-and-drop editor. Runs in the browser or on your PC / Android (Termux).",
   "main": "src/server.js",
   "bin": {

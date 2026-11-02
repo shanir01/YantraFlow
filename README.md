@@ -101,6 +101,14 @@ The website uses the owner's Supabase project (`public/config.js` holds the URL 
 2. **Links in emails (password reset):** *Authentication* → *URL Configuration* → Site URL `https://yantraflow.sites.tab.bot` and add the same to **Redirect URLs**.
 3. **Optional cloud sync + "Delete my account":** paste [`docs/supabase-setup.sql`](docs/supabase-setup.sql) into *SQL Editor* → Run. It creates the `yf_workflows` table with Row Level Security (each user sees only their own rows). Without it, workflows are saved on the device and Settings says "Cloud sync is off".
 
+## 🧭 v3: real logos + workflow actions
+
+- **No emoji icons anymore.** Every node, trigger and service uses a real icon: brand logos for Telegram, YouTube, Instagram, Facebook, Gmail, X, Discord, Slack, RSS, Google Sheets; clean line icons for Schedule, Webhook, HTTP, Code, IF, Switch, Delay, AI Chat, Email and the rest. Same icons in the web and PC/Termux versions, in Dark / AMOLED / Light.
+- **Workflow actions:** on *Your automations*, **right-click** a card (PC), **long-press** it (phone) or tap the **⋮** button → *Open in editor, Rename, Duplicate, Export (.json), Share / send to others, Delete*.
+- **Share links:** *Share* makes a link (the workflow is compressed inside the link itself, nothing is uploaded). Whoever opens it gets a preview and an **Add to my workflows** button. In the PC/Termux version: **Import → From share link** and paste it. API keys are never included.
+
+**Hinglish:** Ab emoji ki jagah asli logo. Apne workflow pe right-click (PC) ya long-press (phone) ya ⋮ dabao → Rename, Duplicate, Export, Share link, Delete. Share link kisi ko bhi bhejo, wo khol ke "Add to my workflows" dabaye.
+
 ## 🔒 Full version (PC / Termux) password
 The local full version has **no accounts**. Every time you run `start.bat` / `sh start.sh`, YantraFlow prints a **new random password** in the terminal:
 
@@ -260,6 +268,7 @@ Created by **Nirbhay Sharma (Nishu)** & **Tab** · login by [supabase-js](https:
 
 - Canvas: [Drawflow](https://github.com/jerosoler/Drawflow) by Jero Soler (MIT)
 - Idea inspired by [n8n](https://n8n.io) (no n8n code used)
+- Icons: brand logos from [Simple Icons](https://simpleicons.org) (CC0 1.0) and line icons from [Lucide](https://lucide.dev) (ISC) — bundled locally in `public/js/icons.js` (licences in `public/vendor/LICENSE-icons.txt`). Brand names and logos belong to their owners.
 
 ## ⭐ Support
 If YantraFlow saves you time, **give it a ⭐ star** — it really helps! Share your workflows (Export → JSON) and open a PR with new nodes. PRs welcome.

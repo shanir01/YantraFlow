@@ -9,6 +9,8 @@
   const LOGO = "img/logo.svg";
   const DEV = { name: "Nirbhay Sharma", nick: "Nishu", github: "https://github.com/shanir01", youtube: "https://www.youtube.com/@JavaGoat9", telegram: "https://t.me/javagoat", email: "shanir01.ai@gmail.com", repo: "https://github.com/shanir01/YantraFlow" };
   const CATS = ["All", "YouTube", "Instagram", "Telegram", "Gmail", "AI Content", "Video"];
+  const CAT_IC = { All: "layout-grid", YouTube: "youtube", Instagram: "instagram", Telegram: "telegram", Gmail: "gmail", "AI Content": "sparkles", Video: "film" };
+  const I = (n, s = 18, c) => window.yfIcon(n, s, c);
 
   // ---------------------------------------------------------------- prefs + i18n
   const prefs = Object.assign({ theme: "dark", lang: "en" }, (() => { try { return JSON.parse(localStorage.getItem("yf_prefs") || "{}"); } catch (_) { return {}; } })());
@@ -118,10 +120,10 @@
     if (S.mode === "local") return showLocalLock();
     if (authMode === "reset") {
       authShell(`<h2 class="auth-h">${prefs.lang === "hi" ? "Naya password set karo" : "Set a new password"}</h2>
-        <form id="af" class="auth-f" novalidate><label class="lb" for="ap">${t("password")}</label><div class="pw"><input class="inp" id="ap" type="password" autocomplete="new-password" minlength="6" required placeholder="••••••••"><button type="button" class="pw-eye" aria-label="Show password">👁</button></div>
+        <form id="af" class="auth-f" novalidate><label class="lb" for="ap">${t("password")}</label><div class="pw"><input class="inp" id="ap" type="password" autocomplete="new-password" minlength="6" required placeholder="••••••••"><button type="button" class="pw-eye" aria-label="Show password">${I("eye", 18, "eye-on")}${I("eye-off", 18, "eye-off")}</button></div>
         <div class="auth-msg" id="am" role="alert"></div><button class="btn primary big" id="ab">${t("save")}</button></form>`);
       wireEye();
-      $("#af").onsubmit = async (e) => { e.preventDefault(); busy(true); const { error } = await S.client.auth.updateUser({ password: $("#ap").value }); busy(false); if (error) return msg(friendly(error)); S.recovery = false; msg(prefs.lang === "hi" ? "Password badal gaya ✅" : "Password updated ✅", "ok"); setTimeout(() => location.replace(location.pathname + "#/workflows") || location.reload(), 900); };
+      $("#af").onsubmit = async (e) => { e.preventDefault(); busy(true); const { error } = await S.client.auth.updateUser({ password: $("#ap").value }); busy(false); if (error) return msg(friendly(error)); S.recovery = false; msg(prefs.lang === "hi" ? "Password badal gaya" : "Password updated", "ok"); setTimeout(() => location.replace(location.pathname + "#/workflows") || location.reload(), 900); };
       return;
     }
     if (authMode === "forgot") {
@@ -134,7 +136,7 @@
         e.preventDefault(); const email = $("#ae").value.trim(); if (!email) return msg(friendly("invalid email"));
         busy(true); const { error } = await S.client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); busy(false);
         if (error) return msg(friendly(error));
-        msg(prefs.lang === "hi" ? "Agar is email se account hai to reset link bhej diya ✅ (Spam bhi check karo)" : "If an account exists for that email, a reset link is on its way ✅ (check Spam too)", "ok");
+        msg(prefs.lang === "hi" ? "Agar is email se account hai to reset link bhej diya (Spam bhi check karo)" : "If an account exists for that email, a reset link is on its way (check Spam too)", "ok");
       };
       return;
     }
@@ -143,7 +145,7 @@
       <h2 class="auth-h">${isUp ? t("signupTitle") : t("loginTitle")}</h2><p class="auth-sub">${isUp ? t("signupSub") : t("loginSub")}</p>
       <form id="af" class="auth-f" novalidate>
         <label class="lb" for="ae">${t("email")}</label><input class="inp" id="ae" type="email" autocomplete="email" inputmode="email" required placeholder="you@gmail.com">
-        <label class="lb" for="ap">${t("password")}</label><div class="pw"><input class="inp" id="ap" type="password" autocomplete="${isUp ? "new-password" : "current-password"}" minlength="6" required placeholder="${isUp ? (prefs.lang === "hi" ? "kam se kam 6 characters" : "at least 6 characters") : "••••••••"}"><button type="button" class="pw-eye" aria-label="Show password">👁</button></div>
+        <label class="lb" for="ap">${t("password")}</label><div class="pw"><input class="inp" id="ap" type="password" autocomplete="${isUp ? "new-password" : "current-password"}" minlength="6" required placeholder="${isUp ? (prefs.lang === "hi" ? "kam se kam 6 characters" : "at least 6 characters") : "••••••••"}"><button type="button" class="pw-eye" aria-label="Show password">${I("eye", 18, "eye-on")}${I("eye-off", 18, "eye-off")}</button></div>
         ${isUp ? "" : `<div class="auth-row"><a href="#" id="fg">${t("forgot")}</a></div>`}
         <div class="auth-msg" id="am" role="alert"></div>
         <button class="btn primary big" id="ab">${isUp ? t("createAcc") : t("doLogin")}</button>
@@ -167,7 +169,7 @@
           if (data.session && data.user) return enter(data.user);
           // Supabase hides "already registered" when confirmations are on: identities is empty
           if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw new Error("already registered");
-          msg((prefs.lang === "hi" ? "Account ban gaya ✅ Ab apne email me confirmation link kholo, phir yahan Log in karo. (Spam folder bhi dekho)" : "Account created ✅ Open the confirmation link we emailed you, then log in here. (Check Spam too)") + ` <button class="linkbtn" id="rs">${prefs.lang === "hi" ? "Email dobara bhejo" : "Resend email"}</button>`, "ok", true);
+          msg((prefs.lang === "hi" ? "Account ban gaya Ab apne email me confirmation link kholo, phir yahan Log in karo. (Spam folder bhi dekho)" : "Account created Open the confirmation link we emailed you, then log in here. (Check Spam too)") + ` <button class="linkbtn" id="rs">${prefs.lang === "hi" ? "Email dobara bhejo" : "Resend email"}</button>`, "ok", true);
           wireResend(email);
         } else {
           const { data, error } = await S.client.auth.signInWithPassword({ email, password });
@@ -178,7 +180,7 @@
       finally { busy(false); }
     };
   }
-  function wireResend(email) { const b = $("#rs"); if (!b) return; b.onclick = async () => { b.disabled = true; const { error } = await S.client.auth.resend({ type: "signup", email, options: { emailRedirectTo: location.origin + location.pathname } }); msg(error ? friendly(error) : (prefs.lang === "hi" ? "Confirmation email dobara bheja ✅" : "Confirmation email sent again ✅"), error ? "" : "ok"); }; }
+  function wireResend(email) { const b = $("#rs"); if (!b) return; b.onclick = async () => { b.disabled = true; const { error } = await S.client.auth.resend({ type: "signup", email, options: { emailRedirectTo: location.origin + location.pathname } }); msg(error ? friendly(error) : (prefs.lang === "hi" ? "Confirmation email dobara bheja" : "Confirmation email sent again"), error ? "" : "ok"); }; }
   function wireEye() { $$(".pw-eye").forEach((b) => (b.onclick = () => { const i = b.previousElementSibling; i.type = i.type === "password" ? "text" : "password"; b.classList.toggle("on"); })); }
   function busy(on) { const b = $("#ab"); if (b) { b.disabled = on; b.classList.toggle("loading", on); } }
   function msg(text, kind, html) { const m = $("#am"); if (!m) return; m.className = "auth-msg " + (kind || "err"); if (html) m.innerHTML = text; else m.textContent = text; }
@@ -192,9 +194,9 @@
   // ---------------------------------------------------------------- local full version: one-time password lock
   function showLocalLock(errText) {
     splash(false);
-    authShell(`<h2 class="auth-h">🔒 ${prefs.lang === "hi" ? "Password daalo" : "Enter password"}</h2>
+    authShell(`<h2 class="auth-h">${I("lock", 22)} ${prefs.lang === "hi" ? "Password daalo" : "Enter password"}</h2>
       <p class="auth-sub">${prefs.lang === "hi" ? "Jo password start.bat / start.sh ki terminal window me dikha hai, wo yahan daalo. Har baar start karne par naya password banta hai." : "Type the password shown in the start.bat / start.sh terminal window. A new password is made every time YantraFlow starts."}</p>
-      <form id="af" class="auth-f" novalidate><label class="lb" for="ap">YantraFlow password</label><div class="pw"><input class="inp mono" id="ap" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="XXXX-XXXX"><button type="button" class="pw-eye" aria-label="Show password">👁</button></div>
+      <form id="af" class="auth-f" novalidate><label class="lb" for="ap">YantraFlow password</label><div class="pw"><input class="inp mono" id="ap" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="XXXX-XXXX"><button type="button" class="pw-eye" aria-label="Show password">${I("eye", 18, "eye-on")}${I("eye-off", 18, "eye-off")}</button></div>
       <div class="auth-msg" id="am" role="alert"></div><button class="btn primary big" id="ab">${prefs.lang === "hi" ? "Unlock karo" : "Unlock"}</button></form>`);
     wireEye();
     if (errText) msg(errText);
@@ -228,7 +230,7 @@
     if (/^#error=|[#&]error_code=/.test(location.hash)) { const q = new URLSearchParams(location.hash.slice(1)); S.linkError = (q.get("error_description") || "Link expired").replace(/\+/g, " ") + (prefs.lang === "hi" ? " — dobara try karo." : " — please try again."); history.replaceState(null, "", location.pathname + "#/login"); }
     let user = null;
     try { user = await initSupabase(); }
-    catch (e) { splash(false); authShell(`<h2 class="auth-h">${prefs.lang === "hi" ? "Login server tak nahi pahunch paye" : "Can't reach the login server"}</h2><p class="auth-sub">${esc(friendly(e))}</p><button class="btn primary big" onclick="location.reload()">↻ Retry</button>`); return false; }
+    catch (e) { splash(false); authShell(`<h2 class="auth-h">${prefs.lang === "hi" ? "Login server tak nahi pahunch paye" : "Can't reach the login server"}</h2><p class="auth-sub">${esc(friendly(e))}</p><button class="btn primary big" onclick="location.reload()">${I("refresh-cw", 16)} Retry</button>`); return false; }
     if (/^#access_token=|^#type=/.test(location.hash)) history.replaceState(null, "", location.pathname + "#/workflows");
     if (S.recovery) { showAuth("reset"); return false; }
     if (!user) { showAuth(location.hash.startsWith("#/signup") ? "signup" : "login"); return false; }
@@ -254,8 +256,8 @@
     if (!m) { m = document.createElement("div"); m.id = "pmenu"; m.className = "pmenu hidden"; document.body.appendChild(m); m.onclick = (e) => e.stopPropagation(); }
     const who = S.mode === "local" ? (prefs.lang === "hi" ? "Local full version" : "Local full version") : (S.user ? S.user.email : "");
     m.innerHTML = `<div class="pm-head">${avatarHtml(42)}<div><b>${esc(displayName())}</b><small>${esc(who)}</small></div></div>
-      <a href="#/profile">👤 ${t("profile")}</a><a href="#/projects">🧩 ${t("pubProjects")}</a><a href="#/settings">⚙️ ${t("settings")}</a><a href="#/about">ℹ️ ${t("about")}</a><a href="#/developer">👨‍💻 ${t("developer")}</a>
-      ${S.mode === "off" ? "" : `<button id="pmOut" class="danger">↪ ${t("logout")}</button>`}`;
+      <a href="#/profile">${I("user", 17)} ${t("profile")}</a><a href="#/projects">${I("layout-grid", 17)} ${t("pubProjects")}</a><a href="#/settings">${I("settings", 17)} ${t("settings")}</a><a href="#/about">${I("info", 17)} ${t("about")}</a><a href="#/developer">${I("code-xml", 17)} ${t("developer")}</a>
+      ${S.mode === "off" ? "" : `<button id="pmOut" class="danger">${I("log-out", 17)} ${t("logout")}</button>`}`;
     m.classList.toggle("hidden");
     $$("#pmenu a").forEach((a) => (a.onclick = () => m.classList.add("hidden")));
     $("#pmOut") && ($("#pmOut").onclick = logout);
@@ -296,7 +298,7 @@
   // ---------------------------------------------------------------- views
   const page = (inner) => `<div class="page">${inner}</div>`;
   function runBadge(p) {
-    const m = { web: ["🌐", t("runsHere"), "b-web"], key: ["🔑", t("ownKey"), "b-key"], full: ["💻", t("needsFull"), "b-full"], setup: ["🛠️", t("needsSetup"), "b-setup"] }[p.runsIn] || ["🌐", t("runsHere"), "b-web"];
+    const m = { web: [I("globe", 12), t("runsHere"), "b-web"], key: [I("key-round", 12), t("ownKey"), "b-key"], full: [I("laptop", 12), t("needsFull"), "b-full"], setup: [I("wrench", 12), t("needsSetup"), "b-setup"] }[p.runsIn] || [I("globe", 12), t("runsHere"), "b-web"];
     return `<span class="rbadge ${m[2]}">${m[0]} ${m[1]}</span>`;
   }
   function tierBadge(p) { return p.tier === "free" || !p.price ? `<span class="free">${t("free")}</span>` : `<span class="paid">₹${esc(p.price)}</span>`; }
@@ -324,17 +326,17 @@
     const A = app(); const list = window.YF_PROJECTS;
     const shown = list.filter((p) => (projCat === "All" || p.categories.includes(projCat)) && (!projQ || (p.title + p.summary + p.categories.join(" ")).toLowerCase().includes(projQ.toLowerCase())));
     A.view().innerHTML = page(`<div class="hero-h"><div><h1 class="h">${prefs.lang === "hi" ? "Public" : "Public"} <span class="g">${prefs.lang === "hi" ? "projects" : "projects"}</span></h1><p class="sub">${t("pubSub")}</p></div>
-      <span class="allfree">🎁 ${prefs.lang === "hi" ? `Abhi saare ${list.length} projects FREE` : `All ${list.length} projects are FREE right now`}</span></div>
+      <span class="allfree">${I("gift", 15)} ${prefs.lang === "hi" ? `Abhi saare ${list.length} projects FREE` : `All ${list.length} projects are FREE right now`}</span></div>
       <div class="pj-tools"><input class="inp" id="pq" type="search" placeholder="${prefs.lang === "hi" ? "Project dhoondo…" : "Search projects…"}" value="${esc(projQ)}" aria-label="Search projects"></div>
-      <div class="cats" role="tablist">${CATS.map((c) => `<button class="cat ${c === projCat ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}${c === "All" ? "" : ` <small>${list.filter((p) => p.categories.includes(c)).length}</small>`}</button>`).join("")}</div>
+      <div class="cats" role="tablist">${CATS.map((c) => `<button class="cat ${c === projCat ? "on" : ""}" data-cat="${esc(c)}">${I(CAT_IC[c] || "tag", 15)}${esc(c)}${c === "All" ? "" : ` <small>${list.filter((p) => p.categories.includes(c)).length}</small>`}</button>`).join("")}</div>
       ${shown.length ? `<div class="grid pj-grid">${shown.map((p) => `<article class="card pj" data-open="${p.id}">
-        <div class="pj-top"><div class="pj-ic">${p.icon}</div><div class="pj-badges">${tierBadge(p)}${runBadge(p)}</div></div>
+        <div class="pj-top"><div class="pj-ic">${I(p.icon, 24)}</div><div class="pj-badges">${tierBadge(p)}${runBadge(p)}</div></div>
         <h3>${esc(prefs.lang === "hi" ? p.title_hi || p.title : p.title)}</h3><p>${esc(p.summary)}</p>
         ${A.chain(projectTypes(p))}
         <div class="pj-cats">${p.categories.map((c) => `<span>${esc(c)}</span>`).join("")}</div>
         <div class="row pj-act"><a class="btn sm" href="#/project/${p.id}">${t("details")}</a><button class="btn sm primary" data-useproj="${p.id}">${t("useProject")}</button></div>
-      </article>`).join("")}</div>` : `<div class="empty"><div class="big">🔎</div><p>${prefs.lang === "hi" ? "Koi project nahi mila" : "No projects found"}</p></div>`}
-      <p class="meta" style="margin-top:18px">🌐 ${t("runsHere")} = ${prefs.lang === "hi" ? "isi website pe chalega" : "works on this website"} · 🔑 ${t("ownKey")} = ${prefs.lang === "hi" ? "provider ki apni paid/trial key chahiye" : "needs your own paid/trial key from a provider"} · 🛠️ = ${prefs.lang === "hi" ? "platform ka developer app / token chahiye" : "needs a platform developer app / token"} · 💻 = ${prefs.lang === "hi" ? "PC/Termux full version" : "PC/Termux full version"}</p>`);
+      </article>`).join("")}</div>` : `<div class="empty"><div class="big">${I("search", 44)}</div><p>${prefs.lang === "hi" ? "Koi project nahi mila" : "No projects found"}</p></div>`}
+      <p class="meta legend" style="margin-top:18px">${I("globe", 13)} ${t("runsHere")} = ${prefs.lang === "hi" ? "isi website pe chalega" : "works on this website"} · ${I("key-round", 13)} ${t("ownKey")} = ${prefs.lang === "hi" ? "provider ki apni paid/trial key chahiye" : "needs your own paid/trial key from a provider"} · ${I("wrench", 13)} = ${prefs.lang === "hi" ? "platform ka developer app / token chahiye" : "needs a platform developer app / token"} · ${I("laptop", 13)} = ${prefs.lang === "hi" ? "PC/Termux full version" : "PC/Termux full version"}</p>`);
     $$("[data-cat]").forEach((b) => (b.onclick = () => { projCat = b.dataset.cat; viewProjects(); }));
     const q = $("#pq"); q.oninput = () => { projQ = q.value; clearTimeout(q._t); q._t = setTimeout(() => { viewProjects(); const n = $("#pq"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
     $$("[data-useproj]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); useProject(b.dataset.useproj, b); }));
@@ -349,12 +351,12 @@
     const A = app(); const wf = await projectWorkflow(p);
     const META = A.META;
     A.view().innerHTML = page(`<a class="backlink" href="#/projects">← ${t("pubProjects")}</a>
-      <div class="pd-hero card"><div class="pj-ic big">${p.icon}</div><div style="flex:1;min-width:0"><div class="pj-badges">${tierBadge(p)}${runBadge(p)}${p.categories.map((c) => `<span class="ctag">${esc(c)}</span>`).join("")}</div>
+      <div class="pd-hero card"><div class="pj-ic big">${I(p.icon, 34)}</div><div style="flex:1;min-width:0"><div class="pj-badges">${tierBadge(p)}${runBadge(p)}${p.categories.map((c) => `<span class="ctag">${esc(c)}</span>`).join("")}</div>
         <h1 class="h" style="font-size:24px;margin-top:8px">${esc(p.title)}</h1><p class="sub">${esc(p.summary)}</p></div></div>
-      ${p.honest ? `<div class="note honest">⚠️ <b>${prefs.lang === "hi" ? "Sach baat" : "Honest note"}:</b> ${esc(p.honest)}</div>` : ""}
+      ${p.honest ? `<div class="note honest">${I("triangle-alert", 15)} <b>${prefs.lang === "hi" ? "Sach baat" : "Honest note"}:</b> ${esc(p.honest)}</div>` : ""}
       <div class="two-col">
-        <section class="card"><h3>🧩 ${prefs.lang === "hi" ? "Isme kya steps hain" : "What's inside"}</h3><ol class="steps">${wf.nodes.map((n) => { const m = META[n.type] || { icon: "•", label: n.type, color: "#888" }; return `<li class="${n.disabled ? "off" : ""}"><span class="chip" style="background:${m.color}26">${m.icon}</span><div><b>${esc(n.name)}</b><small>${esc(m.label)}${n.disabled ? " · OFF (optional)" : ""}${m.fullOnly ? " · 💻 full version" : ""}</small></div></li>`; }).join("")}</ol></section>
-        <section class="card"><h3>🔑 ${prefs.lang === "hi" ? "Kya chahiye" : "You need"}</h3><ul class="needs">${(p.needs || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
+        <section class="card"><h3>${I("workflow", 18)} ${prefs.lang === "hi" ? "Isme kya steps hain" : "What's inside"}</h3><ol class="steps">${wf.nodes.map((n) => { const m = META[n.type] || { icon: "circle-help", label: n.type, color: "#888" }; return `<li class="${n.disabled ? "off" : ""}"><span class="chip" style="background:${m.color}26;color:${m.color}">${I(m.icon, 18)}</span><div><b>${esc(n.name)}</b><small>${esc(m.label)}${n.disabled ? " · OFF (optional)" : ""}${m.fullOnly ? " · PC/Termux version" : ""}</small></div></li>`; }).join("")}</ol></section>
+        <section class="card"><h3>${I("key-round", 18)} ${prefs.lang === "hi" ? "Kya chahiye" : "You need"}</h3><ul class="needs">${(p.needs || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ul>
           <h3 style="margin-top:16px">▶ ${prefs.lang === "hi" ? "Kaise chalayein" : "How to run"}</h3><ol class="howto">${(p.howTo || []).map((n) => `<li>${esc(n)}</li>`).join("")}</ol></section>
       </div>
       <div class="pd-cta"><div><b>${p.tier === "free" ? (prefs.lang === "hi" ? "FREE — abhi ke liye bilkul free" : "FREE — no cost right now") : "₹" + esc(p.price)}</b><small>${prefs.lang === "hi" ? "Ek tap me tumhare workflows me copy hoga. Keys sirf tumhare device pe." : "Copies into your workflows in one tap. Keys stay on your device."}</small></div><button class="btn primary big" id="usep">${t("useProject")} →</button></div>`);
@@ -365,15 +367,15 @@
     const A = app(); const p = getProfile();
     const email = S.mode === "local" ? (prefs.lang === "hi" ? "Local full version (is device pe)" : "Local full version (this device)") : S.user ? S.user.email : "";
     A.view().innerHTML = page(`<div class="prof card"><div class="prof-bg"></div>
-        <div class="prof-ava"><label class="ava-up" title="Change photo">${avatarHtml(96, "xl")}<input type="file" id="avf" accept="image/*" hidden><span class="ava-cam">📷</span></label></div>
+        <div class="prof-ava"><label class="ava-up" title="Change photo">${avatarHtml(96, "xl")}<input type="file" id="avf" accept="image/*" hidden><span class="ava-cam">${I("camera", 16)}</span></label></div>
         <h1 class="h" style="text-align:center;margin-top:10px">${esc(displayName())}</h1><p class="sub" style="text-align:center">${esc(email)}</p>
         <div class="prof-stats" id="pst"><div><b>–</b><small>${t("workflows")}</small></div><div><b>–</b><small>${t("runs")}</small></div><div><b>${window.YF_PROJECTS.length}</b><small>${t("projects")}</small></div></div></div>
-      <section class="card" style="margin-top:14px"><h3>✏️ ${prefs.lang === "hi" ? "Profile edit" : "Edit profile"}</h3>
+      <section class="card" style="margin-top:14px"><h3>${I("user-round-pen", 18)} ${prefs.lang === "hi" ? "Profile edit" : "Edit profile"}</h3>
         <label class="lb" for="pn">${prefs.lang === "hi" ? "Naam" : "Display name"}</label><input class="inp" id="pn" maxlength="40" value="${esc(p.name || (S.user && S.user.user_metadata && S.user.user_metadata.display_name) || "")}" placeholder="Nishu">
         <label class="lb" for="pb">Bio</label><textarea class="inp" id="pb" maxlength="160" placeholder="${prefs.lang === "hi" ? "Main kya automate karta hoon…" : "What I automate…"}">${esc(p.bio || "")}</textarea>
         <div class="row" style="margin-top:12px"><button class="btn primary" id="psave">${t("save")}</button>${p.avatar ? `<button class="btn ghost" id="pdel">${prefs.lang === "hi" ? "Photo hatao" : "Remove photo"}</button>` : ""}</div>
         <p class="help">${prefs.lang === "hi" ? "Photo sirf is device pe save hoti hai." : "Your photo is stored only on this device."}</p></section>
-      <div class="menu-list card" style="margin-top:14px"><a href="#/settings">⚙️ ${t("settings")}<span>›</span></a><a href="#/keys">🔑 ${t("keys")}<span>›</span></a><a href="#/projects">🧩 ${t("pubProjects")}<span>›</span></a><a href="#/about">ℹ️ ${t("about")}<span>›</span></a><a href="#/developer">👨‍💻 ${t("developer")}<span>›</span></a>${S.mode === "off" ? "" : `<button id="plo" class="danger">↪ ${t("logout")}</button>`}</div>`);
+      <div class="menu-list card" style="margin-top:14px"><a href="#/settings">${I("settings", 18)} ${t("settings")}<span>${I("chevron-right", 16)}</span></a><a href="#/keys">${I("key-round", 18)} ${t("keys")}<span>${I("chevron-right", 16)}</span></a><a href="#/projects">${I("layout-grid", 18)} ${t("pubProjects")}<span>${I("chevron-right", 16)}</span></a><a href="#/about">${I("info", 18)} ${t("about")}<span>${I("chevron-right", 16)}</span></a><a href="#/developer">${I("code-xml", 18)} ${t("developer")}<span>${I("chevron-right", 16)}</span></a>${S.mode === "off" ? "" : `<button id="plo" class="danger">${I("log-out", 18)} ${t("logout")}</button>`}</div>`);
     A.B.listWorkflows().then((l) => { const b = $$("#pst b"); if (b[0]) b[0].textContent = l.length; }).catch(() => {});
     A.B.listRuns().then((l) => { const b = $$("#pst b"); if (b[1]) b[1].textContent = l.length; }).catch(() => {});
     $("#avf").onchange = (e) => { const f = e.target.files[0]; if (!f) return; resizeImage(f, 256).then((url) => { const q = getProfile(); q.avatar = url; setProfile(q); applyChrome(); viewProfile(); A.toast("Photo updated ✓", "ok"); }).catch((err) => A.toast(err.message, "err")); };
@@ -394,16 +396,16 @@
     const A = app(); const hi = prefs.lang === "hi";
     const opt = (name, val, cur, label) => `<label class="seg-o"><input type="radio" name="${name}" value="${val}" ${cur === val ? "checked" : ""}><span>${label}</span></label>`;
     A.view().innerHTML = page(`<a class="backlink" href="#/profile">← ${t("profile")}</a><div class="hero-h"><div><h1 class="h">${t("settings")}</h1></div></div>
-      <section class="card set"><h3>🎨 ${t("theme")}</h3><div class="seg">${opt("th", "dark", prefs.theme, "🌙 Dark")}${opt("th", "amoled", prefs.theme, "⚫ AMOLED")}${opt("th", "light", prefs.theme, "☀️ Light")}</div>
-        <h3 style="margin-top:18px">🌐 ${t("language")}</h3><div class="seg">${opt("lg", "en", prefs.lang, "English")}${opt("lg", "hi", prefs.lang, "Hinglish")}</div>
+      <section class="card set"><h3>${I("palette", 18)} ${t("theme")}</h3><div class="seg">${opt("th", "dark", prefs.theme, I("moon", 15) + " Dark")}${opt("th", "amoled", prefs.theme, I("smartphone", 15) + " AMOLED")}${opt("th", "light", prefs.theme, I("sun", 15) + " Light")}</div>
+        <h3 style="margin-top:18px">${I("languages", 18)} ${t("language")}</h3><div class="seg">${opt("lg", "en", prefs.lang, "English")}${opt("lg", "hi", prefs.lang, "Hinglish")}</div>
         <p class="help">${hi ? "Menus, login, profile aur projects Hinglish me. Editor ke andar ke labels English me hi hain." : "Menus, login, profile and projects switch language. Labels inside the editor stay English."}</p></section>
-      <section class="card set"><h3>🔑 ${hi ? "API keys & accounts" : "API keys & accounts"}</h3><p class="sub">${hi ? "Telegram, AI, Instagram, YouTube keys — sirf is device pe save." : "Telegram, AI, Instagram, YouTube keys — saved on this device only."}</p><a class="btn" href="#/keys" style="margin-top:10px">${hi ? "Keys page kholo" : "Open Keys page"} →</a></section>
-      ${S.mode === "supabase" ? `<section class="card set"><h3>☁️ ${hi ? "Cloud sync (workflows)" : "Cloud sync (workflows)"}</h3><p class="sub" id="cst">${hi ? "Check kar rahe hain…" : "Checking…"}</p><button class="btn" id="csync" style="margin-top:10px" disabled>↻ ${hi ? "Abhi sync karo" : "Sync now"}</button><p class="help">${hi ? "Sirf workflows sync hote hain. API keys kabhi cloud pe nahi jaati." : "Only workflows sync. API keys never leave this device."}</p></section>` : ""}
-      <section class="card set"><h3>📦 ${hi ? "Aapka data" : "Your data"}</h3><div class="row" style="margin-top:8px"><button class="btn" id="exp">⤓ ${hi ? "Data export (JSON)" : "Export data (JSON)"}</button><button class="btn danger" id="del">🗑 ${hi ? "Is device ka data delete" : "Delete data on this device"}</button></div>
+      <section class="card set"><h3>${I("key-round", 18)} ${hi ? "API keys & accounts" : "API keys & accounts"}</h3><p class="sub">${hi ? "Telegram, AI, Instagram, YouTube keys — sirf is device pe save." : "Telegram, AI, Instagram, YouTube keys — saved on this device only."}</p><a class="btn" href="#/keys" style="margin-top:10px">${hi ? "Keys page kholo" : "Open Keys page"} →</a></section>
+      ${S.mode === "supabase" ? `<section class="card set"><h3>${I("cloud", 18)} ${hi ? "Cloud sync (workflows)" : "Cloud sync (workflows)"}</h3><p class="sub" id="cst">${hi ? "Check kar rahe hain…" : "Checking…"}</p><button class="btn" id="csync" style="margin-top:10px" disabled>${I("refresh-cw", 15)} ${hi ? "Abhi sync karo" : "Sync now"}</button><p class="help">${hi ? "Sirf workflows sync hote hain. API keys kabhi cloud pe nahi jaati." : "Only workflows sync. API keys never leave this device."}</p></section>` : ""}
+      <section class="card set"><h3>${I("package", 18)} ${hi ? "Aapka data" : "Your data"}</h3><div class="row" style="margin-top:8px"><button class="btn" id="exp">${I("download", 15)} ${hi ? "Data export (JSON)" : "Export data (JSON)"}</button><button class="btn danger" id="del">${I("trash-2", 15)} ${hi ? "Is device ka data delete" : "Delete data on this device"}</button></div>
         <p class="help">${hi ? "Export me workflows, runs aur profile aate hain (API keys nahi)." : "Export includes workflows, runs and profile (not your API keys)."}</p>
         ${S.mode === "supabase" ? `<button class="btn danger ghost" id="delacc" style="margin-top:10px">${hi ? "Mera account delete karo" : "Delete my account"}</button>` : ""}</section>
-      <section class="card set"><h3>👤 ${hi ? "Account" : "Account"}</h3><p class="sub">${esc(S.mode === "local" ? (hi ? "Local full version — har start pe naya password." : "Local full version — new password on every start.") : S.user ? S.user.email : "")}</p>
-        ${S.mode === "supabase" ? `<button class="btn" id="chpw" style="margin-top:10px">${hi ? "Password badlo" : "Change password"}</button>` : ""}${S.mode === "off" ? "" : ` <button class="btn danger" id="slo" style="margin-top:10px">↪ ${t("logout")}</button>`}</section>
+      <section class="card set"><h3>${I("circle-user-round", 18)} ${hi ? "Account" : "Account"}</h3><p class="sub">${esc(S.mode === "local" ? (hi ? "Local full version — har start pe naya password." : "Local full version — new password on every start.") : S.user ? S.user.email : "")}</p>
+        ${S.mode === "supabase" ? `<button class="btn" id="chpw" style="margin-top:10px">${hi ? "Password badlo" : "Change password"}</button>` : ""}${S.mode === "off" ? "" : ` <button class="btn danger" id="slo" style="margin-top:10px">${I("log-out", 15)} ${t("logout")}</button>`}</section>
       <p class="meta" style="text-align:center">YantraFlow · ${A.B.edition === "full" ? "Full · local" : "Web version"} · Created by Nirbhay Sharma &amp; Tab</p>`);
     $$("input[name=th]").forEach((r) => (r.onchange = () => { prefs.theme = r.value; savePrefs(); applyTheme(); }));
     $$("input[name=lg]").forEach((r) => (r.onchange = () => { prefs.lang = r.value; savePrefs(); applyTheme(); applyChrome(); viewSettings(); }));
@@ -415,7 +417,7 @@
       localStorage.removeItem(profileKey()); A.toast(hi ? "Data delete ho gaya" : "Data deleted", "ok"); location.hash = "#/workflows";
     };
     $("#slo") && ($("#slo").onclick = logout);
-    $("#chpw") && ($("#chpw").onclick = async () => { const np = prompt(hi ? "Naya password (6+ characters)" : "New password (6+ characters)"); if (!np) return; const { error } = await S.client.auth.updateUser({ password: np }); A.toast(error ? friendly(error) : hi ? "Password badal gaya ✅" : "Password changed ✅", error ? "err" : "ok"); });
+    $("#chpw") && ($("#chpw").onclick = async () => { const np = prompt(hi ? "Naya password (6+ characters)" : "New password (6+ characters)"); if (!np) return; const { error } = await S.client.auth.updateUser({ password: np }); A.toast(error ? friendly(error) : hi ? "Password badal gaya" : "Password changed", error ? "err" : "ok"); });
     $("#delacc") && ($("#delacc").onclick = async () => {
       if (!confirm(hi ? "Account hamesha ke liye delete karna hai?" : "Delete your account permanently?")) return;
       const { error } = await S.client.rpc("yf_delete_my_account");
@@ -424,7 +426,7 @@
     });
     if ($("#cst")) {
       const st = await cloudCheck(); const el = $("#cst"); const b = $("#csync");
-      if (st === "ready") { el.textContent = hi ? "✅ Cloud sync ON — workflows aapke account me save hote hain." : "✅ Cloud sync is on — your workflows are saved to your account."; b.disabled = false; b.onclick = async () => { b.disabled = true; const r = await cloudSync(); b.disabled = false; A.toast(r.ok ? `Synced ✓ (${r.pushed} up, ${r.pulled} down)` : r.state, r.ok ? "ok" : "err"); }; }
+      if (st === "ready") { el.textContent = hi ? "Cloud sync ON — workflows aapke account me save hote hain." : "Cloud sync is on — your workflows are saved to your account."; b.disabled = false; b.onclick = async () => { b.disabled = true; const r = await cloudSync(); b.disabled = false; A.toast(r.ok ? `Synced ✓ (${r.pushed} up, ${r.pulled} down)` : r.state, r.ok ? "ok" : "err"); }; }
       else if (st === "missing") el.textContent = hi ? "Cloud sync abhi off hai (admin ne database table nahi banaya). Workflows is device pe safe hain." : "Cloud sync is off (the admin hasn't created the database table yet). Your workflows are safe on this device.";
       else el.textContent = (hi ? "Cloud sync nahi chal raha: " : "Cloud sync unavailable: ") + st.replace(/^error:/, "");
     }
@@ -433,18 +435,18 @@
     app().setNav("me"); const hi = prefs.lang === "hi";
     app().view().innerHTML = page(`<a class="backlink" href="#/profile">← ${t("profile")}</a>
       <div class="about-hero"><img src="${LOGO}" alt="YantraFlow logo" class="about-logo"><h1 class="h">Yantra<span class="g">Flow</span></h1><p class="sub">${hi ? "Free, n8n jaisa automation tool — phone aur PC dono pe." : "A free, n8n-style automation tool for your phone and PC."}</p></div>
-      <section class="card set"><h3>⚙️ ${hi ? "Naam ka matlab" : "The name"}</h3><p class="sub">${hi ? "<b>Yantra</b> = machine / yantra, <b>Flow</b> = kaam ka bahav. Logo me gear (yantra) ke andar 3 nodes ek flow me milte hain." : "<b>Yantra</b> means machine (and the sacred geometric 'yantra'); <b>Flow</b> is work moving by itself. The logo is a gear with three nodes merging into one flow."}</p></section>
-      <section class="card set"><h3>✨ ${hi ? "Kya kar sakte ho" : "What you can do"}</h3><ul class="needs"><li>${hi ? "Drag-drop workflow editor (mobile pe tap)" : "Drag-and-drop workflow editor (tap-based on phones)"}</li><li>${hi ? "Schedule, webhook, AI, Telegram, Instagram, YouTube, Gmail, HTTP" : "Schedules, webhooks, AI, Telegram, Instagram, YouTube, Gmail, HTTP"}</li><li>${window.YF_PROJECTS.length} ${hi ? "ready Public projects (abhi sab FREE)" : "ready-made Public projects (all FREE right now)"}</li><li>${hi ? "Keys sirf tumhare device pe" : "Your keys stay on your device"}</li></ul></section>
-      <section class="card set"><h3>🌐 ${hi ? "Do version" : "Two versions"}</h3><p class="sub">${hi ? "<b>Website</b>: browser me, login ke saath, install nahi. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email." : "<b>Website</b>: runs in your browser with a free account, no install. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email."}</p><a class="btn primary" style="margin-top:10px" href="${DEV.repo}" target="_blank" rel="noopener">⬇ ${hi ? "Full version (GitHub)" : "Get the full version (GitHub)"}</a></section>
-      <section class="card set"><h3>📬 ${hi ? "Support / Contact" : "Support & contact"}</h3><p class="sub">${hi ? "Koi sawaal, bug ya idea? Email karo:" : "Questions, bugs or ideas? Email us:"} <a href="mailto:${DEV.email}">${DEV.email}</a></p></section>
+      <section class="card set"><h3>${I("cpu", 18)} ${hi ? "Naam ka matlab" : "The name"}</h3><p class="sub">${hi ? "<b>Yantra</b> = machine / yantra, <b>Flow</b> = kaam ka bahav. Logo me gear (yantra) ke andar 3 nodes ek flow me milte hain." : "<b>Yantra</b> means machine (and the sacred geometric 'yantra'); <b>Flow</b> is work moving by itself. The logo is a gear with three nodes merging into one flow."}</p></section>
+      <section class="card set"><h3>${I("sparkles", 18)} ${hi ? "Kya kar sakte ho" : "What you can do"}</h3><ul class="needs"><li>${hi ? "Drag-drop workflow editor (mobile pe tap)" : "Drag-and-drop workflow editor (tap-based on phones)"}</li><li>${hi ? "Schedule, webhook, AI, Telegram, Instagram, YouTube, Gmail, HTTP" : "Schedules, webhooks, AI, Telegram, Instagram, YouTube, Gmail, HTTP"}</li><li>${window.YF_PROJECTS.length} ${hi ? "ready Public projects (abhi sab FREE)" : "ready-made Public projects (all FREE right now)"}</li><li>${hi ? "Keys sirf tumhare device pe" : "Your keys stay on your device"}</li></ul></section>
+      <section class="card set"><h3>${I("monitor", 18)} ${hi ? "Do version" : "Two versions"}</h3><p class="sub">${hi ? "<b>Website</b>: browser me, login ke saath, install nahi. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email." : "<b>Website</b>: runs in your browser with a free account, no install. <b>Full version</b> (PC/Termux): 24×7 schedules, webhooks, folder watch, YouTube upload, email."}</p><a class="btn primary" style="margin-top:10px" href="${DEV.repo}" target="_blank" rel="noopener">${I("download", 15)} ${hi ? "Full version (GitHub)" : "Get the full version (GitHub)"}</a></section>
+      <section class="card set"><h3>${I("mail", 18)} ${hi ? "Support / Contact" : "Support & contact"}</h3><p class="sub">${hi ? "Koi sawaal, bug ya idea? Email karo:" : "Questions, bugs or ideas? Email us:"} <a href="mailto:${DEV.email}">${DEV.email}</a></p></section>
       <p class="meta" style="text-align:center">Open source · MIT License · Drawflow (MIT) · supabase-js (MIT)<br>Created by Nirbhay Sharma &amp; Tab</p>`);
   }
   function viewDeveloper() {
     app().setNav("me"); const hi = prefs.lang === "hi";
-    const link = (href, ic, label, sub) => `<a class="dev-link" href="${href}" target="_blank" rel="noopener"><span class="dl-ic">${ic}</span><div><b>${label}</b><small>${sub}</small></div><span>↗</span></a>`;
+    const link = (href, ic, label, sub) => `<a class="dev-link" href="${href}" target="_blank" rel="noopener"><span class="dl-ic">${ic}</span><div><b>${label}</b><small>${sub}</small></div><span class="dl-go">${I("external-link", 15)}</span></a>`;
     app().view().innerHTML = page(`<a class="backlink" href="#/profile">← ${t("profile")}</a>
       <div class="dev card"><div class="dev-ava">N</div><h1 class="h" style="margin-top:12px">Nirbhay Sharma</h1><p class="sub">“Nishu” · ${hi ? "YantraFlow ka creator" : "Creator of YantraFlow"}</p></div>
-      <div class="dev-links">${link(DEV.github, "🐙", "GitHub", "github.com/shanir01")}${link(DEV.youtube, "▶️", "YouTube", "@JavaGoat9")}${link(DEV.telegram, "✈️", "Telegram", "t.me/javagoat")}<a class="dev-link" href="mailto:${DEV.email}"><span class="dl-ic">📧</span><div><b>Email</b><small>${DEV.email}</small></div><span>↗</span></a>${link(DEV.repo, "⭐", hi ? "YantraFlow repo — star do!" : "YantraFlow repo — leave a star!", "github.com/shanir01/YantraFlow")}</div>
+      <div class="dev-links">${link(DEV.github, I("github", 22), "GitHub", "github.com/shanir01")}${link(DEV.youtube, I("youtube", 22), "YouTube", "@JavaGoat9")}${link(DEV.telegram, I("telegram", 22), "Telegram", "t.me/javagoat")}<a class="dev-link" href="mailto:${DEV.email}"><span class="dl-ic">${I("gmail", 22)}</span><div><b>Email</b><small>${DEV.email}</small></div><span class="dl-go">${I("external-link", 15)}</span></a>${link(DEV.repo, I("star", 22), hi ? "YantraFlow repo — star do!" : "YantraFlow repo — leave a star!", "github.com/shanir01/YantraFlow")}</div>
       <div class="credit card"><img src="${LOGO}" alt=""><div><b>Created by Nirbhay Sharma &amp; Tab</b><small>${hi ? "Idea + design: Nishu · Build: Tab" : "Idea & direction: Nishu · Built with Tab"}</small></div></div>`);
   }
 

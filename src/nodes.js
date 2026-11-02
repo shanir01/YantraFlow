@@ -75,7 +75,7 @@ const CRED = "(blank = use Keys page)";
 
 // ===== Triggers
 def({
-  type: "manualTrigger", label: "Manual Trigger", group: "Triggers", icon: "▶️", color: "#22c55e", inputs: 0, trigger: "manual",
+  type: "manualTrigger", label: "Manual Trigger", group: "Triggers", icon: "play", color: "#22c55e", inputs: 0, trigger: "manual",
   description: "Starts when you press Run.",
   params: [{ key: "testData", label: "Test data (JSON, optional)", type: "json", default: "{}" }],
   async run(ctx) {
@@ -85,7 +85,7 @@ def({
   },
 });
 def({
-  type: "scheduleTrigger", label: "Schedule", group: "Triggers", icon: "⏰", color: "#22c55e", inputs: 0, trigger: "schedule",
+  type: "scheduleTrigger", label: "Schedule", group: "Triggers", icon: "clock", color: "#22c55e", inputs: 0, trigger: "schedule",
   description: "Runs on a timer or cron while the workflow is Active.",
   params: [
     { key: "mode", label: "Mode", type: "select", options: ["interval", "cron"], default: "interval" },
@@ -95,7 +95,7 @@ def({
   async run(ctx) { return one([{ firedAt: new Date().toISOString() }]); },
 });
 def({
-  type: "webhookTrigger", fullOnly: "Webhooks need a server — use the full version on PC/Termux.", label: "Webhook", group: "Triggers", icon: "🪝", color: "#22c55e", inputs: 0, trigger: "webhook",
+  type: "webhookTrigger", fullOnly: "Webhooks need a server — use the full version on PC/Termux.", label: "Webhook", group: "Triggers", icon: "webhook", color: "#22c55e", inputs: 0, trigger: "webhook",
   description: "Starts when a URL is called: http://localhost:PORT/webhook/<path>",
   params: [
     { key: "path", label: "Path", type: "text", default: "my-hook" },
@@ -111,7 +111,7 @@ def({
   },
 });
 def({
-  type: "folderTrigger", fullOnly: "Browsers cannot watch folders — use the full version.", label: "Folder Watch", group: "Triggers", icon: "📂", color: "#22c55e", inputs: 0, trigger: "poll",
+  type: "folderTrigger", fullOnly: "Browsers cannot watch folders — use the full version.", label: "Folder Watch", group: "Triggers", icon: "folder-search", color: "#22c55e", inputs: 0, trigger: "poll",
   description: "Fires once for every NEW file that appears in a folder (checked every few seconds while Active).",
   params: [
     { key: "folder", label: "Folder", type: "text", default: "inbox", help: "Relative = inside YantraFlow's data/files. Termux phone storage: /sdcard/Movies (run termux-setup-storage once)." },
@@ -151,7 +151,7 @@ def({
   },
 });
 def({
-  type: "sheetTrigger", label: "Sheet / CSV New Row", group: "Triggers", icon: "📊", color: "#22c55e", inputs: 0, trigger: "poll",
+  type: "sheetTrigger", label: "Sheet / CSV New Row", group: "Triggers", icon: "googlesheets", color: "#22c55e", inputs: 0, trigger: "poll",
   description: "Fires for every new row in a Google Sheet (File → Share → Publish to web → CSV link) or a local .csv file.",
   params: [
     { key: "source", label: "CSV link or file path", type: "text", default: "", placeholder: "https://docs.google.com/spreadsheets/d/e/.../pub?output=csv" },
@@ -185,7 +185,7 @@ async function readCsvSource(ctx, src) {
 
 // ===== Core
 def({
-  type: "httpRequest", label: "HTTP Request", group: "Core", icon: "🌐", color: "#3b82f6",
+  type: "httpRequest", label: "HTTP Request", group: "Core", icon: "globe", color: "#3b82f6",
   description: "Call any API or website.",
   params: [
     { key: "method", label: "Method", type: "select", options: ["GET", "POST", "PUT", "PATCH", "DELETE"], default: "GET" },
@@ -213,7 +213,7 @@ def({
   },
 });
 def({
-  type: "set", label: "Set Fields", group: "Core", icon: "✏️", color: "#3b82f6",
+  type: "set", label: "Set Fields", group: "Core", icon: "square-pen", color: "#3b82f6",
   description: "Add or change fields. One per line: name = value  (values can use {{ }})",
   params: [
     { key: "fields", label: "Fields", type: "textarea", default: "greeting = Hello {{ $json.name || 'Nishu' }}\ndate = {{ $today }}" },
@@ -228,7 +228,7 @@ def({
   },
 });
 def({
-  type: "code", label: "Code (JavaScript)", group: "Core", icon: "🧩", color: "#3b82f6",
+  type: "code", label: "Code (JavaScript)", group: "Core", icon: "code-xml", color: "#3b82f6",
   description: "Write JavaScript. `items` = list of inputs. Return a list (or one object).",
   params: [{ key: "code", label: "JavaScript", type: "code", default: "// items = [{...}, {...}]\nreturn items.map(item => ({\n  ...item,\n  upper: String(item.title || 'hello').toUpperCase(),\n}));" }],
   async run(ctx) {
@@ -249,7 +249,7 @@ def({
   },
 });
 def({
-  type: "if", label: "IF", group: "Logic", icon: "🔀", color: "#a855f7", outputs: 2, outputLabels: ["true", "false"],
+  type: "if", label: "IF", group: "Logic", icon: "split", color: "#a855f7", outputs: 2, outputLabels: ["true", "false"],
   description: "Sends each item to TRUE (top) or FALSE (bottom).",
   params: [
     { key: "left", label: "Value", type: "text", default: "{{ $json.status }}" },
@@ -282,7 +282,7 @@ function testCondition(a, op, b) {
   }
 }
 def({
-  type: "switch", label: "Switch", group: "Logic", icon: "🚦", color: "#a855f7", outputs: 4, outputLabels: ["1", "2", "3", "else"],
+  type: "switch", label: "Switch", group: "Logic", icon: "route", color: "#a855f7", outputs: 4, outputLabels: ["1", "2", "3", "else"],
   description: "Route by value: output 1/2/3 when the value matches, else the last output.",
   params: [
     { key: "value", label: "Value", type: "text", default: "{{ $json.type }}" },
@@ -301,13 +301,13 @@ def({
   },
 });
 def({
-  type: "delay", label: "Delay", group: "Logic", icon: "⏳", color: "#a855f7",
+  type: "delay", label: "Delay", group: "Logic", icon: "timer", color: "#a855f7",
   description: "Wait before continuing.",
   params: [{ key: "seconds", label: "Seconds", type: "number", default: 5 }],
   async run(ctx) { await sleep(Math.min(Number(ctx.p("seconds")) || 0, 3600) * 1000); return one(ctx.items); },
 });
 def({
-  type: "filter", label: "Limit / Filter", group: "Logic", icon: "🧹", color: "#a855f7",
+  type: "filter", label: "Limit / Filter", group: "Logic", icon: "funnel", color: "#a855f7",
   description: "Keep only the first N items, and/or items matching a JS condition.",
   params: [
     { key: "max", label: "Keep first N (0 = all)", type: "number", default: 3 },
@@ -323,7 +323,7 @@ def({
 
 // ===== AI
 def({
-  type: "aiChat", label: "AI Chat", group: "AI", icon: "🤖", color: "#f59e0b",
+  type: "aiChat", label: "AI Chat", group: "AI", icon: "sparkles", color: "#f59e0b",
   description: "Ask any OpenAI-compatible AI. Default: your FreeLLM-Router on http://localhost:8787/v1",
   params: [
     { key: "prompt", label: "Prompt", type: "textarea", default: "Write a short motivational quote in Hinglish." },
@@ -361,7 +361,7 @@ def({
 
 // ===== Social / messaging
 def({
-  type: "telegram", label: "Telegram", group: "Social & Messaging", icon: "✈️", color: "#0ea5e9",
+  type: "telegram", label: "Telegram", group: "Social & Messaging", icon: "telegram", color: "#0ea5e9",
   description: "Send text, photo, video or file to a chat, group or channel (@channelname — add your bot as admin).",
   params: [
     { key: "operation", label: "Send", type: "select", options: ["text", "photo", "video", "document"], default: "text" },
@@ -414,7 +414,7 @@ def({
   },
 });
 def({
-  type: "instagram", label: "Instagram Post", group: "Social & Messaging", icon: "📸", color: "#e1306c",
+  type: "instagram", label: "Instagram Post", group: "Social & Messaging", icon: "instagram", color: "#e1306c",
   description: "Post a photo or Reel with the official Instagram Graph API. Needs a Business/Creator account + a PUBLIC media URL.",
   params: [
     { key: "kind", label: "Post type", type: "select", options: ["REELS", "IMAGE"], default: "REELS" },
@@ -456,7 +456,7 @@ def({
   },
 });
 def({
-  type: "facebook", label: "Facebook Page Post", group: "Social & Messaging", icon: "📘", color: "#1877f2",
+  type: "facebook", label: "Facebook Page Post", group: "Social & Messaging", icon: "facebook", color: "#1877f2",
   description: "Post text/link, a photo URL or a video URL to your Facebook Page (Graph API).",
   params: [
     { key: "kind", label: "Post type", type: "select", options: ["text", "photo", "video"], default: "text" },
@@ -487,7 +487,7 @@ def({
   },
 });
 def({
-  type: "youtube", fullOnly: "YouTube upload reads a video file from disk — use the full version.", label: "YouTube Upload", group: "Social & Messaging", icon: "▶️", color: "#ff0033",
+  type: "youtube", fullOnly: "YouTube upload reads a video file from disk — use the full version.", label: "YouTube Upload", group: "Social & Messaging", icon: "youtube", color: "#ff0033",
   description: "Upload a video file from this phone/PC to your channel (YouTube Data API v3).",
   params: [
     { key: "file", label: "Video file path", type: "text", default: "{{ $json.path }}" },
@@ -533,7 +533,7 @@ def({
   },
 });
 def({
-  type: "xPost", fullOnly: "X blocks browser calls (CORS) — use the full version.", label: "X (Twitter) Post", group: "Social & Messaging", icon: "𝕏", color: "#64748b",
+  type: "xPost", fullOnly: "X blocks browser calls (CORS) — use the full version.", label: "X (Twitter) Post", group: "Social & Messaging", icon: "x", color: "#64748b",
   description: "Post a text tweet with the X API v2 (your own developer app keys).",
   params: [{ key: "text", label: "Tweet text (max 280)", type: "textarea", default: "{{ $json.text }}" }],
   async run(ctx) {
@@ -550,7 +550,7 @@ def({
   },
 });
 def({
-  type: "discord", label: "Discord", group: "Social & Messaging", icon: "🎮", color: "#5865f2",
+  type: "discord", label: "Discord", group: "Social & Messaging", icon: "discord", color: "#5865f2",
   description: "Send a message to a Discord channel webhook.",
   params: [
     { key: "webhookUrl", label: "Webhook URL " + CRED, type: "secret", default: "" },
@@ -569,7 +569,7 @@ def({
   },
 });
 def({
-  type: "slack", fullOnly: "Slack blocks browser calls (CORS) — use the full version.", label: "Slack", group: "Social & Messaging", icon: "💬", color: "#4a154b",
+  type: "slack", fullOnly: "Slack blocks browser calls (CORS) — use the full version.", label: "Slack", group: "Social & Messaging", icon: "slack", color: "#4a154b",
   description: "Send a message to Slack (Incoming Webhook).",
   params: [
     { key: "webhookUrl", label: "Webhook URL " + CRED, type: "secret", default: "" },
@@ -587,7 +587,7 @@ def({
   },
 });
 def({
-  type: "email", fullOnly: "Browsers cannot send SMTP email — use the full version.", label: "Email (SMTP)", group: "Social & Messaging", icon: "📧", color: "#14b8a6",
+  type: "email", fullOnly: "Browsers cannot send SMTP email — use the full version.", label: "Email (SMTP)", group: "Social & Messaging", icon: "mail", color: "#14b8a6",
   description: "Send an email with your SMTP account (Gmail: use an App Password).",
   params: [
     { key: "to", label: "To (comma separated)", type: "text", default: "" },
@@ -609,7 +609,7 @@ def({
 
 // ===== Data
 def({
-  type: "rss", label: "RSS Read", group: "Data", icon: "📰", color: "#ec4899",
+  type: "rss", label: "RSS Read", group: "Data", icon: "rss", color: "#ec4899",
   description: "Read a news/blog/YouTube RSS feed. Each post becomes one item.",
   params: [
     { key: "url", label: "Feed URL", type: "text", default: "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en" },
@@ -625,7 +625,7 @@ def({
   },
 });
 def({
-  type: "readSheet", label: "Read Sheet / CSV", group: "Data", icon: "📑", color: "#ec4899",
+  type: "readSheet", label: "Read Sheet / CSV", group: "Data", icon: "file-spreadsheet", color: "#ec4899",
   description: "Read all rows from a Google Sheet CSV link or a .csv file. Each row = one item.",
   params: [
     { key: "source", label: "CSV link or file path", type: "text", default: "posts.csv" },
@@ -639,7 +639,7 @@ def({
   },
 });
 def({
-  type: "writeFile", fullOnly: "Browsers cannot write files on disk — use the full version.", label: "Write File / Log", group: "Data", icon: "💾", color: "#ec4899",
+  type: "writeFile", fullOnly: "Browsers cannot write files on disk — use the full version.", label: "Write File / Log", group: "Data", icon: "file-pen", color: "#ec4899",
   description: "Save text or JSON to a file (relative paths go to data/files).",
   params: [
     { key: "path", label: "File path", type: "text", default: "log.txt" },
@@ -661,7 +661,7 @@ def({
   },
 });
 def({
-  type: "log", label: "Log", group: "Data", icon: "📝", color: "#ec4899",
+  type: "log", label: "Log", group: "Data", icon: "scroll-text", color: "#ec4899",
   description: "Write a line into the run log (see Executions).",
   params: [{ key: "message", label: "Message", type: "text", default: "Got: {{ $json }}" }],
   async run(ctx) {
@@ -670,7 +670,7 @@ def({
   },
 });
 def({
-  type: "respondWebhook", fullOnly: "Only useful with Webhook — full version.", label: "Respond to Webhook", group: "Data", icon: "↩️", color: "#ec4899",
+  type: "respondWebhook", fullOnly: "Only useful with Webhook — full version.", label: "Respond to Webhook", group: "Data", icon: "reply", color: "#ec4899",
   description: "Choose what the Webhook caller gets back.",
   params: [
     { key: "body", label: "Response body (JSON or text)", type: "textarea", default: "{\"reply\": \"{{ $json.text }}\"}" },

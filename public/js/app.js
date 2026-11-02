@@ -22,12 +22,14 @@
     if (s < 60) return "just now"; if (s < 3600) return `${Math.floor(s / 60)} min ago`;
     if (s < 86400) return `${Math.floor(s / 3600)} h ago`; return new Date(iso).toLocaleDateString();
   }
+  const I = (name, size = 18, cls) => window.yfIcon(name, size, cls);
+  const nodeMeta = (type) => META[type] || { icon: "circle-help", color: "#64748b", label: type };
   function icon(type, size = 32) {
-    const m = META[type] || { icon: "❔", color: "#666" };
-    return `<span class="chip" style="width:${size}px;height:${size}px;background:${m.color}26;border-color:${m.color}55" title="${esc(m.label)}">${m.icon}</span>`;
+    const m = nodeMeta(type);
+    return `<span class="chip" style="width:${size}px;height:${size}px;background:${m.color}26;border-color:${m.color}55;color:${m.color}" title="${esc(m.label)}">${I(m.icon, Math.round(size * 0.56))}</span>`;
   }
-  function chain(types) { return `<div class="chain">${types.slice(0, 7).map((t, i) => (i ? '<span class="arrow">→</span>' : "") + icon(t)).join("")}</div>`; }
-  function statusPill(st) { const m = { success: "✓ Success", error: "✗ Failed", running: "● Running", skipped: "Skipped", disabled: "Disabled" }; return `<span class="status ${st}">${m[st] || st}</span>`; }
+  function chain(types) { return `<div class="chain">${types.slice(0, 7).map((t, i) => (i ? `<span class="arrow">${I("chevron-right", 14)}</span>` : "") + icon(t)).join("")}</div>`; }
+  function statusPill(st) { const m = { success: [I("circle-check", 13), "Success"], error: [I("circle-x", 13), "Failed"], running: [I("loader-circle", 13, "spin"), "Running"], skipped: ["", "Skipped"], disabled: ["", "Disabled"] }; const v = m[st] || ["", st]; return `<span class="status ${st}">${v[0]}${esc(v[1])}</span>`; }
   function download(name, obj) {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" }));
@@ -47,7 +49,7 @@
   function setNav(name) { $$(".nav a, .bottomnav a").forEach((a) => a.classList.toggle("on", a.dataset.v === name)); }
   function webBanner() {
     if (B.edition !== "web") return "";
-    return `<div class="banner"><span style="font-size:22px">🌐</span><div style="flex:1;min-width:220px"><b>Web version</b> — works right here in your browser, saved on this device. Webhooks, Folder Watch, YouTube upload, email &amp; file saving need the free <b>full version</b> on your PC or phone (Termux).</div><a class="btn sm primary" href="${REPO}" target="_blank" rel="noopener">⬇ Download full version</a></div>`;
+    return `<div class="banner"><span class="bn-ic">${I("globe", 22)}</span><div style="flex:1;min-width:220px"><b>Web version</b> — works right here in your browser, saved on this device. Webhooks, Folder Watch, YouTube upload, email &amp; file saving need the free <b>full version</b> on your PC or phone (Termux).</div><a class="btn sm primary" href="${REPO}" target="_blank" rel="noopener">${I("download", 16)} Download full version</a></div>`;
   }
 
   // ---------- views
@@ -56,38 +58,185 @@
     const list = await B.listWorkflows();
     view().innerHTML = `<div class="page">${webBanner()}
       <div class="hero-h"><div><h1 class="h">Your <span class="g">automations</span></h1><p class="sub">Build once, it runs by itself — on your PC or your phone. Free &amp; local.</p></div>
-      <div class="row"><button class="btn" id="imp">⤓ Import</button><button class="btn primary" id="new">＋ New workflow</button></div></div>
+      <div class="row"><button class="btn" id="imp">${I("upload", 16)} Import</button><button class="btn primary" id="new">${I("plus", 16)} New workflow</button></div></div>
       ${list.length ? `<div class="grid">${list.map((w) => `
-        <div class="card" data-id="${w.id}">
-          <div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(w.name)}</h3>
-            <label class="switch" title="Active = runs by itself"><input type="checkbox" data-act="${w.id}" ${w.active ? "checked" : ""}><span class="tr"></span></label></div>
+        <div class="card wf-card" data-id="${w.id}">
+          <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><h3 style="flex:1;min-width:0">${esc(w.name)}</h3>
+            <label class="switch" title="Active = runs by itself"><input type="checkbox" data-act="${w.id}" ${w.active ? "checked" : ""}><span class="tr"></span></label>
+            <button class="kebab" data-kebab="${w.id}" aria-label="More actions for ${esc(w.name)}" title="More (or right-click / long-press)">${I("ellipsis-vertical", 18)}</button></div>
           ${chain(w.nodeTypes)}
-          <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? "✅" : "❌"}` : "never run"}</span>
-          <div class="row"><button class="btn sm" data-run="${w.id}">▶ Run</button><a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
+          <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? `<span class="ok-c">${I("circle-check", 13)}</span>` : `<span class="err-c">${I("circle-x", 13)}</span>`}` : "never run"}</span>
+          <div class="row"><button class="btn sm" data-run="${w.id}">${I("play", 14)} Run</button><a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
         </div>`).join("")}</div>`
-        : `<div class="empty"><div class="big">⚡</div><h3>No workflows yet</h3><p>Start from a ready-made project — viral script generator, Reel auto-post, YouTube upload, Gmail summary…</p><p class="row" style="justify-content:center;margin-top:14px"><a class="btn primary" href="#/projects">🧩 Browse public projects</a><button class="btn" id="new2">＋ Blank workflow</button></p></div>`}
+        : `<div class="empty"><div class="big">${I("workflow", 44)}</div><h3>No workflows yet</h3><p>Start from a ready-made project — viral script generator, Reel auto-post, YouTube upload, Gmail summary…</p><p class="row" style="justify-content:center;margin-top:14px"><a class="btn primary" href="#/projects">${I("layout-grid", 16)} Browse public projects</a><button class="btn" id="new2">${I("plus", 16)} Blank workflow</button></p></div>`}
     </div>`;
     $("#new") && ($("#new").onclick = () => (location.hash = "#/editor/new"));
     $("#new2") && ($("#new2").onclick = () => (location.hash = "#/editor/new"));
-    $("#imp").onclick = importFlow;
+    $("#imp").onclick = (e) => { e.stopPropagation(); openImportMenu(e.currentTarget); };
+    wireCardMenus();
     $$("[data-act]").forEach((el) => (el.onchange = async () => {
-      try { await B.setActive(el.dataset.act, el.checked); toast(el.checked ? "Active — it will run by itself ⚡" : "Paused", "ok"); }
+      try { await B.setActive(el.dataset.act, el.checked); toast(el.checked ? "Active — it will run by itself" : "Paused", "ok"); }
       catch (e) { el.checked = !el.checked; toast(e.message, "err"); }
     }));
     $$("[data-run]").forEach((el) => (el.onclick = async () => {
       el.disabled = true; el.textContent = "Running…";
-      try { const ex = await B.runWorkflow(el.dataset.run); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✅` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"); }
+      try { const ex = await B.runWorkflow(el.dataset.run); toast(ex.status === "success" ? `Done in ${ex.durationMs} ms ✓` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err"); }
       catch (e) { toast(e.message, "err"); }
       viewWorkflows();
     }));
+  }
+
+
+  // ---------- workflow card actions: right-click (desktop), long-press (phone) or the ⋮ button
+  const b64u = (bytes) => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const unb64u = (s) => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const bin = atob(s); const out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; };
+  async function packWorkflow(wf) {
+    const bytes = new TextEncoder().encode(JSON.stringify(wf));
+    if (window.CompressionStream) { try { const st = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw")); return "z" + b64u(new Uint8Array(await new Response(st).arrayBuffer())); } catch (_) { /* fall through */ } }
+    return "j" + b64u(bytes);
+  }
+  async function unpackWorkflow(code) {
+    const kind = code[0], bytes = unb64u(code.slice(1));
+    if (kind === "z") { if (!window.DecompressionStream) throw new Error("This browser is too old to open share links — use Import → file."); const st = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw")); return JSON.parse(await new Response(st).text()); }
+    if (kind === "j") return JSON.parse(new TextDecoder().decode(bytes));
+    throw new Error("Not a YantraFlow share link");
+  }
+  const SHARE_BASE = "https://yantraflow.sites.tab.bot/";
+  function shareCodeFrom(text) { const m = String(text || "").match(/#\/share\/([A-Za-z0-9_-]+)/); return m ? m[1] : (/^[zj][A-Za-z0-9_-]{20,}$/.test(String(text).trim()) ? String(text).trim() : null); }
+  function cleanForShare(wf) { const c = JSON.parse(JSON.stringify(wf)); delete c.id; delete c.createdAt; delete c.updatedAt; delete c.lastRun; c.active = false; return c; }
+  const fileName = (wf) => `${String(wf.name || "workflow").replace(/[^\w-]+/g, "_")}.yantraflow.json`;
+
+  function closePop() { const p = $("#ctxm"); if (p) p.remove(); const b = $("#ctxb"); if (b) b.remove(); document.removeEventListener("keydown", popKey); }
+  function popKey(e) { if (e.key === "Escape") closePop(); }
+  // items: [{ ic, label, act, danger }] or "hr"; at: {x,y} | element
+  function openPop(items, at, title) {
+    closePop();
+    const sheet = isMobile();
+    const bd = document.createElement("div"); bd.id = "ctxb"; bd.className = "ctx-back" + (sheet ? " on" : "");
+    bd.addEventListener("click", closePop); bd.addEventListener("contextmenu", (e) => { e.preventDefault(); closePop(); });
+    const p = document.createElement("div"); p.id = "ctxm"; p.className = "ctx " + (sheet ? "sheet" : "pop"); p.setAttribute("role", "menu");
+    p.innerHTML = (title ? `<div class="ctx-h">${title}</div>` : "") + items.map((it, i) => it === "hr" ? "<hr>" : `<button role="menuitem" data-i="${i}" class="${it.danger ? "danger" : ""}">${I(it.ic, 18)}<span>${esc(it.label)}</span></button>`).join("") + (sheet ? `<button class="ctx-cancel" data-cancel>${esc("Cancel")}</button>` : "");
+    document.body.appendChild(bd); document.body.appendChild(p);
+    p.addEventListener("contextmenu", (e) => e.preventDefault());
+    $$("[data-i]", p).forEach((b) => (b.onclick = (e) => { e.stopPropagation(); const it = items[+b.dataset.i]; closePop(); it.act(); }));
+    const c = $("[data-cancel]", p); if (c) c.onclick = closePop;
+    if (!sheet) {
+      let x, y; if (at instanceof Element) { const r = at.getBoundingClientRect(); x = r.right; y = r.bottom + 4; } else { x = at.x; y = at.y; }
+      const w = p.offsetWidth, h = p.offsetHeight;
+      if (at instanceof Element) x -= w;
+      p.style.left = Math.max(8, Math.min(x, innerWidth - w - 8)) + "px"; p.style.top = Math.max(8, Math.min(y, innerHeight - h - 8)) + "px";
+    }
+    document.addEventListener("keydown", popKey);
+    const first = $("[data-i]", p); if (first && !sheet) first.focus({ preventScroll: true });
+  }
+
+  async function cardMenu(id, at) {
+    let wf; try { wf = await B.getWorkflow(id); } catch (e) { toast(e.message, "err"); return; }
+    openPop([
+      { ic: "square-pen", label: "Open in editor", act: () => (location.hash = `#/editor/${id}`) },
+      { ic: "pencil", label: "Rename", act: () => renameFlow(wf) },
+      { ic: "copy", label: "Duplicate", act: () => duplicateFlow(wf) },
+      { ic: "download", label: "Export (.json)", act: () => { download(fileName(wf), cleanForShare(wf)); toast("Exported ✓", "ok"); } },
+      { ic: "share-2", label: "Share / send to others", act: () => shareFlow(wf) },
+      "hr",
+      { ic: "trash-2", label: "Delete", danger: true, act: () => deleteFlow(wf) },
+    ], at, `${I("workflow", 15)}<b>${esc(wf.name)}</b>`);
+  }
+  async function renameFlow(wf) {
+    const name = prompt("New name", wf.name); if (name == null || !name.trim() || name.trim() === wf.name) return;
+    try { await B.saveWorkflow(Object.assign({}, wf, { name: name.trim() })); toast("Renamed ✓", "ok"); refreshList(); } catch (e) { toast(e.message, "err"); }
+  }
+  async function duplicateFlow(wf) {
+    try { const c = cleanForShare(wf); c.name = wf.name + " (copy)"; await B.saveWorkflow(c); toast("Duplicated ✓", "ok"); refreshList(); } catch (e) { toast(e.message, "err"); }
+  }
+  async function deleteFlow(wf) {
+    if (!confirm(`Delete "${wf.name}"? This can't be undone.`)) return;
+    try { await B.deleteWorkflow(wf.id); toast("Deleted", "ok"); refreshList(); } catch (e) { toast(e.message, "err"); }
+  }
+  function refreshList() { if (/^#\/workflows|^#?\/?$/.test(location.hash) || !location.hash) viewWorkflows(); }
+
+  async function shareFlow(wf) {
+    const clean = cleanForShare(wf);
+    const link = SHARE_BASE + "#/share/" + (await packWorkflow(clean));
+    const canShare = !!navigator.share;
+    closePop();
+    const bd = document.createElement("div"); bd.id = "ctxb"; bd.className = "ctx-back on"; bd.onclick = closePop;
+    const p = document.createElement("div"); p.id = "ctxm"; p.className = "ctx dialog";
+    p.innerHTML = `<div class="ctx-h">${I("share-2", 16)}<b>Share “${esc(wf.name)}”</b></div>
+      <p class="sub" style="margin:4px 4px 10px">Anyone with this link can add a copy to their YantraFlow (website or PC/Termux → Import → From link). Your API keys are <b>not</b> included.</p>
+      <input class="inp mono" id="shl" readonly value="${esc(link)}" aria-label="Share link">
+      <div class="row" style="margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary sm" id="shc">${I("copy", 15)} Copy link</button>
+        ${canShare ? `<button class="btn sm" id="shs">${I("send-horizontal", 15)} Send…</button>` : ""}
+        <button class="btn sm" id="shf">${I("download", 15)} .json file</button>
+        <button class="btn sm ghost" id="shx">Close</button>
+      </div>
+      ${link.length > 6000 ? `<p class="help">Big workflow — if the link is too long for your chat app, send the .json file instead.</p>` : ""}`;
+    document.body.appendChild(bd); document.body.appendChild(p);
+    document.addEventListener("keydown", popKey);
+    const inp = $("#shl"); inp.onclick = () => inp.select();
+    $("#shc").onclick = async () => { try { await navigator.clipboard.writeText(link); toast("Link copied ✓", "ok"); } catch (_) { inp.select(); document.execCommand && document.execCommand("copy"); toast("Link selected — copy it", "ok"); } };
+    $("#shs") && ($("#shs").onclick = async () => {
+      try {
+        const file = new File([JSON.stringify(clean, null, 2)], fileName(wf), { type: "application/json" });
+        const data = { title: `YantraFlow: ${wf.name}`, text: `Open this to add my YantraFlow automation “${wf.name}”:`, url: link };
+        await navigator.share(data).catch(async (e) => { if (e && e.name === "AbortError") return; if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: data.title }); else throw e; });
+      } catch (e) { toast("Sharing not available here — use Copy link", "err"); }
+    });
+    $("#shf").onclick = () => download(fileName(wf), clean);
+    $("#shx").onclick = closePop;
+  }
+
+  function openImportMenu(anchor) {
+    openPop([
+      { ic: "upload", label: "From file (.json)", act: importFlow },
+      { ic: "share-2", label: "From share link", act: importFromLink },
+    ], anchor, `${I("upload", 15)}<b>Import a workflow</b>`);
+  }
+  async function importFromLink() {
+    const txt = prompt("Paste the YantraFlow share link"); if (!txt) return;
+    const code = shareCodeFrom(txt); if (!code) { toast("That doesn't look like a YantraFlow share link", "err"); return; }
+    location.hash = "#/share/" + code;
+  }
+  async function viewShare(code) {
+    setNav("workflows");
+    let wf; try { wf = await unpackWorkflow(code); if (!wf || !Array.isArray(wf.nodes)) throw new Error("Link is broken or incomplete"); } catch (e) { view().innerHTML = `<div class="page"><div class="empty"><div class="big">${I("triangle-alert", 44)}</div><h3>Can't open this share link</h3><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`; return; }
+    view().innerHTML = `<div class="page"><div class="card share-card"><div class="pj-ic big">${I("share-2", 30)}</div>
+      <p class="meta">Someone shared a YantraFlow automation with you</p><h1 class="h" style="font-size:24px;margin:6px 0">${esc(wf.name || "Shared workflow")}</h1>
+      ${wf.description ? `<p class="sub">${esc(wf.description)}</p>` : ""}${chain(wf.nodes.map((n) => n.type))}
+      <p class="meta">${wf.nodes.length} steps · it starts paused · add your own keys on the Keys page</p>
+      <div class="row" style="margin-top:14px"><button class="btn primary" id="shadd">${I("plus", 16)} Add to my workflows</button><a class="btn" href="#/workflows">Cancel</a></div></div></div>`;
+    $("#shadd").onclick = async () => { try { const s = await B.importWorkflow(cleanForShare(wf)); toast("Added to your workflows ✓", "ok"); location.hash = `#/editor/${s.id}`; } catch (e) { toast("Import failed: " + e.message, "err"); } };
+  }
+
+  function wireCardMenus() {
+    $$("[data-kebab]").forEach((b) => (b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); cardMenu(b.dataset.kebab, b); }));
+    $$(".wf-card").forEach((card) => {
+      const id = card.dataset.id; let t = null, sx = 0, sy = 0, fired = 0;
+      card.addEventListener("contextmenu", (e) => {
+        if (e.target.closest("input,textarea")) return;
+        e.preventDefault(); if (Date.now() - fired < 800) return; fired = Date.now();
+        cardMenu(id, { x: e.clientX, y: e.clientY });
+      });
+      card.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1 || e.target.closest("input,.switch,.kebab")) return;
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY; card.classList.add("pressing");
+        t = setTimeout(() => { t = null; card.classList.remove("pressing"); if (Date.now() - fired < 800) return; fired = Date.now(); if (navigator.vibrate) navigator.vibrate(12); cardMenu(id, { x: sx, y: sy }); }, 520);
+      }, { passive: true });
+      const cancel = () => { if (t) { clearTimeout(t); t = null; } card.classList.remove("pressing"); };
+      card.addEventListener("touchmove", (e) => { const q = e.touches[0]; if (Math.abs(q.clientX - sx) > 10 || Math.abs(q.clientY - sy) > 10) cancel(); }, { passive: true });
+      card.addEventListener("touchend", (e) => { if (Date.now() - fired < 800 && e.cancelable) e.preventDefault(); cancel(); });
+      card.addEventListener("touchcancel", cancel);
+      card.addEventListener("click", (e) => { if (Date.now() - fired < 800) { e.preventDefault(); e.stopPropagation(); } }, true);
+    });
   }
 
   async function viewTemplates() {
     setNav("templates");
     const list = await B.templates();
     view().innerHTML = `<div class="page">${webBanner()}<div class="hero-h"><div><h1 class="h">Ready <span class="g">templates</span></h1><p class="sub">One tap to copy, then add your keys and press Run.</p></div></div>
-      <div class="grid">${list.map((t) => `<div class="card"><div style="font-size:26px">${t.icon || "✨"}</div><h3 style="margin-top:6px">${esc(t.title)}</h3><p>${esc(t.description)}</p>${chain(t.nodes)}
-        <div class="row" style="justify-content:space-between"><span class="meta">${t.nodes.some((n) => META[n] && META[n].fullOnly) && B.edition === "web" ? "🔒 some steps need the full version" : `${t.nodes.length} nodes`}</span><button class="btn sm primary" data-use="${t.key}">Use template</button></div></div>`).join("")}</div></div>`;
+      <div class="grid">${list.map((t) => `<div class="card"><div class="pj-ic">${I(t.icon || "sparkles", 24)}</div><h3 style="margin-top:6px">${esc(t.title)}</h3><p>${esc(t.description)}</p>${chain(t.nodes)}
+        <div class="row" style="justify-content:space-between"><span class="meta">${t.nodes.some((n) => META[n] && META[n].fullOnly) && B.edition === "web" ? `${I("laptop", 13)} some steps need the full version` : `${t.nodes.length} nodes`}</span><button class="btn sm primary" data-use="${t.key}">Use template</button></div></div>`).join("")}</div></div>`;
     $$("[data-use]").forEach((b) => (b.onclick = async () => { const wf = await B.useTemplate(b.dataset.use); toast("Template copied ✓", "ok"); location.hash = `#/editor/${wf.id}`; }));
   }
 
@@ -96,7 +245,7 @@
     const list = await B.listRuns();
     view().innerHTML = `<div class="page"><div class="hero-h"><div><h1 class="h">Run <span class="g">history</span></h1><p class="sub">Every run, every node, every output.</p></div>${list.length ? '<button class="btn sm danger" id="clr">Clear all</button>' : ""}</div>
       ${list.length ? `<div class="list">${list.map((r) => `<a class="run-row" href="#/runs/${r.id}">${statusPill(r.status)}<span class="nm">${esc(r.workflowName)}</span><span class="meta hide-m">${esc(r.mode)}</span><span class="meta">${ago(r.startedAt)} · ${r.durationMs} ms</span></a>`).join("")}</div>`
-        : `<div class="empty"><div class="big">🧾</div><p>No runs yet. Open a workflow and press ▶ Run.</p></div>`}</div>`;
+        : `<div class="empty"><div class="big">${I("history", 44)}</div><p>No runs yet. Open a workflow and press Run.</p></div>`}</div>`;
     $("#clr") && ($("#clr").onclick = async () => { if (confirm("Delete all run history?")) { await B.clearRuns(); viewRuns(); } });
   }
 
@@ -118,17 +267,17 @@
     const { schema, values } = await B.getCreds();
     const filled = (id) => Object.values(values[id] || {}).some((v) => v);
     view().innerHTML = `<div class="page">${webBanner()}<div class="hero-h"><div><h1 class="h">Keys &amp; <span class="g">accounts</span></h1><p class="sub">Saved only on ${B.edition === "web" ? "this browser" : "this device (data/credentials.json)"} — never uploaded anywhere. Nodes use these when their own key field is blank.</p></div></div>
-      ${schema.map((sec) => `<details class="card cred" ${sec.id === "ai" || sec.id === "telegram" ? "open" : ""}><summary><span class="ic">${sec.icon}</span><div><b>${esc(sec.title)}</b><div class="meta">${sec.fields.length} field(s)</div></div><span class="st ${filled(sec.id) ? "on" : "off"}">${filled(sec.id) ? "● saved" : "not set"}</span></summary>
+      ${schema.map((sec) => `<details class="card cred" ${sec.id === "ai" || sec.id === "telegram" ? "open" : ""}><summary><span class="ic">${I(sec.icon, 22)}</span><div><b>${esc(sec.title)}</b><div class="meta">${sec.fields.length} field(s)</div></div><span class="st ${filled(sec.id) ? "on" : "off"}">${filled(sec.id) ? "● saved" : "not set"}</span></summary>
         <p class="help" style="margin-top:12px">${esc(sec.help)}</p>
         <div class="two">${sec.fields.map((f) => `<div><label class="lb" for="c-${sec.id}-${f.key}">${esc(f.label)}</label><input class="inp" id="c-${sec.id}-${f.key}" data-sec="${sec.id}" data-key="${f.key}" type="${f.secret ? "password" : "text"}" autocomplete="off" spellcheck="false" placeholder="${esc(f.placeholder || "")}" value="${esc(values[sec.id][f.key])}"></div>`).join("")}</div>
         <div class="row" style="margin-top:14px"><button class="btn sm primary" data-save="${sec.id}">Save</button>${sec.test ? `<button class="btn sm" data-test="${sec.id}">Test ${sec.id === "ai" ? "AI" : "Telegram"}</button>` : ""}<span class="meta" id="tr-${sec.id}"></span></div></details>`).join("")}
-      <div class="note">🔐 Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div></div>`;
+      <div class="note">${I("shield-check", 15)} Tip: never share screenshots of this page with keys visible. In the full version you can set a password: <code>YANTRAFLOW_PASSWORD=yourpass</code>.</div></div>`;
     const collect = (secId) => { const o = { [secId]: {} }; $$(`[data-sec="${secId}"]`).forEach((i) => (o[secId][i.dataset.key] = i.value)); return o; };
     $$("[data-save]").forEach((b) => (b.onclick = async () => { await B.saveCreds(collect(b.dataset.save)); toast("Saved on this device ✓", "ok"); viewKeys(); }));
     $$("[data-test]").forEach((b) => (b.onclick = async () => {
       const id = b.dataset.test; await B.saveCreds(collect(id)); const out = $(`#tr-${id}`); out.textContent = "Testing…";
-      try { const r = await B.testCred(id); out.innerHTML = r.ok ? `<span style="color:#7dffb0">✅ Works!</span>` : `<span style="color:#ff9aac">❌ ${esc(r.error)}</span>`; }
-      catch (e) { out.innerHTML = `<span style="color:#ff9aac">❌ ${esc(e.message)}</span>`; }
+      try { const r = await B.testCred(id); out.innerHTML = r.ok ? `<span style="color:#7dffb0">${I("circle-check", 15)} Works!</span>` : `<span style="color:#ff9aac">${I("circle-x", 15)} ${esc(r.error)}</span>`; }
+      catch (e) { out.innerHTML = `<span style="color:#ff9aac">${I("circle-x", 15)} ${esc(e.message)}</span>`; }
     }));
   }
 
@@ -141,25 +290,25 @@
     document.body.style.overflow = "hidden";
     view().innerHTML = `<div class="editor" id="editor">
       <div class="ed-top">
-        <a class="btn icon ghost" href="#/workflows" id="back" aria-label="Back">←</a>
+        <a class="btn icon ghost" href="#/workflows" id="back" aria-label="Back">${I("arrow-left", 18)}</a>
         <input class="name" id="wfname" value="${esc(wf.name)}" aria-label="Workflow name"><span class="dirty-dot" title="Unsaved changes"></span>
         <label class="switch" title="Active = runs by itself (schedule, webhook, folder…)"><input type="checkbox" id="active" ${wf.active ? "checked" : ""}><span class="tr"></span><span class="lbl-txt">Active</span></label>
-        <button class="btn sm" id="save"><span>💾</span><span class="lbl-txt">Save</span></button>
-        <button class="btn sm run" id="run">▶ <span class="lbl-txt">Run</span></button>
-        <button class="btn sm icon" id="more" aria-label="More">⋯</button>
+        <button class="btn sm" id="save">${I("save", 16)}<span class="lbl-txt">Save</span></button>
+        <button class="btn sm run" id="run">${I("play", 16)}<span class="lbl-txt">Run</span></button>
+        <button class="btn sm icon" id="more" aria-label="More">${I("ellipsis-vertical", 18)}</button>
       </div>
       <div class="ed-body">
         <aside class="palette" id="palette"><input class="inp search" id="psearch" placeholder="Search nodes…" aria-label="Search nodes"><div id="plist"></div></aside>
         <div id="drawflow"></div>
         <div class="sheet-backdrop" id="backdrop"></div>
         <aside class="panel hidden" id="panel"></aside>
-        <button class="fab" id="fab" aria-label="Add node">＋</button>
-        <div class="zoomctl"><button class="btn" id="zin" aria-label="Zoom in">＋</button><button class="btn" id="zout" aria-label="Zoom out">－</button><button class="btn" id="zfit" aria-label="Fit">⤢</button></div>
+        <button class="fab" id="fab" aria-label="Add node">${I("plus", 26)}</button>
+        <div class="zoomctl"><button class="btn" id="zin" aria-label="Zoom in">${I("plus", 18)}</button><button class="btn" id="zout" aria-label="Zoom out">${I("minus", 18)}</button><button class="btn" id="zfit" aria-label="Fit">${I("maximize-2", 16)}</button></div>
         <div class="runbar" id="runbar"></div>
         <div class="drawer hidden" id="drawer"></div>
       </div>
       <div class="menu hidden" id="menu">
-        <button data-m="export">⬇ Export JSON</button><button data-m="import">⤓ Import JSON</button><button data-m="dup">⧉ Duplicate workflow</button><button data-m="runs">🧾 Run history</button><hr><button data-m="del" style="color:#ff9aac">🗑 Delete workflow</button>
+        <button data-m="export">${I("download", 16)} Export JSON</button><button data-m="import">${I("upload", 16)} Import JSON</button><button data-m="dup">${I("copy", 16)} Duplicate workflow</button><button data-m="runs">${I("history", 16)} Run history</button><hr><button data-m="del" style="color:#ff9aac">${I("trash-2", 16)} Delete workflow</button>
       </div></div>`;
     const el = $("#drawflow");
     const ed = new Drawflow(el);
@@ -199,7 +348,7 @@
     document.addEventListener("click", hideMenu);
     $$("#menu [data-m]").forEach((b) => (b.onclick = () => menuAction(b.dataset.m)));
     setTimeout(fit, 30);
-    if (wf.nodes.length <= 1 && isMobile()) toast("Tap ＋ to add a node 👇");
+    if (wf.nodes.length <= 1 && isMobile()) toast("Tap + to add a node");
   }
   // On phones a long left→right flow becomes tiny, so lay it out top→bottom (zig-zag).
   function mobileLayout(wf) {
@@ -218,8 +367,8 @@
   function rebuildIndex() { ED.byNodeId = {}; for (const [df, n] of Object.entries(ED.map)) ED.byNodeId[n.id] = Number(df); }
   function setDirty(v) { ED.dirty = v; $("#editor") && $("#editor").classList.toggle("dirty", v); }
   function nodeHtml(n) {
-    const m = META[n.type] || { icon: "❔", color: "#666", label: n.type };
-    return `<div class="nf"><div class="nf-ic" style="background:${m.color}26;color:${m.color}">${m.icon}</div><div class="nf-tx"><b>${esc(n.name)}</b><small>${esc(m.label)}${m.fullOnly && B.edition === "web" ? ' <span class="lock">PC</span>' : ""}</small></div><button class="nf-edit" data-edit aria-label="Edit">⚙</button></div><span class="nf-badge"></span>`;
+    const m = nodeMeta(n.type);
+    return `<div class="nf"><div class="nf-ic" style="background:${m.color}26;color:${m.color}">${I(m.icon, 20)}</div><div class="nf-tx"><b>${esc(n.name)}</b><small>${esc(m.label)}${m.fullOnly && B.edition === "web" ? ' <span class="lock">PC</span>' : ""}</small></div><button class="nf-edit" data-edit aria-label="Edit">${I("settings", 16)}</button></div><span class="nf-badge"></span>`;
   }
   function addNode(n, x, y) {
     const m = META[n.type] || { inputs: 1, outputs: 1 };
@@ -249,7 +398,7 @@
     const list = Object.values(META).filter((m) => !q || (m.label + m.description + m.group).toLowerCase().includes(q));
     $("#plist").innerHTML = GROUPS.map((g) => {
       const items = list.filter((m) => m.group === g); if (!items.length) return "";
-      return `<div class="pg">${g}</div>` + items.map((m) => `<div class="pnode" draggable="true" data-type="${m.type}" title="${esc(m.description)}"><span class="pi" style="background:${m.color}26">${m.icon}</span><div><div class="pt">${esc(m.label)}${m.fullOnly && B.edition === "web" ? '<span class="lock">PC</span>' : ""}</div><div class="pd">${esc(m.description)}</div></div></div>`).join("");
+      return `<div class="pg">${g}</div>` + items.map((m) => `<div class="pnode" draggable="true" data-type="${m.type}" title="${esc(m.description)}"><span class="pi" style="background:${m.color}26;color:${m.color}">${I(m.icon, 18)}</span><div><div class="pt">${esc(m.label)}${m.fullOnly && B.edition === "web" ? '<span class="lock">PC</span>' : ""}</div><div class="pd">${esc(m.description)}</div></div></div>`).join("");
     }).join("");
     $$(".pnode").forEach((p) => {
       p.ondragstart = (e) => e.dataTransfer.setData("text/yf-type", p.dataset.type);
@@ -257,6 +406,7 @@
     });
   }
   function fit() {
+    if (!ED || !ED.ed) return;
     const ed = ED.ed; const data = ed.export().drawflow.Home.data; const ids = Object.keys(data);
     const el = $("#drawflow"); if (!ids.length || !el) return;
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
@@ -289,11 +439,11 @@
   }
   async function toggleActive() {
     const el = $("#active");
-    try { await save(false); await B.setActive(ED.wf.id, el.checked); ED.wf.active = el.checked; toast(el.checked ? "Active ⚡ it will run by itself" : "Paused", "ok"); }
+    try { await save(false); await B.setActive(ED.wf.id, el.checked); ED.wf.active = el.checked; toast(el.checked ? "Active — it will run by itself" : "Paused", "ok"); }
     catch (e) { el.checked = !el.checked; toast(e.message, "err"); }
   }
   async function runNow() {
-    const btn = $("#run"); btn.disabled = true; btn.innerHTML = "⏳ <span class='lbl-txt'>Running…</span>";
+    const btn = $("#run"); btn.disabled = true; btn.innerHTML = `${I("loader-circle", 16, "spin")}<span class='lbl-txt'>Running…</span>`;
     $$(".drawflow-node").forEach((n) => n.classList.remove("run-success", "run-error", "run-skipped", "run-disabled"));
     try {
       const wf = await save(false);
@@ -301,7 +451,7 @@
       const ex = await B.runWorkflow(wf.id, collect(), trig);
       showExec(ex);
     } catch (e) { toast(e.message, "err"); }
-    btn.disabled = false; btn.innerHTML = "▶ <span class='lbl-txt'>Run</span>";
+    btn.disabled = false; btn.innerHTML = `${I("play", 16)}<span class='lbl-txt'>Run</span>`;
   }
   function showExec(ex) {
     ED.lastExec = ex;
@@ -310,9 +460,9 @@
       ne.classList.add(`run-${r.status}`);
       $(".nf-badge", ne).textContent = r.status === "success" ? `✓ ${r.outputCount} item${r.outputCount === 1 ? "" : "s"}` : r.status === "error" ? "✗ error" : r.status;
     }
-    toast(ex.status === "success" ? `Done ✅ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : `Failed ❌ ${ex.error}`, ex.status === "success" ? "ok" : "err");
+    toast(ex.status === "success" ? `Done ✓ ${ex.nodes.filter((n) => n.status === "success").length} nodes in ${ex.durationMs} ms` : `Failed: ${ex.error}`, ex.status === "success" ? "ok" : "err");
     const d = $("#drawer");
-    d.innerHTML = `<h4>${statusPill(ex.status)} Run log <span class="meta">${ex.durationMs} ms</span><span class="spacer"></span><button class="btn sm ghost" id="dclose">✕</button></h4>
+    d.innerHTML = `<h4>${statusPill(ex.status)} Run log <span class="meta">${ex.durationMs} ms</span><span class="spacer"></span><button class="btn sm ghost" id="dclose" aria-label="Close">${I("close", 16)}</button></h4>
       ${ex.error ? `<div class="note warn" style="margin:0 0 10px">${esc(ex.error)}</div>` : ""}
       <div class="list">${ex.nodes.map((n) => `<div class="run-row" data-open="${n.id}">${icon(n.type, 28)}<span class="nm">${esc(n.name)}</span>${statusPill(n.status)}<span class="meta">${n.outputCount} out</span></div>`).join("")}</div>`;
     d.classList.remove("hidden");
@@ -351,15 +501,15 @@
       return `<label class="lb" for="${id}">${esc(f.label)}</label>${input}${f.help ? `<div class="help">${esc(f.help)}</div>` : ""}`;
     };
     const hookUrl = n.type === "webhookTrigger" ? B.webhookBase() + encodeURIComponent(n.params.path || "my-hook") : "";
-    p.innerHTML = `<div class="panel-h"><div class="nf-ic" style="background:${m.color}26">${m.icon}</div><input class="nm" id="pname" value="${esc(n.name)}" aria-label="Node name"><button class="btn sm ghost" id="pclose" aria-label="Close">✕</button></div>
+    p.innerHTML = `<div class="panel-h"><div class="nf-ic" style="background:${m.color}26;color:${m.color}">${I(m.icon, 20)}</div><input class="nm" id="pname" value="${esc(n.name)}" aria-label="Node name"><button class="btn sm ghost" id="pclose" aria-label="Close">${I("close", 16)}</button></div>
       <div class="panel-b">
         <p class="help" style="font-size:13px;margin-top:12px">${esc(m.description)}</p>
-        ${m.fullOnly && B.edition === "web" ? `<div class="note">🔒 ${esc(m.fullOnly)} <a href="${REPO}" target="_blank" rel="noopener">Download</a></div>` : ""}
+        ${m.fullOnly && B.edition === "web" ? `<div class="note">${I("laptop", 15)} ${esc(m.fullOnly)} <a href="${REPO}" target="_blank" rel="noopener">Download</a></div>` : ""}
         ${hookUrl ? `<label class="lb">Webhook URL (when workflow is Active)</label><div class="hookurl"><code id="hook">${esc(hookUrl)}</code><button class="btn sm" id="copyhook">Copy</button></div>` : ""}
         ${(m.params || []).map(field).join("")}
         ${m.inputs ? `<label class="lb">Data from previous node</label>${fields && fields.length ? `<div class="fields-chips">${fields.map((k) => `<span class="fchip" data-ins="{{ $json.${/^[A-Za-z_$][\w$]*$/.test(k) ? k : `["${k}"]`} }}">${esc(k)}</span>`).join("")}</div><div class="help">Tap a field to insert it where your cursor is.</div>` : `<div class="help">Run the workflow once — then the fields from the previous node show here. Or type <code>{{ $json.fieldName }}</code></div>`}` : ""}
         <div class="row" style="margin-top:16px;gap:16px"><label class="switch"><input type="checkbox" id="pcof" ${n.continueOnFail ? "checked" : ""}><span class="tr"></span>Continue if it fails</label><label class="switch"><input type="checkbox" id="pdis" ${n.disabled ? "checked" : ""}><span class="tr"></span>Disable</label></div>
-        <div class="row" style="margin-top:16px"><button class="btn sm run" id="prun">▶ Run workflow</button><button class="btn sm" id="pdup">⧉ Duplicate</button><button class="btn sm danger" id="pdel">🗑 Delete</button></div>
+        <div class="row" style="margin-top:16px"><button class="btn sm run" id="prun">${I("play", 14)} Run workflow</button><button class="btn sm" id="pdup">${I("copy", 14)} Duplicate</button><button class="btn sm danger" id="pdel">${I("trash-2", 14)} Delete</button></div>
         ${rec ? `<h4 style="margin:20px 0 6px">Last run ${statusPill(rec.status)} <span class="meta">${rec.ms} ms · in ${rec.inputCount} · out ${rec.outputCount}</span></h4>${rec.error ? `<div class="note warn">${esc(rec.error)}</div>` : ""}${rec.output ? `<pre class="json">${esc(JSON.stringify(rec.output, null, 2))}</pre>` : ""}` : ""}
       </div>`;
     $("#pclose").onclick = closePanel;
@@ -398,12 +548,14 @@
     if (ED && ED.dirty && !h.startsWith("#/editor/" + (ED.wf.id || "new")) && current.startsWith("#/editor")) {
       if (!confirm("You have unsaved changes. Leave without saving?")) { history.replaceState(null, "", current); return; }
     }
+    closePop();
     if (!h.startsWith("#/editor")) { ED = null; document.body.style.overflow = ""; document.removeEventListener("click", hideMenu); }
     current = h;
     const [, v, id] = h.split("/");
     const PV = window.YFPlatform.views;
     try {
       if (v === "editor") await viewEditor(id || "new");
+      else if (v === "share" && id) await viewShare(id);
       else if (v === "templates") await viewTemplates();
       else if (v === "projects") await PV.projects();
       else if (v === "project" && id) await PV.project(id);
@@ -417,7 +569,7 @@
       else await viewWorkflows();
     } catch (e) {
       if (e && e.locked) return;
-      view().innerHTML = `<div class="page"><div class="empty"><div class="big">😕</div><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`;
+      view().innerHTML = `<div class="page"><div class="empty"><div class="big">${I("triangle-alert", 44)}</div><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`;
     }
     window.scrollTo(0, 0);
   }
@@ -432,8 +584,10 @@
     document.body.classList.remove("auth-on");
     window.YFPlatform.applyChrome();
     window.YFPlatform.hookCloud(B);
+    const pendingShare = sessionStorage.getItem("yf_share");
+    if (pendingShare) { sessionStorage.removeItem("yf_share"); history.replaceState(null, "", location.pathname + pendingShare); }
     if (B.edition === "web") {
-      if (!schedulerOn) { schedulerOn = true; B.startScheduler((ex) => toast(`⏰ ${ex.workflowName}: ${ex.status === "success" ? "ran ✅" : "failed ❌"}`, ex.status === "success" ? "ok" : "err")); }
+      if (!schedulerOn) { schedulerOn = true; B.startScheduler((ex) => toast(`${ex.workflowName}: ${ex.status === "success" ? "ran ✓" : "failed"}`, ex.status === "success" ? "ok" : "err")); }
       const seedKey = "yf_" + (window.YF_NS || "") + "seeded";
       if (!localStorage.getItem(seedKey)) {
         localStorage.setItem(seedKey, "1");
@@ -445,6 +599,7 @@
   window.YFApp = { get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
 
   async function boot() {
+    if (location.hash.startsWith("#/share/")) sessionStorage.setItem("yf_share", location.hash);
     window.YFPlatform.splash(true, "Starting YantraFlow…");
     const want = window.YF_EDITION || "auto";
     if (want === "web") B = YFBackends.LocalBackend;

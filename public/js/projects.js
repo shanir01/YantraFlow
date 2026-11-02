@@ -27,7 +27,7 @@ return items.map((it) => {
 
   const P = [
     {
-      id: "viral-script", icon: "🧠", categories: ["AI Content", "Instagram", "YouTube"],
+      id: "viral-script", icon: "wand-sparkles", categories: ["AI Content", "Instagram", "YouTube"],
       title: "AI viral script generator", title_hi: "AI viral script generator",
       summary: "Topic do → AI hook, full script, caption aur hashtags bana deta hai (Reels / Shorts).",
       runsIn: "web", needs: ["AI key (Groq / OpenRouter free) on Keys page"],
@@ -42,7 +42,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "viral-analyser", icon: "🔍", categories: ["Video", "YouTube", "Instagram", "AI Content"],
+      id: "viral-analyser", icon: "scan-search", categories: ["Video", "YouTube", "Instagram", "AI Content"],
       title: "Viral video analyser", title_hi: "Viral video analyser",
       summary: "Viral video ka title, description, views aur transcript paste karo → AI batata hai kyun viral hua aur tum kaise remake karo.",
       runsIn: "web", needs: ["AI key on Keys page", "Video ka title/description/transcript (copy-paste)"],
@@ -57,7 +57,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "profile-optimiser", icon: "✨", categories: ["Instagram", "YouTube", "AI Content"],
+      id: "profile-optimiser", icon: "user-round-pen", categories: ["Instagram", "YouTube", "AI Content"],
       title: "Profile optimiser (normal → unique profile)", title_hi: "Profile optimiser",
       summary: "AI tumhari profile ko unique banata hai: name/username ideas, 3 bio options, highlights, content pillars, posting plan.",
       runsIn: "web", needs: ["AI key on Keys page"],
@@ -72,7 +72,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "youtube-seo", icon: "🏷️", categories: ["YouTube", "AI Content"],
+      id: "youtube-seo", icon: "youtube", categories: ["YouTube", "AI Content"],
       title: "YouTube title, description & tags (AI SEO)", title_hi: "YouTube SEO generator",
       summary: "Video kis baare me hai likho → 5 click-worthy titles, SEO description, 25 tags, thumbnail text, pinned comment.",
       runsIn: "web", needs: ["AI key on Keys page"],
@@ -84,7 +84,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "content-calendar", icon: "🗓️", categories: ["AI Content", "Instagram", "YouTube"],
+      id: "content-calendar", icon: "calendar-days", categories: ["AI Content", "Instagram", "YouTube"],
       title: "Weekly content calendar generator", title_hi: "Weekly content calendar",
       summary: "Niche batao → 7 din ka plan: har din ka topic, format, hook, caption idea aur best time.",
       runsIn: "web", needs: ["AI key on Keys page", "(optional) Telegram bot"],
@@ -97,7 +97,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "comment-dm", icon: "💬", categories: ["Instagram", "AI Content"],
+      id: "comment-dm", icon: "instagram", categories: ["Instagram", "AI Content"],
       title: "Comment keyword → auto DM text generator", title_hi: "Comment keyword → DM text",
       summary: "Jo log 'GUIDE' jaisa keyword comment karein, unke liye AI personal DM message likhta hai.",
       runsIn: "web", needs: ["AI key on Keys page", "Comments list (paste ya HTTP se laao)"],
@@ -111,7 +111,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "telegram-daily-post", icon: "📣", categories: ["Telegram", "AI Content"],
+      id: "telegram-daily-post", icon: "telegram", categories: ["Telegram", "AI Content"],
       title: "Telegram channel daily post (AI)", title_hi: "Telegram channel daily post",
       summary: "Roz 9 baje AI tumhare topic pe naya post likh ke Telegram channel pe daal deta hai.",
       runsIn: "web", needs: ["AI key", "Telegram bot token + @channel (bot ko channel admin banao)"],
@@ -125,7 +125,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "trending-news-post", icon: "🔥", categories: ["AI Content", "Telegram"],
+      id: "trending-news-post", icon: "newspaper", categories: ["AI Content", "Telegram"],
       title: "Trending news → AI post", title_hi: "Trending news → AI post",
       summary: "Top trending news uthata hai, AI usse Insta/X ready post (caption + hashtags) bana ke Telegram pe bhejta hai.",
       runsIn: "full", needs: ["AI key", "Telegram bot"],
@@ -139,7 +139,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "gmail-summary", icon: "📬", categories: ["Gmail", "Telegram"],
+      id: "gmail-summary", icon: "gmail", categories: ["Gmail", "Telegram"],
       title: "Gmail daily inbox summary → Telegram", title_hi: "Gmail inbox summary → Telegram",
       summary: "Raat 9 baje aaj ke unread mails padh ke AI 8 point me summary Telegram pe bhejta hai.",
       runsIn: "setup", needs: ["Google OAuth access token (scope gmail.readonly)", "AI key", "Telegram bot"],
@@ -155,7 +155,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "gmail-auto-reply", icon: "↩️", categories: ["Gmail", "AI Content"],
+      id: "gmail-auto-reply", icon: "gmail", categories: ["Gmail", "AI Content"],
       title: "Gmail auto-reply (AI drafts → you approve)", title_hi: "Gmail auto-reply",
       summary: "Naye mails ke liye AI reply draft karta hai aur Telegram pe bhejta hai. Approve karke 'Send email' node ON karo to reply chala jayega.",
       runsIn: "full", needs: ["Google OAuth access token (gmail.readonly)", "AI key", "Telegram bot", "Full version: Gmail SMTP + App Password for sending"],
@@ -172,7 +172,7 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "cartoon-lipsync", icon: "🎭", categories: ["Video", "YouTube", "Instagram"],
+      id: "cartoon-lipsync", icon: "clapperboard", categories: ["Video", "YouTube", "Instagram"],
       title: "2D / 3D cartoon video with lip-sync", title_hi: "2D/3D cartoon lip-sync video",
       summary: "Script + character likho → tumhari video-AI API ko request jaati hai → talking cartoon video (lip-sync) ka job banta hai.",
       runsIn: "key", needs: ["APNI video-AI API key (paid ya free-trial) — kisi bhi talking-avatar / lip-sync provider se", "Provider ka API endpoint URL"],
@@ -186,14 +186,14 @@ return items.map((it) => {
       ]),
     },
     {
-      id: "uptime-monitor", icon: "🚨", categories: ["Telegram"], fromTemplate: "uptime-monitor",
+      id: "uptime-monitor", icon: "activity", categories: ["Telegram"], fromTemplate: "uptime-monitor",
       title: "Website down alert → Telegram", title_hi: "Website down alert",
       summary: "Har 5 minute website check; down hui (status ≠ 200) to turant Telegram alert.",
       runsIn: "web", needs: ["Telegram bot"], honest: "Website pe tab khula rehna chahiye; 24×7 ke liye full version. Kuch sites browser checks block karti hain (CORS) — full version me sab chalta hai.",
       howTo: ["Keys page: Telegram", "URL node me apni site", "Active ON"],
     },
     {
-      id: "reel-autopost", icon: "🎬", categories: ["Instagram", "Telegram"], fromTemplate: "reel-autopost",
+      id: "reel-autopost", icon: "instagram", categories: ["Instagram", "Telegram"], fromTemplate: "reel-autopost",
       title: "Auto-post Reel to Instagram + Telegram at a time", title_hi: "Reel auto-post: Insta + Telegram",
       summary: "Roz 6 baje AI caption + hashtags likhta hai aur tumhari Reel Instagram + Telegram channel pe post karta hai.",
       runsIn: "setup", needs: ["Instagram Business/Creator account + Meta app token", "Video ka public https link", "AI key", "Telegram bot"],
@@ -201,7 +201,7 @@ return items.map((it) => {
       howTo: ["Keys page: Instagram, AI, Telegram", "'Set' node me video link + topic", "▶ Run / Active"],
     },
     {
-      id: "folder-youtube", icon: "📤", categories: ["YouTube", "Video"], fromTemplate: "folder-youtube",
+      id: "folder-youtube", icon: "youtube", categories: ["YouTube", "Video"], fromTemplate: "folder-youtube",
       title: "Auto YouTube upload from folder (AI title/desc/tags)", title_hi: "Folder → YouTube auto upload",
       summary: "Folder me video daalo → AI title, description, tags likhta hai → YouTube pe upload (private) → Telegram ping.",
       runsIn: "full", needs: ["Full version (PC/Termux)", "YouTube OAuth (client ID/secret + refresh token)", "AI key"],
@@ -209,20 +209,20 @@ return items.map((it) => {
       howTo: ["Full version install karo", "Keys page: YouTube + AI", "Active ON — folder me video daalo"],
     },
     {
-      id: "rss-ai-telegram", icon: "📰", categories: ["Telegram", "AI Content"], fromTemplate: "rss-ai-telegram",
+      id: "rss-ai-telegram", icon: "rss", categories: ["Telegram", "AI Content"], fromTemplate: "rss-ai-telegram",
       title: "News → AI summary → Telegram", title_hi: "News → AI summary → Telegram",
       summary: "Subah latest news padh ke AI har ek ki 2 line Hinglish summary Telegram pe bhejta hai.",
       runsIn: "full", needs: ["AI key", "Telegram bot"], honest: "Website pe kuch feeds browser block karti hain; full version me har feed chalti hai.",
       howTo: ["Keys page: AI + Telegram", "▶ Run"],
     },
     {
-      id: "daily-quote", icon: "💡", categories: ["Telegram", "AI Content"], fromTemplate: "daily-quote",
+      id: "daily-quote", icon: "lightbulb", categories: ["Telegram", "AI Content"], fromTemplate: "daily-quote",
       title: "Daily AI quote → Telegram", title_hi: "Daily AI quote → Telegram",
       summary: "Roz 7 baje AI naya motivational quote likh ke Telegram pe bhejta hai.",
       runsIn: "web", needs: ["AI key", "Telegram bot"], howTo: ["Keys page: AI + Telegram", "▶ Run, phir Active ON"],
     },
     {
-      id: "webhook-ai-reply", icon: "🪝", categories: ["AI Content"], fromTemplate: "webhook-ai-reply",
+      id: "webhook-ai-reply", icon: "webhook", categories: ["AI Content"], fromTemplate: "webhook-ai-reply",
       title: "Webhook → AI reply (your own AI API)", title_hi: "Webhook → AI reply",
       summary: "Apna AI API: kisi bhi app/bot se message bhejo, AI ka jawab wapas.",
       runsIn: "full", needs: ["Full version (webhook ke liye server)", "AI key"], howTo: ["Full version chalao", "POST localhost:5679/webhook/ask"],
