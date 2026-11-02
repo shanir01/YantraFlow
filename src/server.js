@@ -2,6 +2,7 @@
 "use strict";
 // YantraFlow — free local automation (n8n-style) for PC and Android (Termux).
 const http = require("node:http");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { Store } = require("./store");
@@ -60,6 +61,15 @@ function mergeSettings(old, incoming) {
   }
   return out;
 }
+// A fresh password every time YantraFlow starts (no confusing 0/O/1/l/I characters).
+function makePassword() {
+  const abc = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const pick = () => Array.from(crypto.randomBytes(4), (b) => abc[b % abc.length]).join("");
+  return pick() + "-" + pick();
+}
+function parseCookies(h) { const out = {}; for (const part of String(h || "").split(";")) { const i = part.indexOf("="); if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim()); } return out; }
+function sameSecret(a, b) { const x = crypto.createHash("sha256").update(String(a)).digest(); const y = crypto.createHash("sha256").update(String(b)).digest(); return crypto.timingSafeEqual(x, y); }
+
 function loadTemplates() {
   const dir = path.join(PUBLIC, "templates");
   const index = JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8"));
@@ -69,7 +79,9 @@ function loadTemplates() {
 function createServer(opts = {}) {
   const store = opts.store || new Store(opts.dataDir || process.env.YANTRAFLOW_DATA || path.join(__dirname, "..", "data"));
   const runner = opts.runner || new Runner(store, opts.logger || console);
-  const password = opts.password !== undefined ? opts.password : process.env.YANTRAFLOW_PASSWORD || "";
+  // opts.password "" = no lock (tests). Otherwise YANTRAFLOW_PASSWORD, else a NEW random password on every start.
+  const password = opts.password !== undefined ? opts.password : process.env.YANTRAFLOW_PASSWORD || makePassword();
+  const sessions = new Set(); const fails = new Map();
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, "http://x");
@@ -93,11 +105,25 @@ function createServer(opts = {}) {
         if (ex.status === "error") return send(res, 500, { error: ex.error, executionId: ex.id });
         return send(res, 200, ex.lastOutput !== undefined ? ex.lastOutput : { ok: true, executionId: ex.id });
       }
-      // ---- optional password
+      // ---- password lock: UI + API need the password printed in the terminal (webhooks above stay open)
       if (password) {
-        const h = req.headers.authorization || "";
-        const given = h.startsWith("Basic ") ? Buffer.from(h.slice(6), "base64").toString().split(":").slice(1).join(":") : "";
-        if (given !== password) return send(res, 401, "Password required", { "www-authenticate": 'Basic realm="YantraFlow"' });
+        const sid = parseCookies(req.headers.cookie).yf_session;
+        const authed = !!(sid && sessions.has(sid));
+        if (p === "/api/health") return send(res, 200, { ok: true, name: "YantraFlow", edition: "full", version: pkg.version, locked: true, authed });
+        if (p === "/api/login" && req.method === "POST") {
+          const ip = req.socket.remoteAddress || "";
+          const now = Date.now(); const f = fails.get(ip) || { n: 0, t: now };
+          if (now - f.t > 60000) { f.n = 0; f.t = now; }
+          if (f.n >= 8) return send(res, 429, { error: "Too many wrong tries — wait 1 minute." });
+          let given = ""; try { given = String(JSON.parse((await readBody(req, 10000)) || "{}").password || "").trim(); } catch (_) { /* */ }
+          if (!given || !sameSecret(given, password)) { f.n++; fails.set(ip, f); return send(res, 401, { error: "Wrong password. Use the password shown in the terminal window." }); }
+          fails.delete(ip);
+          const token = crypto.randomBytes(24).toString("hex"); sessions.add(token);
+          return send(res, 200, { ok: true }, { "set-cookie": `yf_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000` });
+        }
+        if (p === "/api/logout" && req.method === "POST") { if (sid) sessions.delete(sid); return send(res, 200, { ok: true }, { "set-cookie": "yf_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0" }); }
+        if (p.startsWith("/api/") && !authed) return send(res, 401, { error: "locked" });
+        // static files (the app shell + lock screen) are served without the password; your data is only behind /api
       }
       if (p.startsWith("/api/")) return await api(req, res, url, store, runner);
       // ---- static files
@@ -112,6 +138,7 @@ function createServer(opts = {}) {
   });
   server.store = store;
   server.runner = runner;
+  server.password = password;
   return server;
 }
 
@@ -200,6 +227,7 @@ if (require.main === module) {
   });
   server.listen(port, host, () => {
     const shown = host === "0.0.0.0" ? "localhost" : host;
-    console.log(`\n  ⚡ YantraFlow ${pkg.version} is running\n  👉 Open: http://${shown === "127.0.0.1" ? "localhost" : shown}:${port}\n  Webhooks: http://localhost:${port}/webhook/<path>\n  Data folder: ${server.store.dir}\n  Stop: Ctrl+C\n`);
+    const line = "═".repeat(44);
+    console.log(`\n  ⚡ YantraFlow ${pkg.version} is running\n  👉 Open: http://${shown === "127.0.0.1" ? "localhost" : shown}:${port}\n\n  ${line}\n  🔒 YantraFlow password:  ${server.password}\n  ${line}\n  (New password every time you start. Type it on the lock screen.)\n\n  Webhooks (no password needed): http://localhost:${port}/webhook/<path>\n  Data folder: ${server.store.dir}\n  Stop: Ctrl+C\n`);
   });
 }

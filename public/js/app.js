@@ -65,7 +65,7 @@
           <div class="row" style="justify-content:space-between"><span class="meta">${w.nodeCount} nodes · ${w.lastRun ? `last run ${ago(w.lastRun.startedAt)} ${w.lastRun.status === "success" ? "✅" : "❌"}` : "never run"}</span>
           <div class="row"><button class="btn sm" data-run="${w.id}">▶ Run</button><a class="btn sm primary" href="#/editor/${w.id}">Open</a></div></div>
         </div>`).join("")}</div>`
-        : `<div class="empty"><div class="big">⚡</div><h3>No workflows yet</h3><p>Start from a ready template — news to Telegram, daily AI quote, Reel auto-post, YouTube upload…</p><p class="row" style="justify-content:center;margin-top:14px"><a class="btn primary" href="#/templates">✨ Browse templates</a><button class="btn" id="new2">＋ Blank workflow</button></p></div>`}
+        : `<div class="empty"><div class="big">⚡</div><h3>No workflows yet</h3><p>Start from a ready-made project — viral script generator, Reel auto-post, YouTube upload, Gmail summary…</p><p class="row" style="justify-content:center;margin-top:14px"><a class="btn primary" href="#/projects">🧩 Browse public projects</a><button class="btn" id="new2">＋ Blank workflow</button></p></div>`}
     </div>`;
     $("#new") && ($("#new").onclick = () => (location.hash = "#/editor/new"));
     $("#new2") && ($("#new2").onclick = () => (location.hash = "#/editor/new"));
@@ -393,6 +393,7 @@
   // ---------- router
   let current = "";
   async function route() {
+    if (!started) return;
     const h = location.hash || "#/workflows";
     if (ED && ED.dirty && !h.startsWith("#/editor/" + (ED.wf.id || "new")) && current.startsWith("#/editor")) {
       if (!confirm("You have unsaved changes. Leave without saving?")) { history.replaceState(null, "", current); return; }
@@ -400,21 +401,51 @@
     if (!h.startsWith("#/editor")) { ED = null; document.body.style.overflow = ""; document.removeEventListener("click", hideMenu); }
     current = h;
     const [, v, id] = h.split("/");
+    const PV = window.YFPlatform.views;
     try {
       if (v === "editor") await viewEditor(id || "new");
       else if (v === "templates") await viewTemplates();
+      else if (v === "projects") await PV.projects();
+      else if (v === "project" && id) await PV.project(id);
+      else if (v === "profile") await PV.profile();
+      else if (v === "settings") await PV.settings();
+      else if (v === "about") await PV.about();
+      else if (v === "developer") await PV.developer();
       else if (v === "runs" && id) await viewRun(id);
       else if (v === "runs") await viewRuns();
       else if (v === "keys") await viewKeys();
       else await viewWorkflows();
-    } catch (e) { view().innerHTML = `<div class="page"><div class="empty"><div class="big">😕</div><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`; }
+    } catch (e) {
+      if (e && e.locked) return;
+      view().innerHTML = `<div class="page"><div class="empty"><div class="big">😕</div><p>${esc(e.message)}</p><a class="btn" href="#/workflows">Back</a></div></div>`;
+    }
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);
   window.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "s" && ED) { e.preventDefault(); save(true); } });
   window.addEventListener("beforeunload", (e) => { if (ED && ED.dirty) { e.preventDefault(); e.returnValue = ""; } });
 
+  let started = false, schedulerOn = false;
+  // called once the person is logged in (website) or unlocked (local full version)
+  async function start() {
+    started = true;
+    document.body.classList.remove("auth-on");
+    window.YFPlatform.applyChrome();
+    window.YFPlatform.hookCloud(B);
+    if (B.edition === "web") {
+      if (!schedulerOn) { schedulerOn = true; B.startScheduler((ex) => toast(`⏰ ${ex.workflowName}: ${ex.status === "success" ? "ran ✅" : "failed ❌"}`, ex.status === "success" ? "ok" : "err")); }
+      const seedKey = "yf_" + (window.YF_NS || "") + "seeded";
+      if (!localStorage.getItem(seedKey)) {
+        localStorage.setItem(seedKey, "1");
+        try { await B.useTemplate("daily-quote"); } catch (_) { /* */ }
+      }
+    }
+    route();
+  }
+  window.YFApp = { get B() { return B; }, toast, esc, chain, view, setNav, download, META, REPO, start, refresh: () => route() };
+
   async function boot() {
+    window.YFPlatform.splash(true, "Starting YantraFlow…");
     const want = window.YF_EDITION || "auto";
     if (want === "web") B = YFBackends.LocalBackend;
     else if (want === "full") B = YFBackends.ServerBackend;
@@ -424,14 +455,7 @@
     }
     $("#edition").textContent = B.edition === "full" ? "● Full · local" : "● Web version";
     $("#edition").className = `pill ${B.edition}`;
-    if (B.edition === "web") {
-      B.startScheduler((ex) => toast(`⏰ ${ex.workflowName}: ${ex.status === "success" ? "ran ✅" : "failed ❌"}`, ex.status === "success" ? "ok" : "err"));
-      if (!localStorage.getItem("yf_seeded")) {
-        localStorage.setItem("yf_seeded", "1");
-        try { await B.useTemplate("daily-quote"); } catch (_) { /* */ }
-      }
-    }
-    route();
+    if (await window.YFPlatform.gate(B)) start();
   }
   boot();
 })();

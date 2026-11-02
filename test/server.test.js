@@ -247,8 +247,12 @@ test("optional password protects the UI but not webhooks", async () => {
   const s2 = createServer({ dataDir: tmpDir(), logger: silent, password: "pass123" });
   await new Promise((r) => s2.listen(0, "127.0.0.1", r));
   const b2 = `http://127.0.0.1:${s2.address().port}`;
-  assert.equal((await fetch(b2 + "/api/workflows")).status, 401);
-  assert.equal((await fetch(b2 + "/api/workflows", { headers: { authorization: "Basic " + Buffer.from("x:pass123").toString("base64") } })).status, 200);
-  assert.equal((await fetch(b2 + "/webhook/none")).status, 404);
-  s2.close();
+  try {
+    assert.equal((await fetch(b2 + "/api/workflows")).status, 401);
+    const lg = await fetch(b2 + "/api/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: "pass123" }) });
+    assert.equal(lg.status, 200);
+    const cookie = lg.headers.get("set-cookie").split(";")[0];
+    assert.equal((await fetch(b2 + "/api/workflows", { headers: { cookie } })).status, 200);
+    assert.equal((await fetch(b2 + "/webhook/none")).status, 404);
+  } finally { s2.close(); }
 });

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="YantraFlow">
+  <defs><linearGradient id="yfg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset=".55" stop-color="#6366f1"/><stop offset="1" stop-color="#06d6f5"/></linearGradient>
+  <radialGradient id="yfs" cx=".3" cy=".2" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+  <rect width="64" height="64" rx="16" fill="url(#yfg)"/><rect width="64" height="64" rx="16" fill="url(#yfs)"/>
+  <g transform="translate(32 32) scale(.86) translate(-32 -32)"><path d="M26.98 11.09 L27.73 6.35 L36.27 6.35 L37.02 11.09 L43.23 13.67 L47.12 10.85 L53.15 16.88 L50.33 20.77 L52.91 26.98 L57.65 27.73 L57.65 36.27 L52.91 37.02 L50.33 43.23 L53.15 47.12 L47.12 53.15 L43.23 50.33 L37.02 52.91 L36.27 57.65 L27.73 57.65 L26.98 52.91 L20.77 50.33 L16.88 53.15 L10.85 47.12 L13.67 43.23 L11.09 37.02 L6.35 36.27 L6.35 27.73 L11.09 26.98 L13.67 20.77 L10.85 16.88 L16.88 10.85 L20.77 13.67 Z" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="14.2" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.4"/><g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"><path d="M22.5 22.5 C22.5 30 32 28.5 32 35.5 M41.5 22.5 C41.5 30 32 28.5 32 35.5 M32 35.5 V41.5" /></g>
+  <circle cx="22.5" cy="22.5" r="3.6" fill="#fff"/><circle cx="41.5" cy="22.5" r="3.6" fill="#fff"/><circle cx="32" cy="43" r="4.2" fill="#fff"/></g>
+</svg>

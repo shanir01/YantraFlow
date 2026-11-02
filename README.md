@@ -1,11 +1,13 @@
 <p align="center"><img src="docs/banner.jpg" alt="YantraFlow — free n8n-style automation for PC and phone" width="100%"></p>
 
-<h1 align="center">⚡ YantraFlow</h1>
-<p align="center"><b>Free, local, n8n-style workflow automation that runs on your PC <i>and</i> your Android phone (Termux).</b><br>
+<p align="center"><img src="public/img/logo.svg" width="96" alt="YantraFlow logo"></p>
+<h1 align="center">YantraFlow</h1>
+<p align="center"><b>Free, n8n-style automation platform: free account, 17 ready-made Public Projects, and a drag-and-drop editor — on the web, your PC <i>and</i> your Android phone (Termux).</b><br>
 Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhooks, schedules. Zero dependencies. Your keys never leave your device.</p>
 
 <p align="center">
 <a href="https://yantraflow.sites.tab.bot/"><b>🌐 Try it live in your browser</b></a> ·
+<a href="#-website-accounts--public-projects-v2">🧩 Public Projects</a> ·
 <a href="#-quick-start-pc">💻 PC setup</a> ·
 <a href="#-quick-start-android-termux">📱 Phone setup</a> ·
 <a href="#-hinglish-quickstart">🇮🇳 Hinglish guide</a>
@@ -30,6 +32,8 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 > YantraFlow is **inspired by** n8n's idea, but it is written from scratch — no n8n code is used. n8n has far more integrations; YantraFlow is small, simple and phone-friendly.
 
 ## 📸 Screenshots
+
+<p align="center"><img src="docs/screenshots/v2-login.jpg" width="23%" alt="Login"> <img src="docs/screenshots/v2-projects.jpg" width="23%" alt="Public Projects"> <img src="docs/screenshots/v2-project-detail.jpg" width="23%" alt="Project detail"> <img src="docs/screenshots/v2-profile.jpg" width="23%" alt="Profile"></p>
 
 <p align="center">
 <img src="docs/screenshots/phone-workflows.jpg" width="23%"> <img src="docs/screenshots/phone-run.jpg" width="23%"> <img src="docs/screenshots/phone-node.jpg" width="23%"> <img src="docs/screenshots/phone-palette.jpg" width="23%">
@@ -60,6 +64,55 @@ Drag &amp; drop nodes → AI, Telegram, Instagram Reels, YouTube upload, webhook
 | 🎬 AI caption → Reel to Instagram + Telegram | 6 PM daily: AI caption + hashtags, posts Reel to Instagram and video to Telegram channel |
 | 📤 New video in folder → YouTube | Drop a video in a folder → AI writes title/description/tags → uploads to YouTube → Telegram ping |
 | 🚨 Website down alert | Checks a site every 5 min, Telegram alert if status ≠ 200 |
+
+## 👤 Website accounts & Public Projects (v2)
+
+The live website **https://yantraflow.sites.tab.bot/** is now a small platform:
+
+- **Free account** — email + password only (Sign up / Log in / Forgot password). Each account gets its own workflows, runs and keys (keys stay in that browser, never on a server).
+- **Profile** — avatar (initials or your photo), name, bio. **Settings**: theme (Dark / AMOLED / Light), language (English / Hinglish), Keys page, export data, delete data, change password, delete account. **About** and **Developer** pages.
+- **🧩 Public Projects** — 17 ready-made automations with category filters (YouTube, Instagram, Telegram, Gmail, AI Content, Video). Every project has a `tier`/`price` field in [`public/js/projects.js`](public/js/projects.js) — **all FREE right now**. One tap on **Use this project** copies it into your workflows.
+
+| Project | Category | Where it runs |
+|---|---|---|
+| AI viral script generator (topic → hook, script, caption, hashtags) | AI Content | 🌐 website |
+| Viral video analyser (title/description/transcript → why it went viral + remake plan) | Video | 🌐 website — analyses **text only**, it cannot watch the video |
+| Profile optimiser (unique name, bio, highlights, content pillars) | Instagram / YouTube | 🌐 website |
+| YouTube title, description & tags (AI SEO) | YouTube | 🌐 website |
+| Weekly content calendar generator | AI Content | 🌐 website |
+| Comment keyword → auto DM text generator | Instagram | 🌐 website (writes the DM text; auto-sending DMs needs Meta's Messaging API) |
+| Telegram channel daily post (AI) | Telegram | 🌐 website (24×7 in full version) |
+| Daily AI quote → Telegram | Telegram | 🌐 website |
+| Website down alert → Telegram | Telegram | 🌐 website |
+| Auto-post Reel to Instagram + Telegram at a time | Instagram | 🛠️ needs Meta app token + public video URL |
+| Gmail daily inbox summary → Telegram | Gmail | 🛠️ needs your Google OAuth token (expires in 1 h) |
+| 2D / 3D cartoon video with lip-sync | Video | 🔑 needs **your own** video-AI API key (paid / free trial) — not free from us |
+| Trending news → AI post | AI Content | 💻 full version (many feeds block browsers) |
+| News → AI summary → Telegram | Telegram | 💻 full version |
+| Gmail auto-reply (AI drafts → you approve) | Gmail | 💻 full version (SMTP send) |
+| Auto YouTube upload from folder (AI title/desc/tags) | YouTube | 💻 full version |
+| Webhook → AI reply | AI Content | 💻 full version |
+
+### Supabase setup (site owner)
+The website uses the owner's Supabase project (`public/config.js` holds the URL + **publishable** key — safe in the browser; never put a secret key there).
+
+1. **Make signups work instantly:** Supabase → *Authentication* → *Sign In / Providers* → *Email* → turn **OFF "Confirm email"** → Save.
+   *(If you keep it ON, Supabase's built-in email sends only a few emails per hour — add your own SMTP under Authentication → Emails → SMTP Settings, e.g. Gmail App Password, Brevo or Resend.)*
+2. **Links in emails (password reset):** *Authentication* → *URL Configuration* → Site URL `https://yantraflow.sites.tab.bot` and add the same to **Redirect URLs**.
+3. **Optional cloud sync + "Delete my account":** paste [`docs/supabase-setup.sql`](docs/supabase-setup.sql) into *SQL Editor* → Run. It creates the `yf_workflows` table with Row Level Security (each user sees only their own rows). Without it, workflows are saved on the device and Settings says "Cloud sync is off".
+
+## 🔒 Full version (PC / Termux) password
+The local full version has **no accounts**. Every time you run `start.bat` / `sh start.sh`, YantraFlow prints a **new random password** in the terminal:
+
+```
+  ════════════════════════════════════════════
+  🔒 YantraFlow password:  Kp7m-Xq3Z
+  ════════════════════════════════════════════
+```
+
+Type it on the lock screen at `http://localhost:5679`. Restarting makes a new password (old sessions stop working). **Webhooks (`/webhook/...`) never need the password**, so outside apps can still call them. Advanced: set `YANTRAFLOW_PASSWORD=...` to use a fixed password instead.
+
+**Hinglish:** PC/Termux version me account nahi hai. Har baar `start.bat` / `sh start.sh` chalane par terminal me naya password dikhega (`🔒 YantraFlow password: XXXX-XXXX`). Browser me lock screen pe wahi password daalo. Dobara start kiya to naya password banega. Webhooks bina password ke chalte rahenge.
 
 ## 💻 Quick start (PC)
 
@@ -124,7 +177,7 @@ All keys go on the **Keys** page (🔑). They stay on your device.
 curl -X POST http://localhost:5679/webhook/ask -H "content-type: application/json" -d '{"message":"Termux kya hai?"}'
 ```
 - **From the internet** (e.g. a form or another server): use a free tunnel such as `cloudflared tunnel --url http://localhost:5679` (`pkg install cloudflared` on Termux).
-- **Open the phone's editor from your PC on the same Wi-Fi:** `HOST=0.0.0.0 YANTRAFLOW_PASSWORD=mypass sh start.sh`, then open `http://<phone-ip>:5679`.
+- **Open the phone's editor from your PC on the same Wi-Fi:** `HOST=0.0.0.0 sh start.sh`, then open `http://<phone-ip>:5679` and type the password shown in Termux.
 
 ## ⚙️ Settings (environment variables)
 
@@ -132,12 +185,14 @@ curl -X POST http://localhost:5679/webhook/ask -H "content-type: application/jso
 |---|---|---|
 | `PORT` | `5679` | Port |
 | `HOST` | `127.0.0.1` | `0.0.0.0` = reachable from your Wi-Fi |
-| `YANTRAFLOW_PASSWORD` | – | Password for the editor (webhooks stay open) |
+| `YANTRAFLOW_PASSWORD` | new random password every start | Fixed password for the editor instead of the random one (webhooks stay open) |
 | `YANTRAFLOW_DATA` | `./data` | Where workflows, runs, keys and files are saved |
 | `YANTRAFLOW_MAX_RUNS` | `300` | Run history kept |
 | `NO_BROWSER` | – | `1` = don't open the browser on start |
 
 ## 🇮🇳 Hinglish quickstart
+
+**Website (naya v2):** https://yantraflow.sites.tab.bot/ kholo → *Sign up* (sirf email + password) → *Projects* me jao → koi bhi project → **Use this project** → Keys page pe apni AI/Telegram key → ▶ Run. Saare projects abhi FREE hain.
 
 **YantraFlow kya hai?** n8n jaisa apna free automation tool — drag-drop karke "jab ye ho, tab wo karo" workflow banao. PC aur Android phone (Termux) dono pe chalta hai. Koi paisa nahi, koi Docker nahi, data tumhare device pe hi rehta hai.
 
@@ -191,9 +246,12 @@ data/              your workflows, runs, keys (git-ignored)
 ## 🔒 Security notes
 - Keys are stored in plain JSON on your device (`data/credentials.json`) — keep your device safe, never commit `data/`.
 - The Code node runs JavaScript with full access to your computer — only import workflows you trust.
-- By default the server listens on `127.0.0.1` only. If you use `HOST=0.0.0.0`, set `YANTRAFLOW_PASSWORD`.
+- By default the server listens on `127.0.0.1` only, and the editor is locked with a new random password printed at every start.
 
 ## 🙏 Credits
+
+Created by **Nirbhay Sharma (Nishu)** & **Tab** · login by [supabase-js](https://github.com/supabase/supabase-js) (MIT, vendored in `public/vendor/`).
+
 - Canvas: [Drawflow](https://github.com/jerosoler/Drawflow) by Jero Soler (MIT)
 - Idea inspired by [n8n](https://n8n.io) (no n8n code used)
 

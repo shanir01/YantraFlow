@@ -6,6 +6,7 @@
   async function req(method, url, body) {
     const r = await fetch(url, { method, headers: body !== undefined ? { "content-type": "application/json" } : {}, body: body !== undefined ? JSON.stringify(body) : undefined });
     let data = null; try { data = await r.json(); } catch (_) { /* */ }
+    if (r.status === 401 && data && data.error === "locked") { if (window.YFPlatform) window.YFPlatform.showLocalLock("Session ended — enter the password from the terminal again."); throw Object.assign(new Error("Locked"), { locked: true }); }
     if (!r.ok) throw new Error((data && data.error) || `Server answered ${r.status}`);
     return data;
   }
@@ -32,8 +33,9 @@
 
   // ---------------- web edition (browser only)
   const LS = {
-    get(k, d) { try { const v = localStorage.getItem("yf_" + k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
-    set(k, v) { localStorage.setItem("yf_" + k, JSON.stringify(v)); },
+    // logged-in users get their own space: yf_u_<userId>_workflows, yf_u_<userId>_creds, ...
+    get(k, d) { try { const v = localStorage.getItem("yf_" + (window.YF_NS || "") + k); return v ? JSON.parse(v) : d; } catch (_) { return d; } },
+    set(k, v) { localStorage.setItem("yf_" + (window.YF_NS || "") + k, JSON.stringify(v)); },
   };
   const id = () => Math.random().toString(36).slice(2, 12);
   let tplCache = null;

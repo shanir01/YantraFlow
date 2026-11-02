@@ -7,7 +7,8 @@ http.createServer((req,res)=>{let b='';req.on('data',d=>b+=d);req.on('end',()=>{
   if(req.method==='OPTIONS'){res.end();return;}
   if(req.url.includes('/chat/completions')){const j=JSON.parse(b||'{}');const q=(j.messages||[]).at(-1)?.content||'';
     let t='Mehnat ka phal meetha hota hai — aaj ek kadam aage badho! 🚀';
-    if(/JSON/.test(q)) t='{"title":"My Termux Automation Trick 🔥","description":"Phone se automation!\\nFree & local.\\n#termux #automation #ai #yantraflow #nishu","tags":["termux","automation","ai"]}';
+    if(/scroll-stopping hook/.test(q)) t=JSON.stringify({hook:'Ruko! Ye 3 FREE AI tools tumhara 5 ghante ka kaam 5 minute me karenge 😱',script:'1) ChatGPT jaisa free AI — notes 1 minute me\n2) AI se PPT — topic do, slides ready\n3) AI voice — script bolo, video ready\nSave karo, baad me kaam aayega!',caption:'Students ke liye 3 free AI tools jo life easy kar denge 🚀',hashtags:'#aitools #students #hinglish #reels #viral #studytips',cta:'Comment GUIDE for the full list 💬'});
+    else if(/JSON/.test(q)) t='{"title":"My Termux Automation Trick 🔥","description":"Phone se automation!\\nFree & local.\\n#termux #automation #ai #yantraflow #nishu","tags":["termux","automation","ai"]}';
     else if(/Summarize/.test(q)) t='Summary: '+q.split('\n')[0].replace('Summarize: ','').slice(0,60)+' — short Hinglish summary.';
     else if(/Reel topic/.test(q)) t='Subah jaldi utho, sapne pure karo 💪\nConsistency hi asli talent hai.\nFollow karo daily motivation ke liye!\n#motivation #students #hinglish #reels #viral';
     else if(!/quote/i.test(q)) t='Termux ek Android app hai jo phone pe Linux terminal deta hai. Isse aap Node.js, Python sab chala sakte ho.';
